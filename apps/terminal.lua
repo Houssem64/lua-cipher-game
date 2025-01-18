@@ -11,7 +11,7 @@ local States = {
 
 function Terminal:new()
     local obj = {
-        history = {"Welcome to Terminal v1.0"},
+        history = {"Welcome to Terminal v1.1"},
         currentLine = "",
         cursorBlink = true,
         blinkTimer = 0,
@@ -53,15 +53,63 @@ function Terminal:handleCommand(command)
         return
     end
 
-    -- Basic commands
+    -- Enhanced commands
     if parts[1] == "clear" then
         self.history = {"Terminal cleared"}
     elseif parts[1] == "whoami" then
         table.insert(self.history, "kali")
     elseif parts[1] == "pwd" then
-        table.insert(self.history, "/home/kali")
+        table.insert(self.history, FileSystem.current_path)
     elseif parts[1] == "ls" then
-        table.insert(self.history, "Documents  Downloads  Desktop  Pictures")
+        local files = FileSystem:listFiles(FileSystem.current_path)
+        if #files > 0 then
+            table.insert(self.history, table.concat(files, "  "))
+        else
+            table.insert(self.history, "No files found")
+        end
+    elseif parts[1] == "cd" then
+        if parts[2] then
+            local newPath = FileSystem:changePath(parts[2])
+            if newPath then
+                FileSystem.current_path = newPath
+            else
+                table.insert(self.history, "cd: " .. parts[2] .. ": No such file or directory")
+            end
+        else
+            FileSystem.current_path = "/home/kali"
+        end
+    elseif parts[1] == "mkdir" then
+        if parts[2] then
+            if FileSystem:createDirectory(parts[2]) then
+                table.insert(self.history, "Directory created: " .. parts[2])
+            else
+                table.insert(self.history, "mkdir: Cannot create directory '" .. parts[2] .. "': File exists")
+            end
+        else
+            table.insert(self.history, "mkdir: missing operand")
+        end
+    elseif parts[1] == "touch" then
+        if parts[2] then
+            if FileSystem:createFile(parts[2]) then
+                table.insert(self.history, "File created: " .. parts[2])
+            else
+                table.insert(self.history, "touch: Cannot create file '" .. parts[2] .. "': File exists")
+            end
+        else
+            table.insert(self.history, "touch: missing file operand")
+        end
+    elseif parts[1] == "rm" then
+        if parts[2] then
+            if FileSystem:removeFile(parts[2]) then
+                table.insert(self.history, "Removed: " .. parts[2])
+            else
+                table.insert(self.history, "rm: cannot remove '" .. parts[2] .. "': No such file or directory")
+            end
+        else
+            table.insert(self.history, "rm: missing operand")
+        end
+    elseif parts[1] == "echo" then
+        table.insert(self.history, table.concat(parts, " ", 2))
     elseif parts[1] == "help" then
         table.insert(self.history, "Available commands:")
         table.insert(self.history, "  clear    - Clear terminal")
@@ -69,12 +117,17 @@ function Terminal:handleCommand(command)
         table.insert(self.history, "  pwd      - Show current directory")
         table.insert(self.history, "  ls       - List files")
         table.insert(self.history, "  cd       - Change directory")
+        table.insert(self.history, "  mkdir    - Create a new directory")
+        table.insert(self.history, "  touch    - Create a new file")
+        table.insert(self.history, "  rm       - Remove a file")
+        table.insert(self.history, "  echo     - Display a line of text")
         table.insert(self.history, "  sudo     - Run command as root")
     else
         table.insert(self.history, "Command not found: " .. parts[1])
     end
 end
 
+-- Add the rest of the Terminal methods here (handlePassword, draw, update, textinput, keypressed)
 function Terminal:handlePassword(password)
     if password == self.sudoPassword then
         self.state = States.NORMAL
@@ -158,5 +211,4 @@ function Terminal:keypressed(key)
         self.currentLine = self.currentLine:sub(1, -2)
     end
 end
-
 return Terminal

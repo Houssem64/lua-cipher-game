@@ -26,6 +26,12 @@ function StatusBar:new()
         }
     }
     obj.icons:load()  -- Load the icons immediately after creation
+
+    -- Add some initial networks
+    obj.networkManager:addNetwork("WiFi-1", 80, true)
+    obj.networkManager:addNetwork("WiFi-2", 60, true)
+    obj.networkManager:addNetwork("OpenNet", 40, false)
+
     setmetatable(obj, self)
     self.__index = self
     return obj
@@ -64,7 +70,28 @@ function StatusBar:draw()
     love.graphics.setColor(self.textColor)
     local timeText = os.date("%H:%M")
     love.graphics.print(timeText, love.graphics.getWidth() - 50, 5)
-    self.networkManager:draw(love.graphics.getWidth() - 100, 0)
+
+    -- Draw network status and icon
+    local networkStatus = "Not Connected"
+    local iconColor = {0.5, 0.5, 0.5} -- Gray for disconnected
+    if self.networkManager.connectedNetwork then
+        networkStatus = "Connected to " .. self.networkManager.connectedNetwork.name
+        iconColor = {0.2, 0.8, 0.2} -- Green for connected
+    end
+    love.graphics.print(networkStatus, love.graphics.getWidth() - 300, 5)
+
+    -- Draw network icon
+    local iconX = love.graphics.getWidth() - 200
+    local iconY = 5
+    local iconSize = 15
+
+    love.graphics.setColor(iconColor)
+    -- Draw a simple WiFi icon
+    love.graphics.arc("fill", iconX + iconSize/2, iconY + iconSize/2, iconSize/2, math.pi, 0)
+    love.graphics.arc("fill", iconX + iconSize/2, iconY + iconSize/2, iconSize/3, math.pi, 0)
+    love.graphics.arc("fill", iconX + iconSize/2, iconY + iconSize/2, iconSize/6, math.pi, 0)
+
+    self.networkManager:draw(love.graphics.getWidth() - 200, 0)
 end
 
 function StatusBar:launchApp(app)
@@ -82,8 +109,11 @@ end
 function StatusBar:mousepressed(x, y, button)
     if button == 1 then
         -- Check network icon
-        if x >= love.graphics.getWidth() - 100 and x <= love.graphics.getWidth() - 85 and
-           y >= 5 and y <= 20 then
+        local iconX = love.graphics.getWidth() - 100
+        local iconY = 5
+        local iconSize = 15
+        if x >= iconX and x <= iconX + iconSize and
+           y >= iconY and y <= iconY + iconSize then
             self.networkManager:toggle()
             return
         end
@@ -99,6 +129,27 @@ function StatusBar:mousepressed(x, y, button)
             end
         end
     end
+    -- Pass mouse events to the network manager if its menu is open
+    if self.networkManager.isOpen then
+        self.networkManager:mousepressed(x, y, button)
+    end
 end
 
-return StatusBar 
+function StatusBar:keypressed(key)
+    if self.networkManager.isOpen or self.networkManager.passwordPrompt then
+        self.networkManager:keypressed(key)
+    end
+end
+
+function StatusBar:textinput(text)
+    if self.networkManager.passwordPrompt then
+        self.networkManager:textinput(text)
+    end
+end
+
+function StatusBar:update(dt)
+    -- Update time
+    self.time = os.date("%H:%M")
+end
+
+return StatusBar

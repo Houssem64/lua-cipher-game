@@ -100,33 +100,33 @@ function Window:draw()
     -- Draw window background
     love.graphics.setColor(self.backgroundColor)
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
-    
+
     -- Draw title bar
     love.graphics.setColor(self.titleBarColor)
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.titleBarHeight)
-    
+
     -- Draw title text
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(self.title, self.x + 5, self.y + 5)
-    
+
     -- Draw window buttons
     local buttonSpacing = 5
     local buttonX = self.x + self.width - self.buttonSize - buttonSpacing
-    
+
     -- Close button
     love.graphics.setColor(self.buttons.close.color)
     love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
-    
+
     -- Maximize button
     buttonX = buttonX - self.buttonSize - buttonSpacing
     love.graphics.setColor(self.buttons.maximize.color)
     love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
-    
+
     -- Minimize button
     buttonX = buttonX - self.buttonSize - buttonSpacing
     love.graphics.setColor(self.buttons.minimize.color)
     love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
-    
+
     -- Draw resize handle if not minimized
     if not self.isMinimized then
         love.graphics.setColor(0.5, 0.5, 0.5)
@@ -137,9 +137,9 @@ function Window:draw()
             self.resizeHandleSize
         )
     end
-    
-    -- Draw the app content if it exists
-    if self.app then
+
+    -- Draw the app content if it exists and has a draw method
+    if self.app and type(self.app.draw) == "function" then
         local function stencilFunc()
             love.graphics.rectangle("fill", 
                 self.x, 
@@ -148,20 +148,38 @@ function Window:draw()
                 self.height - self.titleBarHeight
             )
         end
-        
+
         love.graphics.stencil(stencilFunc, "replace", 1)
         love.graphics.setStencilTest("greater", 0)
-        
+
         self.app:draw(
             self.x, 
             self.y + self.titleBarHeight, 
             self.width, 
             self.height - self.titleBarHeight
         )
-        
+
         love.graphics.setStencilTest()
+    else
+        -- Draw a placeholder if no app or draw method
+        love.graphics.setColor(0.2, 0.2, 0.2)
+        love.graphics.rectangle("fill", 
+            self.x, 
+            self.y + self.titleBarHeight, 
+            self.width, 
+            self.height - self.titleBarHeight
+        )
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf("No app or draw method", 
+            self.x, 
+            self.y + self.height / 2, 
+            self.width, 
+            "center"
+        )
     end
 end
+
+
 
 function Window:textinput(text)
     if self.app and self.app.textinput then
