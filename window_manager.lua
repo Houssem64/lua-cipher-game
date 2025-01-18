@@ -1,6 +1,13 @@
 local Window = {}
 
-function Window:new(title, x, y, width, height)
+function Window:new(title, width, height)
+    local desktopWidth = love.graphics.getWidth()
+    local desktopHeight = love.graphics.getHeight()
+    
+    -- Calculate the center position
+    local x = (desktopWidth - width) / 2
+    local y = (desktopHeight - height) / 2
+
     local obj = {
         title = title,
         x = x,
