@@ -1,0 +1,284 @@
+local Window = {}
+
+function Window:new(title, x, y, width, height)
+    local obj = {
+        title = title,
+        x = x,
+        y = y,
+        width = math.max(width, 200),
+        height = math.max(height, 100),
+        originalWidth = width,
+        originalHeight = height,
+        originalX = x,
+        originalY = y,
+        titleBarHeight = 25,
+        isDragging = false,
+        isResizing = false,
+        isMinimized = false,
+        isMaximized = false,
+        dragOffsetX = 0,
+        dragOffsetY = 0,
+        backgroundColor = {0.3, 0.3, 0.3},
+        titleBarColor = {0.4, 0.4, 0.4},
+        buttonSize = 20,
+        resizeHandleSize = 15,
+        buttons = {
+            close = {color = {0.8, 0.2, 0.2}},
+            minimize = {color = {0.8, 0.8, 0.2}},
+            maximize = {color = {0.2, 0.8, 0.2}}
+        }
+    }
+    setmetatable(obj, self)
+    self.__index = self
+    return obj
+end
+
+function Window:minimize()
+    self.isMinimized = not self.isMinimized
+    if self.isMinimized then
+        self.originalHeight = self.height
+        self.height = self.titleBarHeight
+    else
+        self.height = self.originalHeight
+    end
+end
+
+function Window:maximize()
+    self.isMaximized = not self.isMaximized
+    if self.isMaximized then
+        self.originalX = self.x
+        self.originalY = self.y
+        self.originalWidth = self.width
+        self.originalHeight = self.height
+        
+        self.x = 0
+        self.y = 25  -- Account for status bar
+        self.width = love.graphics.getWidth()
+        self.height = love.graphics.getHeight() - 25
+    else
+        self.x = self.originalX
+        self.y = self.originalY
+        self.width = self.originalWidth
+        self.height = self.originalHeight
+    end
+end
+
+function Window:isMouseInTitleBar(x, y)
+    return x >= self.x and x <= self.x + self.width and
+           y >= self.y and y <= self.y + self.titleBarHeight
+end
+
+function Window:isMouseInCloseButton(x, y)
+    local buttonX = self.x + self.width - self.buttonSize - 5
+    local buttonY = self.y + 3
+    return x >= buttonX and x <= buttonX + self.buttonSize - 2 and
+           y >= buttonY and y <= buttonY + self.buttonSize - 2
+end
+
+function Window:isMouseInResizeHandle(x, y)
+    return x >= self.x + self.width - self.resizeHandleSize and
+           x <= self.x + self.width and
+           y >= self.y + self.height - self.resizeHandleSize and
+           y <= self.y + self.height
+end
+
+function Window:isMouseInMinimizeButton(x, y)
+    local buttonX = self.x + self.width - (self.buttonSize * 3) - 15
+    local buttonY = self.y + 3
+    return x >= buttonX and x <= buttonX + self.buttonSize - 2 and
+           y >= buttonY and y <= buttonY + self.buttonSize - 2
+end
+
+function Window:isMouseInMaximizeButton(x, y)
+    local buttonX = self.x + self.width - (self.buttonSize * 2) - 10
+    local buttonY = self.y + 3
+    return x >= buttonX and x <= buttonX + self.buttonSize - 2 and
+           y >= buttonY and y <= buttonY + self.buttonSize - 2
+end
+
+function Window:draw()
+    -- Draw window background
+    love.graphics.setColor(self.backgroundColor)
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+    
+    -- Draw title bar
+    love.graphics.setColor(self.titleBarColor)
+    love.graphics.rectangle("fill", self.x, self.y, self.width, self.titleBarHeight)
+    
+    -- Draw title text
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print(self.title, self.x + 5, self.y + 5)
+    
+    -- Draw window buttons
+    local buttonSpacing = 5
+    local buttonX = self.x + self.width - self.buttonSize - buttonSpacing
+    
+    -- Close button
+    love.graphics.setColor(self.buttons.close.color)
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    
+    -- Maximize button
+    buttonX = buttonX - self.buttonSize - buttonSpacing
+    love.graphics.setColor(self.buttons.maximize.color)
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    
+    -- Minimize button
+    buttonX = buttonX - self.buttonSize - buttonSpacing
+    love.graphics.setColor(self.buttons.minimize.color)
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    
+    -- Draw resize handle if not minimized
+    if not self.isMinimized then
+        love.graphics.setColor(0.5, 0.5, 0.5)
+        love.graphics.rectangle("fill", 
+            self.x + self.width - self.resizeHandleSize,
+            self.y + self.height - self.resizeHandleSize,
+            self.resizeHandleSize,
+            self.resizeHandleSize
+        )
+    end
+    
+    -- Draw the app content if it exists
+    if self.app then
+        local function stencilFunc()
+            love.graphics.rectangle("fill", 
+                self.x, 
+                self.y + self.titleBarHeight, 
+                self.width, 
+                self.height - self.titleBarHeight
+            )
+        end
+        
+        love.graphics.stencil(stencilFunc, "replace", 1)
+        love.graphics.setStencilTest("greater", 0)
+        
+        self.app:draw(
+            self.x, 
+            self.y + self.titleBarHeight, 
+            self.width, 
+            self.height - self.titleBarHeight
+        )
+        
+        love.graphics.setStencilTest()
+    end
+end
+
+function Window:textinput(text)
+    if self.app and self.app.textinput then
+        self.app:textinput(text)
+    end
+end
+
+function Window:keypressed(key)
+    if self.app and self.app.keypressed then
+        self.app:keypressed(key)
+    end
+end
+
+function Window:update(dt)
+    if self.app and self.app.update then
+        self.app:update(dt)
+    end
+end
+
+local WindowManager = {}
+
+function WindowManager:new()
+    local obj = {
+        windows = {},
+        activeWindow = nil
+    }
+    setmetatable(obj, self)
+    self.__index = self
+    return obj
+end
+
+function WindowManager:createWindow(title, x, y, width, height, app)
+    local window = Window:new(title, x, y, width, height)
+    window.app = app
+    table.insert(self.windows, window)
+    self.activeWindow = window
+    return window
+end
+
+function WindowManager:update(dt)
+    for _, window in ipairs(self.windows) do
+        window:update(dt)
+    end
+end
+
+function WindowManager:draw()
+    for _, window in ipairs(self.windows) do
+        window:draw()
+    end
+end
+
+function WindowManager:mousepressed(x, y, button)
+    if button == 1 then -- Left click
+        for i = #self.windows, 1, -1 do
+            local window = self.windows[i]
+            if window:isMouseInTitleBar(x, y) then
+                if window:isMouseInCloseButton(x, y) then
+                    table.remove(self.windows, i)
+                    return
+                elseif window:isMouseInMinimizeButton(x, y) then
+                    window:minimize()
+                    return
+                elseif window:isMouseInMaximizeButton(x, y) then
+                    window:maximize()
+                    return
+                end
+                
+                window.isDragging = true
+                window.dragOffsetX = x - window.x
+                window.dragOffsetY = y - window.y
+                
+                table.remove(self.windows, i)
+                table.insert(self.windows, window)
+                break
+            elseif not window.isMinimized and window:isMouseInResizeHandle(x, y) then
+                window.isResizing = true
+                window.dragOffsetX = window.width - (x - window.x)
+                window.dragOffsetY = window.height - (y - window.y)
+                break
+            end
+        end
+    end
+end
+
+function WindowManager:mousereleased(x, y, button)
+    if button == 1 then
+        for _, window in ipairs(self.windows) do
+            window.isDragging = false
+            window.isResizing = false
+        end
+    end
+end
+
+function WindowManager:mousemoved(x, y, dx, dy)
+    for _, window in ipairs(self.windows) do
+        if window.isDragging then
+            window.x = x - window.dragOffsetX
+            window.y = y - window.dragOffsetY
+        elseif window.isResizing then
+            local newWidth = x - window.x + window.dragOffsetX
+            local newHeight = y - window.y + window.dragOffsetY
+            window.width = math.max(200, newWidth)  -- Minimum width
+            window.height = math.max(100, newHeight) -- Minimum height
+        end
+    end
+end
+
+function WindowManager:textinput(text)
+    if self.activeWindow then
+        self.activeWindow:textinput(text)
+    end
+end
+
+function WindowManager:keypressed(key)
+    if self.activeWindow then
+        self.activeWindow:keypressed(key)
+    end
+end
+
+return WindowManager
