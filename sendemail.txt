@@ -1,0 +1,129 @@
+
+
+I'll show you how to add emails programmatically and create a function to add test emails. Add these functions to the EmailClient:
+
+```lua:apps/email_client.lua
+function EmailClient:new()
+    local obj = {
+        state = EmailStates.INBOX,
+        emails = {
+            inbox = {},
+            sent = {},
+            drafts = {}
+        },
+        selectedEmail = nil,
+        composeData = {
+            to = "",
+            subject = "",
+            body = "",
+            activeField = "to"
+        },
+        scrollPosition = 0,
+        maxEmailsVisible = 10,
+        sidebarWidth = 250,
+        width = 0,
+        height = 0
+    }
+    setmetatable(obj, self)
+    self.__index = self
+    
+    obj:loadEmails()
+    -- Add some test emails if inbox is empty
+    if #obj.emails.inbox == 0 then
+        obj:addTestEmails()
+    end
+    return obj
+end
+
+function EmailClient:addEmail(email)
+    email.id = #self.emails.inbox + 1
+    email.timestamp = email.timestamp or os.time()
+    email.read = false
+    table.insert(self.emails.inbox, 1, email)
+    self:saveEmails()
+end
+
+function EmailClient:addTestEmails()
+    self:addEmail({
+        from = "system@admin.local",
+        subject = "Welcome to your Email Client",
+        body = "Welcome to your new email client!\n\nThis is your first email. You can:\n- Read emails\n- Send new emails\n- Delete emails\n\nEnjoy!",
+        timestamp = os.time() - 3600 -- 1 hour ago
+    })
+    
+    self:addEmail({
+        from = "mission@hacker.local",
+        subject = "New Mission Available",
+        body = "Agent,\n\nA new hacking mission is available. Your target is a high-security server.\n\nMission details will follow in the next email.\n\nGood luck!",
+        timestamp = os.time() - 7200 -- 2 hours ago
+    })
+    
+    self:addEmail({
+        from = "tutorial@system.local",
+        subject = "Basic Terminal Commands",
+        body = "Here are some basic terminal commands you might find useful:\n\n- ls: List files\n- cd: Change directory\n- cat: Read file contents\n- whoami: Display current user\n\nPractice these commands to improve your skills.",
+        timestamp = os.time() - 10800 -- 3 hours ago
+    })
+end
+
+-- Function to add a mission email
+function EmailClient:addMissionEmail(mission)
+    self:addEmail({
+        from = "mission@control.local",
+        subject = "Mission: " .. mission.title,
+        body = string.format([[
+Mission Brief: %s
+
+Objective: %s
+
+Reward: %s
+
+Status: Active
+]], mission.title, mission.description, mission.reward),
+        timestamp = os.time(),
+        missionId = mission.id
+    })
+end
+
+-- Function to add a story email
+function EmailClient:addStoryEmail(title, content)
+    self:addEmail({
+        from = "story@system.local",
+        subject = title,
+        body = content,
+        timestamp = os.time()
+    })
+end
+```
+
+You can now add emails in several ways:
+
+1. Directly using addEmail:
+```lua
+emailClient:addEmail({
+    from = "someone@example.com",
+    subject = "Test Email",
+    body = "This is a test email content",
+    timestamp = os.time()
+})
+```
+
+2. Add a mission email:
+```lua
+emailClient:addMissionEmail({
+    id = "hack_server_1",
+    title = "Hack the Mainframe",
+    description = "Infiltrate the corporate server and extract the data",
+    reward = "$5000"
+})
+```
+
+3. Add a story email:
+```lua
+emailClient:addStoryEmail(
+    "Strange Activity Detected",
+    "We've detected unusual activity in the network. Be careful when connecting to external servers."
+)
+```
+
+The emails will be automatically saved and loaded between sessions. Would you like me to explain any part in more detail or add additional features?

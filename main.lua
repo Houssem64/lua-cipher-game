@@ -6,6 +6,8 @@ local desktop
 local statusBar
 local windowManager
 
+
+
 function love.load()
     desktop = Desktop:new()
     windowManager = WindowManager:new()

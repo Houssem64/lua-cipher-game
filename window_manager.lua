@@ -181,6 +181,12 @@ function Window:update(dt)
     end
 end
 
+function Window:mousepressed(x, y, button)
+    if self.app and self.app.mousepressed then
+        self.app:mousepressed(x, y, button, self.x, self.y)
+    end
+end
+
 local WindowManager = {}
 
 function WindowManager:new()
@@ -214,9 +220,22 @@ function WindowManager:draw()
 end
 
 function WindowManager:mousepressed(x, y, button)
-    if button == 1 then -- Left click
+    if button == 1 then
         for i = #self.windows, 1, -1 do
             local window = self.windows[i]
+            
+            -- Check if click is within window content area
+            local contentX = x - window.x
+            local contentY = y - (window.y + window.titleBarHeight)
+            local isInContent = contentX >= 0 and contentX <= window.width and
+                               contentY >= 0 and contentY <= window.height - window.titleBarHeight
+
+            if isInContent and window.app and window.app.mousepressed then
+                window.app:mousepressed(contentX, contentY, button)
+                self.activeWindow = window
+                return
+            end
+
             if window:isMouseInTitleBar(x, y) then
                 if window:isMouseInCloseButton(x, y) then
                     table.remove(self.windows, i)
