@@ -11,7 +11,9 @@ function SaveSystem:save(data, filename)
         print("Error saving game: " .. message)
         return false
     end
+    
     return true
+
 end
 
 function SaveSystem:load(filename)
@@ -30,5 +32,12 @@ function SaveSystem:load(filename)
     end
     return data
 end
-
+function SaveSystem:getTextFilesList()
+    local files = {}
+    local savedData = self:load("text_files_index") or {}
+    for filename, _ in pairs(savedData) do
+        table.insert(files, filename)
+    end
+    return files
+end
 return SaveSystem 

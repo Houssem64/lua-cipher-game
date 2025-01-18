@@ -2,6 +2,8 @@ local Desktop = require("desktop")
 local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
 local NetworkManager = require("modules.network_manager")
+local debug = require('libraries.lovedebug')
+
 
 local desktop
 local statusBar

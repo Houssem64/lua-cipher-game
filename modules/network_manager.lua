@@ -1,8 +1,11 @@
 local NetworkManager = {}
 
 function NetworkManager:new()
+    isConnected = false
+    networkName = ""
     local obj = {
         networks = {},
+    
         connectedNetwork = nil,
         isOpen = false,
         x = 0,
@@ -13,6 +16,7 @@ function NetworkManager:new()
         currentPasswordInput = "",
         selectedNetwork = nil
     }
+   
     setmetatable(obj, self)
     self.__index = self
     return obj
@@ -46,6 +50,10 @@ function NetworkManager:finalizeConnection(network)
     self.passwordPrompt = false
     self.selectedNetwork = nil
     self.currentPasswordInput = ""
+    isConnected = true
+    networkName = network.name
+    print(network.connected)
+    print(isConnected)
     print("Connected to " .. network.name)
 end
 
@@ -72,7 +80,7 @@ function NetworkManager:draw(x, y)
                 love.graphics.circle("fill", x + 180, yPos + 5, 2)
             end
             if network.connected then
-                love.graphics.print("✓", x + 10, yPos)
+                love.graphics.print("O", x + 10, yPos)
             end
         end
 

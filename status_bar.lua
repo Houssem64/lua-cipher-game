@@ -46,6 +46,8 @@ function StatusBar:isAppOpen(appName)
     return false
 end
 
+
+
 function StatusBar:draw()
     -- Draw background
     love.graphics.setColor(self.backgroundColor)
@@ -72,12 +74,17 @@ function StatusBar:draw()
     love.graphics.print(timeText, love.graphics.getWidth() - 50, 5)
 
     -- Draw network status and icon
-    local networkStatus = "Not Connected"
-    local iconColor = {0.5, 0.5, 0.5} -- Gray for disconnected
-    if self.networkManager.connectedNetwork then
-        networkStatus = "Connected to " .. self.networkManager.connectedNetwork.name
+    local networkStatus, iconColor
+    if isConnected then
+        networkStatus = "Connected" 
         iconColor = {0.2, 0.8, 0.2} -- Green for connected
+        
+    else
+        networkStatus = "Not Connected"
+        iconColor = {0.5, 0.5, 0.5} -- Gray for disconnected
     end
+    love.graphics.setColor(self.textColor)
+
     love.graphics.print(networkStatus, love.graphics.getWidth() - 300, 5)
 
     -- Draw network icon

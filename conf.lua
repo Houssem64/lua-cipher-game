@@ -5,4 +5,5 @@ function love.conf(t)
     t.window.resizable = true
     t.window.title = "CIPHER PROTOCOL"
     t.window.vsync = true
+    t.console = true
 end
