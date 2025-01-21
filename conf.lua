@@ -1,12 +1,29 @@
+-- conf.lua
 function love.conf(t)
-   --[[  t.window.fullscreen = false ]]
-    t.window.width = 1920
-    t.window.height = 1080 
- --[[    t.window.minwidth = 800
-    t.window.minheight = 600 ]]
-   --[[   t.window.resizable = true  ]]
-    t.window.title = "CIPHER PROTOCOL"
- --[[     t.window.vsync = true
-        t.console = true 
-        t.window.highdpi = true  ]]
+   t.window.title = "LÖVE Desktop Environment"
+   t.window.width = 1920
+   t.window.height = 1080
+   t.window.resizable = true
+   t.window.vsync = true
+   t.window.minwidth = 800
+   t.window.minheight = 600
+   t.window.fullscreen = true
+   
+   -- Enable all modules
+   t.modules.audio = true
+   t.modules.data = true
+   t.modules.event = true
+   t.modules.font = true
+   t.modules.graphics = true
+   t.modules.image = true
+   t.modules.joystick = true
+   t.modules.keyboard = true
+   t.modules.math = true
+   t.modules.mouse = true
+   t.modules.physics = true
+   t.modules.sound = true
+   t.modules.system = true
+   t.modules.thread = true
+   t.modules.timer = true
+   t.modules.window = true
 end

@@ -127,7 +127,6 @@ function Terminal:handleCommand(command)
     end
 end
 
--- Add the rest of the Terminal methods here (handlePassword, draw, update, textinput, keypressed)
 function Terminal:handlePassword(password)
     if password == self.sudoPassword then
         self.state = States.NORMAL
@@ -145,7 +144,9 @@ function Terminal:handlePassword(password)
     end
     self.currentLine = ""
 end
-local default_font=love.graphics.getFont()
+
+local default_font = love.graphics.getFont()
+
 function Terminal:draw(x, y, width, height)
     -- Terminal background
     love.graphics.setColor(0, 0, 0)
@@ -153,8 +154,10 @@ function Terminal:draw(x, y, width, height)
     
     -- Draw terminal text
     love.graphics.setColor(0, 1, 0)  -- Green text
-    local font = love.graphics.newFont("UbuntuMono-Regular.ttf",24)  -- Increased font size
-    font:setFilter( "nearest", "nearest" )
+    local default_font = love.graphics.getFont()
+    local font = love.graphics.newFont("joty.otf", 24)  -- Adjusted font size for 1080p
+    font:setFilter("nearest", "nearest")  -- Set filter to nearest
+
     love.graphics.setFont(font)
     
     local lineHeight = font:getHeight() * 1.2  -- Add some line spacing
@@ -218,4 +221,5 @@ function Terminal:keypressed(key)
         self.currentLine = self.currentLine:sub(1, -2)
     end
 end
+
 return Terminal

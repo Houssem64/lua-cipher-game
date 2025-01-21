@@ -33,8 +33,11 @@ function TextEditor:refreshFileList()
     self.selectedFileIndex = 1  -- Reset the selected index when refreshing
 end
 function TextEditor:draw(x, y, width, height)
-    local previousFont = love.graphics.getFont()
-    local font =  love.graphics.newFont("cour.ttf",18)
+    local default_font = love.graphics.getFont()
+    local font = love.graphics.newFont("joty.otf", 21)  -- Adjusted font size for 1080p
+    font:setFilter("nearest", "nearest")  -- Set filter to nearest for crisp text
+    love.graphics.setFont(font)
+
     -- Editor background
     love.graphics.setColor(0.95, 0.95, 0.95)
     love.graphics.rectangle("fill", x, y, width, height)
@@ -60,7 +63,7 @@ function TextEditor:draw(x, y, width, height)
     if self.showFileDialog then
         self:drawFileDialog(x, y, width, height)
     end
-    love.graphics.setFont(previousFont)
+    love.graphics.setFont(default_font )
 end
 
 

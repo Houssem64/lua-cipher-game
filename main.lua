@@ -3,7 +3,7 @@ local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
 local NetworkManager = require("modules.network_manager")
 --local debug = require('libraries.lovedebug')
-local push = require ("libraries.push")
+
 
 
 
@@ -18,20 +18,29 @@ local networkManager
 
 function love.load()
 
-    local gameWidth, gameHeight = 1280, 720 -- fixed game resolution
-    local windowWidth, windowHeight = love.window.getDesktopDimensions()
-    push:setupScreen(gameWidth, gameHeight, windowWidth, windowHeight, {        fullscreen = true,
-    resizable = true,
-    pixelperfect = true,
-    stretched = true ,
-    canvas= true,
-    vsync = true,
-    highdpi = true,
-            msaa = 0               -- Add this line to disable antialiasing
-
-})
-
-
+ -- Enable antialiasing
+ love.graphics.setDefaultFilter("nearest", "nearest", 1)
+    
+ -- Set up the font with a size that works well for 1080p
+ --font = love.graphics.newFont(32)
+ --love.graphics.setFont(font)
+ 
+ -- Get the screen dimensions
+ screenWidth = love.graphics.getWidth()
+ screenHeight = love.graphics.getHeight()
+ 
+ -- Set up virtual resolution scaling
+ gameWidth = 1920
+ gameHeight = 1080
+ 
+ -- Calculate scaling factors
+ scaleX = screenWidth / gameWidth
+ scaleY = screenHeight / gameHeight
+ scale = math.min(scaleX, scaleY)
+ 
+ -- Calculate the offset to center the game window
+ offsetX = (screenWidth - (gameWidth * scale)) / 2
+ offsetY = (screenHeight - (gameHeight * scale)) / 2
 
   
  
@@ -61,11 +70,11 @@ font:setFilter("nearest", "nearest") ]]
 
 function love.draw()
     
-   push:start()
-
-
-   -- Draw your window and other elements here
-   desktop:draw()
+     -- Set up the coordinate system for 1080p
+     love.graphics.push()
+     love.graphics.translate(offsetX, offsetY)
+     love.graphics.scale(scale, scale)
+  
    windowManager:draw()
    statusBar:draw()
 
@@ -74,7 +83,7 @@ function love.draw()
   
 
    -- networkManager:draw(love.graphics.getWidth() - 200, 0)  -- Adjust position as needed
-  push:finish()
+   love.graphics.pop()
    
 end
 
@@ -89,31 +98,27 @@ function love.textinput(text)
 end
 
 function love.mousepressed(x, y, button)
-    local scaledX, scaledY = push:toGame(x, y)
+    -- Convert screen coordinates to game coordinates
+    local virtualX = (x - offsetX) / scale
+    local virtualY = (y - offsetY) / scale
     
-    if scaledY <= statusBar.height then
-        statusBar:mousepressed(scaledX, scaledY, button)
+    if virtualY <= STATUSBAR_HEIGHT then
+        statusBar:mousepressed(virtualX, virtualY, button)
     else
-        windowManager:mousepressed(scaledX, scaledY, button)
+        windowManager:mousepressed(virtualX, virtualY, button)
     end
 end
 
 function love.mousereleased(x, y, button)
-    local scaledX, scaledY = push:toGame(x, y)
-    windowManager:mousereleased(scaledX, scaledY, button)
+    local virtualX = (x - offsetX) / scale
+    local virtualY = (y - offsetY) / scale
+    windowManager:mousereleased(virtualX, virtualY, button)
 end
 
 function love.mousemoved(x, y, dx, dy)
-    local scaledX, scaledY = push:toGame(x, y)
-    local scaledDX, scaledDY = push:toGame(dx, dy)
-    windowManager:mousemoved(scaledX, scaledY, scaledDX, scaledDY)
-end
-
-function love.resize(w, h)
-    push:resize(w, h)
-    -- Update the game's internal resolution to match the new window size
-    local newWidth, newHeight = push:getWidth(), push:getHeight()
-    desktop:resize(newWidth, newHeight)
-    windowManager:resize(newWidth, newHeight)
-    statusBar:resize(newWidth, newHeight)
+    local virtualX = (x - offsetX) / scale
+    local virtualY = (y - offsetY) / scale
+    local virtualDX = dx / scale
+    local virtualDY = dy / scale
+    windowManager:mousemoved(virtualX, virtualY, virtualDX, virtualDY)
 end

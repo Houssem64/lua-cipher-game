@@ -1,9 +1,8 @@
-local push = require ("libraries.push")
 local Window = {}
 
 function Window:new(title, width, height)
-    local desktopWidth = push:getWidth()
-    local desktopHeight = push:getHeight()
+    local desktopWidth = 1920
+    local desktopHeight = 1080
     
     -- Calculate the center position
     local x = 0
@@ -62,8 +61,8 @@ function Window:maximize()
         
         self.x = 0
         self.y = STATUSBAR_HEIGHT  -- Account for status bar
-        self.width = love.graphics.getWidth()
-        self.height = love.graphics.getHeight() - 25
+        self.width = 1920
+        self.height = 1080 - STATUSBAR_HEIGHT
     else
         self.x = self.originalX
         self.y = self.originalY
@@ -107,6 +106,11 @@ end
 
 function Window:draw()
     -- Draw window background
+    local default_font = love.graphics.getFont()
+    local font = love.graphics.newFont("joty.otf", 21)  -- Adjusted font size for 1080p
+    font:setFilter("nearest", "nearest")  -- Set filter to nearest for crisp text
+    love.graphics.setFont(font)
+
     love.graphics.setColor(self.backgroundColor)
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
 
@@ -147,8 +151,7 @@ function Window:draw()
         )
     end
 
-    -- Draw the app content if it exists and has a draw method
-    if self.app and type(self.app.draw) == "function" then
+    if type(self.app) == "table" and type(self.app.draw) == "function" then
         local function stencilFunc()
             love.graphics.rectangle("fill", 
                 self.x, 
@@ -186,34 +189,45 @@ function Window:draw()
             "center"
         )
     end
+    love.graphics.setFont(default_font)
 end
 
-
-
 function Window:textinput(text)
-    if self.app and self.app.textinput then
+    if self.app and type(self.app.textinput) == "function" then
         self.app:textinput(text)
     end
 end
 
 function Window:keypressed(key)
-    if self.app and self.app.keypressed then
+    if self.app and type(self.app.keypressed) == "function" then
         self.app:keypressed(key)
     end
 end
 
 function Window:update(dt)
-    if self.app and self.app.update then
+    if self.app and type(self.app.update) == "function" then
         self.app:update(dt)
     end
 end
 
 function Window:mousepressed(x, y, button)
-    if self.app and self.app.mousepressed then
+    if self.app and type(self.app.mousepressed) == "function" then
         self.app:mousepressed(x, y, button, self.x, self.y)
     end
 end
 
+--WINODOW MANAGER
+--WINODOW MANAGER
+--WINODOW MANAGER
+--WINODOW MANAGER
+
+
+
+
+
+
+
+-- WindowManager class
 local WindowManager = {}
 
 function WindowManager:new()
@@ -227,27 +241,26 @@ function WindowManager:new()
 end
 
 function WindowManager:createWindow(title, x, y, width, height, app)
-    local window = Window:new(title, x, y, width, height)
-    window.app = app
+    local window = Window:new(title, width, height)
+    if type(app) == "table" then
+        window.app = app
+    end
     table.insert(self.windows, window)
     self.activeWindow = window
     return window
 end
--- Add the bringToFront function here
+
 function WindowManager:bringToFront(window)
-    -- Find the window in the list
     for i, w in ipairs(self.windows) do
         if w == window then
-            -- Remove the window from its current position
             table.remove(self.windows, i)
-            -- Add it to the end of the list (top of the stack)
             table.insert(self.windows, window)
-            -- Set it as the active window
             self.activeWindow = window
             break
         end
     end
 end
+
 function WindowManager:update(dt)
     for _, window in ipairs(self.windows) do
         window:update(dt)
@@ -271,7 +284,7 @@ function WindowManager:mousepressed(x, y, button)
             local isInContent = contentX >= 0 and contentX <= window.width and
                                contentY >= 0 and contentY <= window.height - window.titleBarHeight
 
-            if isInContent and window.app and window.app.mousepressed then
+            if isInContent and window.app and type(window.app.mousepressed) == "function" then
                 window.app:mousepressed(contentX, contentY, button)
                 self.activeWindow = window
                 return
@@ -340,6 +353,5 @@ function WindowManager:keypressed(key)
         self.activeWindow:keypressed(key)
     end
 end
-
 
 return WindowManager
