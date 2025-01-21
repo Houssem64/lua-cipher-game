@@ -3,7 +3,8 @@ local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
 local NetworkManager = require("modules.network_manager")
 --local debug = require('libraries.lovedebug')
-
+local FileSystem = require("filesystem")
+local Chat = require 'chat'
 
 
 
@@ -17,7 +18,7 @@ local windowManager
 local networkManager
 
 function love.load()
-
+    FileSystem:loadState() 
  -- Enable antialiasing
  love.graphics.setDefaultFilter("nearest", "nearest", 1)
     
@@ -25,6 +26,18 @@ function love.load()
  --font = love.graphics.newFont(32)
  --love.graphics.setFont(font)
  
+ chat = Chat.new(nil, nil, {
+    button_color = {0.3, 0.7, 0.9},
+    panel_width = 350
+})
+
+-- Set message callback
+chat:setMessageCallback(function(message)
+    -- Simulate AI response
+    chat:addMessage("I received: " .. message)
+end)
+
+
  -- Get the screen dimensions
  screenWidth = love.graphics.getWidth()
  screenHeight = love.graphics.getHeight()
@@ -62,6 +75,7 @@ end
 
 function love.update(dt)
     windowManager:update(dt)
+    chat:update(dt)
     -- NetworkManager doesn't have an update function in the simplified version
 end
 
@@ -76,8 +90,9 @@ function love.draw()
      love.graphics.scale(scale, scale)
   
    windowManager:draw()
+   chat:draw()
    statusBar:draw()
-
+   
   
 
   
@@ -89,11 +104,13 @@ end
 
 function love.keypressed(key)
     windowManager:keypressed(key)
+    chat:keypressed(key)
 --    networkManager:keypressed(key)
 end
 
 function love.textinput(text)
     windowManager:textinput(text)
+    chat:textinput(text)
   --  networkManager:textinput(text)
 end
 
@@ -107,6 +124,7 @@ function love.mousepressed(x, y, button)
     else
         windowManager:mousepressed(virtualX, virtualY, button)
     end
+    chat:mousepressed(virtualX, virtualY)
 end
 
 function love.mousereleased(x, y, button)

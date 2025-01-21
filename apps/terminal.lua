@@ -6,7 +6,14 @@ local States = {
     NORMAL = "normal",
     SUDO = "sudo",
     PASSWORD = "password",
-    FTP = "ftp"
+    FTP = "ftp",
+    FTP_PASSWORD = "ftp_password"  -- New state for FTP authentication
+}
+local FTPConnection = {
+    host = nil,
+    username = nil,
+    authenticated = false,
+    password = "anonymous"  -- Default FTP password
 }
 
 function Terminal:new()
@@ -21,7 +28,8 @@ function Terminal:new()
         sudoPassword = "kali",
         scrollPosition = 0,
         maxLines = 20,
-        currentCommand = nil
+        currentCommand = nil,
+        ftpConnection = nil
     }
     setmetatable(obj, self)
     self.__index = self
@@ -31,6 +39,8 @@ end
 function Terminal:getCurrentPrompt()
     if self.state == States.FTP then
         return "ftp> "
+    elseif self.state == States.FTP_PASSWORD then
+        return "Password: "
     elseif self.state == States.PASSWORD then
         return "[sudo] password for kali: "
     else
@@ -38,6 +48,137 @@ function Terminal:getCurrentPrompt()
         return "kali@kali:" .. (dir == "kali" and "~" or dir) .. "$ "
     end
 end
+function Terminal:showNeofetch()
+    local ascii_art = {
+        "       _,met$$$$$gg.                    ",
+        "    ,g$$$$$$$$$$$$$$$P.                ",
+        "  ,g$$P\"\"       \"\"\"Y$$.\".",
+        " ,$$P'              `$$$$.             ",
+        "',$$P       ,ggs.     `$$b:           ",
+        "`d$$'     ,$P\"'   .    $$$            ",
+        " $$P      d$'     ,    $$P            ",
+        " $$:      $$.   -    ,d$$'            ",
+        " $$;      Y$b._   _,d$P'              ",
+        " Y$$.    `.`\"Y$$$$P\"'                 ",
+        " `$$b      \"-.__                      ",
+        "  `Y$$                                ",
+        "   `Y$.                               ",
+        "     `$$b.                            ",
+        "       `Y$$b.                         ",
+        "          `\"Y$b._                     ",
+        "              `\"\"\"\"                   ",
+    }
+    local system_info = {
+        "OS: Kali GNU/Linux",
+        "Kernel: Linux 5.15.0-kali1-amd64",
+        "Shell: bash 5.1.4",
+        "Terminal: LOVE Terminal v1.1",
+        "CPU: Intel i7-10700K @ 3.80GHz",
+        "Memory: 16GB RAM",
+        "Disk: 512GB SSD"
+    }
+
+    local maxLines = math.max(#ascii_art, #system_info)
+
+    -- Create combined lines
+    for i = 1, maxLines do
+        local line = ""
+        if i <= #ascii_art then
+            line = ascii_art[i]
+        else
+            line = string.rep(" ", 40)  -- Padding to align system info
+        end
+        
+        if i <= #system_info then
+            line = line .. "    " .. system_info[i]  -- Add spacing between art and info
+        end
+        
+        table.insert(self.history, line)
+    end
+end
+
+-- FTP related functions
+function Terminal:initiateFTPConnection(host, username)
+    self.ftpConnection = {
+        host = host,
+        username = username or "anonymous",
+        authenticated = false,
+        password = "anonymous"
+    }
+    self.state = States.FTP_PASSWORD
+    table.insert(self.history, "Connecting to " .. host .. "...")
+    table.insert(self.history, "Username: " .. (username or "anonymous"))
+    table.insert(self.history, "Password: ")
+end
+
+function Terminal:handleFTPPassword(password)
+    if self.ftpConnection then
+        self.ftpConnection.authenticated = true
+        self.state = States.FTP
+        table.insert(self.history, "")
+        table.insert(self.history, "Connected to " .. self.ftpConnection.host)
+        table.insert(self.history, "Type 'help' for available commands")
+    end
+end
+
+function Terminal:handleFTPCommand(command)
+    local parts = {}
+    for part in command:gmatch("%S+") do
+        table.insert(parts, part)
+    end
+
+    if #parts == 0 then return end
+
+    if parts[1] == "help" then
+        table.insert(self.history, "╭─── FTP Command Reference ────────────────────╮")
+        table.insert(self.history, "│                                              │")
+        table.insert(self.history, "│  Navigation:                                 │")
+        table.insert(self.history, "│    ls      - List files and directories      │")
+        table.insert(self.history, "│    pwd     - Show current directory          │")
+        table.insert(self.history, "│    cd      - Change directory                │")
+        table.insert(self.history, "│                                              │")
+        table.insert(self.history, "│  File Operations:                            │")
+        table.insert(self.history, "│    get     - Download a file                 │")
+        table.insert(self.history, "│    put     - Upload a file                   │")
+        table.insert(self.history, "│                                              │")
+        table.insert(self.history, "│  Connection:                                 │")
+        table.insert(self.history, "│    bye     - Close FTP connection            │")
+        table.insert(self.history, "│    quit    - Same as 'bye'                   │")
+        table.insert(self.history, "│    exit    - Same as 'bye'                   │")
+        table.insert(self.history, "│                                              │")
+        table.insert(self.history, "│  Usage Examples:                             │")
+        table.insert(self.history, "│    get file.txt                              │")
+        table.insert(self.history, "│    put local.txt                             │")
+        table.insert(self.history, "│    cd /public                                │")
+        table.insert(self.history, "│                                              │")
+        table.insert(self.history, "╰──────────────────────────────────────────────╯")
+    elseif parts[1] == "bye" or parts[1] == "quit" or parts[1] == "exit" then
+        self.ftpConnection = nil
+        self.state = States.NORMAL
+        table.insert(self.history, "FTP connection closed")
+    elseif parts[1] == "ls" then
+        table.insert(self.history, "drwxr-xr-x  2 ftp ftp  4096 Jan 21 12:34 public")
+        table.insert(self.history, "-rw-r--r--  1 ftp ftp  1234 Jan 21 12:34 welcome.txt")
+    elseif parts[1] == "get" then
+        if parts[2] then
+            table.insert(self.history, "Downloading '" .. parts[2] .. "'...")
+            table.insert(self.history, "Transfer complete")
+        else
+            table.insert(self.history, "Usage: get <filename>")
+        end
+    elseif parts[1] == "put" then
+        if parts[2] then
+            table.insert(self.history, "Uploading '" .. parts[2] .. "'...")
+            table.insert(self.history, "Transfer complete")
+        else
+            table.insert(self.history, "Usage: put <filename>")
+        end
+    else
+        table.insert(self.history, "Unknown command '" .. parts[1] .. "'")
+    end
+end
+
+
 
 function Terminal:handleCommand(command)
     local parts = {}
@@ -46,13 +187,28 @@ function Terminal:handleCommand(command)
     end
 
     if #parts == 0 then return end
+    if self.state == States.FTP then
+        self:handleFTPCommand(command)
+        return
+    end
 
     if parts[1] == "sudo" then
         self.currentCommand = command
         self.state = States.PASSWORD
         return
     end
-
+    if parts[1] == "neofetch" then
+        self:showNeofetch()
+        return
+    end
+    if parts[1] == "ftp" then
+        if parts[2] then
+            self:initiateFTPConnection(parts[2], parts[3])
+        else
+            table.insert(self.history, "Usage: ftp <host> [username]")
+        end
+        return
+    end
     -- Enhanced commands
     if parts[1] == "clear" then
         self.history = {"Terminal cleared"}
@@ -111,17 +267,32 @@ function Terminal:handleCommand(command)
     elseif parts[1] == "echo" then
         table.insert(self.history, table.concat(parts, " ", 2))
     elseif parts[1] == "help" then
-        table.insert(self.history, "Available commands:")
-        table.insert(self.history, "  clear    - Clear terminal")
-        table.insert(self.history, "  whoami   - Show current user")
-        table.insert(self.history, "  pwd      - Show current directory")
-        table.insert(self.history, "  ls       - List files")
-        table.insert(self.history, "  cd       - Change directory")
-        table.insert(self.history, "  mkdir    - Create a new directory")
-        table.insert(self.history, "  touch    - Create a new file")
-        table.insert(self.history, "  rm       - Remove a file")
-        table.insert(self.history, "  echo     - Display a line of text")
-        table.insert(self.history, "  sudo     - Run command as root")
+        table.insert(self.history, "╭─── Terminal Command Reference ─────────────────────────────╮")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  System Information:                                       │")
+        table.insert(self.history, "│    neofetch  - Display system information and logo         │")
+        table.insert(self.history, "│    whoami    - Show current user                           │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  File System Navigation:                                   │")
+        table.insert(self.history, "│    pwd       - Show current working directory              │")
+        table.insert(self.history, "│    ls        - List directory contents                     │")
+        table.insert(self.history, "│    cd        - Change directory                            │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  File Operations:                                          │")
+        table.insert(self.history, "│    mkdir     - Create a new directory                      │")
+        table.insert(self.history, "│    touch     - Create a new empty file                     │")
+        table.insert(self.history, "│    rm        - Remove a file                               │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  Network:                                                  │")
+        table.insert(self.history, "│    ftp       - Connect to FTP server                       │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  Terminal Control:                                         │")
+        table.insert(self.history, "│    clear     - Clear terminal screen                       │")
+        table.insert(self.history, "│    echo      - Display a line of text                      │")
+        table.insert(self.history, "│    sudo      - Execute command as superuser                │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "╰────────────────────────────────────────────────────────────╯")
+    
     else
         table.insert(self.history, "Command not found: " .. parts[1])
     end
@@ -212,6 +383,9 @@ function Terminal:keypressed(key)
     if key == "return" then
         if self.state == States.PASSWORD then
             self:handlePassword(self.currentLine)
+        elseif self.state == States.FTP_PASSWORD then
+            self:handleFTPPassword(self.currentLine)
+            self.currentLine = ""
         else
             table.insert(self.history, self:getCurrentPrompt() .. self.currentLine)
             self:handleCommand(self.currentLine)
@@ -221,5 +395,6 @@ function Terminal:keypressed(key)
         self.currentLine = self.currentLine:sub(1, -2)
     end
 end
+
 
 return Terminal
