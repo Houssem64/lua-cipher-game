@@ -145,7 +145,7 @@ function Terminal:handlePassword(password)
     end
     self.currentLine = ""
 end
-
+local default_font=love.graphics.getFont()
 function Terminal:draw(x, y, width, height)
     -- Terminal background
     love.graphics.setColor(0, 0, 0)
@@ -153,7 +153,11 @@ function Terminal:draw(x, y, width, height)
     
     -- Draw terminal text
     love.graphics.setColor(0, 1, 0)  -- Green text
-    local lineHeight = 20
+    local font = love.graphics.newFont("UbuntuMono-Regular.ttf",24)  -- Increased font size
+    font:setFilter( "nearest", "nearest" )
+    love.graphics.setFont(font)
+    
+    local lineHeight = font:getHeight() * 1.2  -- Add some line spacing
     local visibleLines = {}
     
     -- Add history lines
@@ -167,19 +171,22 @@ function Terminal:draw(x, y, width, height)
     table.insert(visibleLines, currentText)
     
     -- Draw visible lines with scrolling
-    local startLine = math.max(1, #visibleLines - math.floor(height/lineHeight) + 1)
+    local startLine = math.max(1, #visibleLines - math.floor((height - 20) / lineHeight) + 1)
     for i = startLine, #visibleLines do
-        local lineY = y + ((i - startLine) * lineHeight)
-        if lineY + lineHeight > y + height then break end
-        love.graphics.print(visibleLines[i], x + 10, lineY + 5)
+        local lineY = y + ((i - startLine) * lineHeight) + 10  -- Add top padding
+        if lineY + lineHeight > y + height - 10 then break end  -- Add bottom padding
+        love.graphics.print(visibleLines[i], x + 20, lineY)  -- Increased left padding
     end
     
     -- Draw cursor
     if self.cursorBlink and visibleLines[#visibleLines] then
-        local cursorX = x + 10 + love.graphics.getFont():getWidth(currentText)
-        local cursorY = y + ((#visibleLines - startLine) * lineHeight) + 5
-        love.graphics.rectangle("fill", cursorX, cursorY, 8, lineHeight)
+        local cursorX = x + 20 + font:getWidth(currentText)
+        local cursorY = y + ((#visibleLines - startLine) * lineHeight) + 10
+        love.graphics.rectangle("fill", cursorX, cursorY, 2, lineHeight - 2)  -- Thinner cursor
     end
+    love.graphics.setColor(0.3, 0.3, 0.3)
+    love.graphics.rectangle("line", x, y, width, height)
+    love.graphics.setFont(default_font)
 end
 
 function Terminal:update(dt)

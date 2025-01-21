@@ -60,13 +60,13 @@ end
 function NetworkManager:draw(x, y)
     -- Draw network icon in status bar
     love.graphics.setColor(1, 1, 1)
-    local iconSize = 15
-    love.graphics.rectangle("line", x, y + 5, iconSize, iconSize)
+    local iconSize = NETWORK_ICON_SIZE
+    love.graphics.rectangle("line", x, y + 10, iconSize, iconSize)
 
     -- Draw network menu if open
     if self.isOpen then
         love.graphics.setColor(0.2, 0.2, 0.2, 0.9)
-        love.graphics.rectangle("fill", x, y + 25, self.width, self.height)
+        love.graphics.rectangle("fill", x, y + STATUSBAR_HEIGHT, self.width, self.height)
 
         love.graphics.setColor(1, 1, 1)
         for i, network in ipairs(self.networks) do

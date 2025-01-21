@@ -1,3 +1,4 @@
+local push = require ("libraries.push")
 local Desktop = {}
 
 function Desktop:new()
@@ -9,7 +10,11 @@ function Desktop:new()
     self.__index = self
     return obj
 end
-
+function Desktop:resize(newWidth, newHeight)
+    self.width = newWidth
+    self.height = newHeight
+    -- Adjust any other necessary properties
+end
 function Desktop:draw()
     love.graphics.setColor(self.backgroundColor)
     love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())

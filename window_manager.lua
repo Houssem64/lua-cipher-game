@@ -1,28 +1,30 @@
+local push = require ("libraries.push")
 local Window = {}
 
 function Window:new(title, width, height)
-    local desktopWidth = love.graphics.getWidth()
-    local desktopHeight = love.graphics.getHeight()
+    local desktopWidth = push:getWidth()
+    local desktopHeight = push:getHeight()
     
     -- Calculate the center position
-    local x = (desktopWidth - width) / 2
-    local y = (desktopHeight - height) / 2
-
+    local x = 0
+    local y = STATUSBAR_HEIGHT
+    width = desktopWidth
+    height = desktopHeight - STATUSBAR_HEIGHT
     local obj = {
         title = title,
         x = x,
         y = y,
-        width = math.max(width, 500),
-        height = math.max(height, 500),
-        originalWidth = width,
-        originalHeight = height,
-        originalX = x,
-        originalY = y,
-        titleBarHeight = 25,
+        width = width,
+        height = height,
+        originalWidth = math.max(500, width),  -- Store original size for un-maximizing
+        originalHeight = math.max(500, height),
+        originalX = (desktopWidth - math.max(500, width)) / 2,  -- Center position for un-maximizing
+        originalY = (desktopHeight - math.max(500, height)) / 2 + STATUSBAR_HEIGHT,
+        titleBarHeight = 35,
         isDragging = false,
         isResizing = false,
         isMinimized = false,
-        isMaximized = false,
+        isMaximized = true,  -- Set to true by default
         dragOffsetX = 0,
         dragOffsetY = 0,
         backgroundColor = {0.3, 0.3, 0.3},
@@ -59,7 +61,7 @@ function Window:maximize()
         self.originalHeight = self.height
         
         self.x = 0
-        self.y = 25  -- Account for status bar
+        self.y = STATUSBAR_HEIGHT  -- Account for status bar
         self.width = love.graphics.getWidth()
         self.height = love.graphics.getHeight() - 25
     else
@@ -231,7 +233,21 @@ function WindowManager:createWindow(title, x, y, width, height, app)
     self.activeWindow = window
     return window
 end
-
+-- Add the bringToFront function here
+function WindowManager:bringToFront(window)
+    -- Find the window in the list
+    for i, w in ipairs(self.windows) do
+        if w == window then
+            -- Remove the window from its current position
+            table.remove(self.windows, i)
+            -- Add it to the end of the list (top of the stack)
+            table.insert(self.windows, window)
+            -- Set it as the active window
+            self.activeWindow = window
+            break
+        end
+    end
+end
 function WindowManager:update(dt)
     for _, window in ipairs(self.windows) do
         window:update(dt)
@@ -324,5 +340,6 @@ function WindowManager:keypressed(key)
         self.activeWindow:keypressed(key)
     end
 end
+
 
 return WindowManager

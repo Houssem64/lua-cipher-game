@@ -2,7 +2,12 @@ local Desktop = require("desktop")
 local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
 local NetworkManager = require("modules.network_manager")
-local debug = require('libraries.lovedebug')
+--local debug = require('libraries.lovedebug')
+local push = require ("libraries.push")
+
+
+
+
 
 
 
@@ -12,16 +17,38 @@ local windowManager
 local networkManager
 
 function love.load()
+
+    local gameWidth, gameHeight = 1280, 720 -- fixed game resolution
+    local windowWidth, windowHeight = love.window.getDesktopDimensions()
+    push:setupScreen(gameWidth, gameHeight, windowWidth, windowHeight, {        fullscreen = true,
+    resizable = true,
+    pixelperfect = true,
+    stretched = true ,
+    canvas= true,
+    vsync = true,
+    highdpi = true,
+            msaa = 0               -- Add this line to disable antialiasing
+
+})
+
+
+
+  
+ 
+    --love.window.setFullscreen(true, "exclusive")
+
+    -- Initialize desktop, window manager, and status bar
+   --[[  love.graphics.setDefaultFilter("nearest", "nearest") ]]
     desktop = Desktop:new()
     windowManager = WindowManager:new()
-    networkManager = NetworkManager:new()
+  --  networkManager = NetworkManager:new()
     statusBar = StatusBar:new(networkManager)
     statusBar.windowManager = windowManager
 
     -- Initialize some sample networks
-    networkManager:addNetwork("Home WiFi", 80, true)
+  --[[   networkManager:addNetwork("Home WiFi", 80, true)
     networkManager:addNetwork("Coffee Shop", 60, false)
-    networkManager:addNetwork("Office Network", 100, true)
+    networkManager:addNetwork("Office Network", 100, true) ]]
 end
 
 function love.update(dt)
@@ -29,56 +56,64 @@ function love.update(dt)
     -- NetworkManager doesn't have an update function in the simplified version
 end
 
+--[[ font = love.graphics.newFont("rob.ttf",256)
+font:setFilter("nearest", "nearest") ]]
+
 function love.draw()
-    desktop:draw()
-    windowManager:draw()
-    statusBar:draw()
+    
+   push:start()
 
 
-    networkManager:draw(love.graphics.getWidth() - 200, 0)  -- Adjust position as needed
+   -- Draw your window and other elements here
+   desktop:draw()
+   windowManager:draw()
+   statusBar:draw()
 
+  
+
+  
+
+   -- networkManager:draw(love.graphics.getWidth() - 200, 0)  -- Adjust position as needed
+  push:finish()
+   
 end
 
 function love.keypressed(key)
     windowManager:keypressed(key)
-    networkManager:keypressed(key)
+--    networkManager:keypressed(key)
 end
 
 function love.textinput(text)
     windowManager:textinput(text)
-    networkManager:textinput(text)
+  --  networkManager:textinput(text)
 end
 
 function love.mousepressed(x, y, button)
-    if y <= statusBar.height then
-        -- Check if the click is on the network icon
-        local networkIconX = love.graphics.getWidth() - 200  -- Adjust this value based on your icon's position
-        local networkIconWidth = 20  -- Adjust this value based on your icon's width
-        
-        if x >= networkIconX and x <= networkIconX + networkIconWidth then
-            networkManager:toggle()
-        else
-            statusBar:mousepressed(x, y, button)
-        end
-    elseif networkManager.isOpen then
-        local menuX = love.graphics.getWidth() - 200
-        local menuY = 0
-        if x >= menuX and x <= love.graphics.getWidth() and y >= menuY and y <= menuY + networkManager.height then
-            networkManager:mousepressed(x - menuX, y - menuY, button)
-        else
-            networkManager:toggle()  -- Close the menu if clicked outside
-        end
+    local scaledX, scaledY = push:toGame(x, y)
+    
+    if scaledY <= statusBar.height then
+        statusBar:mousepressed(scaledX, scaledY, button)
     else
-        windowManager:mousepressed(x, y, button)
+        windowManager:mousepressed(scaledX, scaledY, button)
     end
 end
 
 function love.mousereleased(x, y, button)
-    windowManager:mousereleased(x, y, button)
-    -- NetworkManager doesn't use mousereleased in the simplified version
+    local scaledX, scaledY = push:toGame(x, y)
+    windowManager:mousereleased(scaledX, scaledY, button)
 end
 
 function love.mousemoved(x, y, dx, dy)
-    windowManager:mousemoved(x, y, dx, dy)
-    -- NetworkManager doesn't use mousemoved in the simplified version
+    local scaledX, scaledY = push:toGame(x, y)
+    local scaledDX, scaledDY = push:toGame(dx, dy)
+    windowManager:mousemoved(scaledX, scaledY, scaledDX, scaledDY)
+end
+
+function love.resize(w, h)
+    push:resize(w, h)
+    -- Update the game's internal resolution to match the new window size
+    local newWidth, newHeight = push:getWidth(), push:getHeight()
+    desktop:resize(newWidth, newHeight)
+    windowManager:resize(newWidth, newHeight)
+    statusBar:resize(newWidth, newHeight)
 end

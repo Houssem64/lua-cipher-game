@@ -33,10 +33,12 @@ function TextEditor:refreshFileList()
     self.selectedFileIndex = 1  -- Reset the selected index when refreshing
 end
 function TextEditor:draw(x, y, width, height)
+    local previousFont = love.graphics.getFont()
+    local font =  love.graphics.newFont("cour.ttf",18)
     -- Editor background
     love.graphics.setColor(0.95, 0.95, 0.95)
     love.graphics.rectangle("fill", x, y, width, height)
-    
+    love.graphics.setFont(font)
     -- Draw text
     love.graphics.setColor(0, 0, 0)
     local lineHeight = 20
@@ -58,6 +60,7 @@ function TextEditor:draw(x, y, width, height)
     if self.showFileDialog then
         self:drawFileDialog(x, y, width, height)
     end
+    love.graphics.setFont(previousFont)
 end
 
 
