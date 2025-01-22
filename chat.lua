@@ -1,4 +1,3 @@
--- chat.lua
 local Chat = {
     -- Default configuration
     config = {
@@ -20,12 +19,15 @@ function Chat.new(x, y, config)
     
     -- Initialize state using virtual resolution
     self.gameWidth = 1920
-    self.gameHeight = 1080
+    self.gameHeight = 500
+    
+    -- Y offset for dynamic positioning
+    self.y_offset = 150 or 0  -- Default to 0 if not provided
     
     -- Button properties (positioned relative to virtual resolution)
     self.button = {
         x = self.gameWidth - 60,  -- Position from right edge
-        y = 60,  -- Below status bar
+        y =  60,  -- Below status bar, adjusted by y_offset
         width = 40,
         height = 40,
         radius = self.config.button_radius
@@ -35,7 +37,7 @@ function Chat.new(x, y, config)
     self.panel = {
         x = self.gameWidth,  -- Start off screen
         target_x = self.gameWidth - self.config.panel_width,
-        y = 0,
+        y = self.y_offset,  -- Adjusted by y_offset
         width = self.config.panel_width,
         height = self.gameHeight,
         visible = false
@@ -62,6 +64,12 @@ function Chat:update(dt)
 end
 
 function Chat:draw()
+
+    local default_font = love.graphics.getFont()
+    local font = love.graphics.newFont("joty.otf",18)  -- Size for 1080p
+    font:setFilter("nearest", "nearest")  -- Set filter to nearest
+    love.graphics.setFont(font)
+
     -- Draw chat button
     love.graphics.setColor(unpack(self.config.button_color))
     love.graphics.circle('fill', 
@@ -72,8 +80,8 @@ function Chat:draw()
     -- Draw AI text on button
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("AI", 
-        self.button.x + 15, 
-        self.button.y + 15)
+        self.button.x + 7, 
+        self.button.y + 10)
 
     if self.panel.x < self.gameWidth then
         -- Draw chat panel
@@ -87,25 +95,26 @@ function Chat:draw()
         -- Draw messages
         love.graphics.setColor(unpack(self.config.text_color))
         for i, msg in ipairs(self.messages) do
-            love.graphics.print(msg, self.panel.x + 10, 30 * i + 10)
+            love.graphics.print(msg, self.panel.x + 10, self.panel.y + 30 * i + 10)
         end
         
         -- Draw input box at bottom
         love.graphics.setColor(0, 0, 0)
         love.graphics.rectangle('line', 
             self.panel.x + 10, 
-            self.gameHeight - 40, 
+            self.panel.y + self.gameHeight - 40, 
             self.panel.width - 20, 
             30)
         
         love.graphics.setColor(0, 0, 0)
         love.graphics.print(self.input_text, 
             self.panel.x + 15, 
-            self.gameHeight - 35)
+            self.panel.y + self.gameHeight - 35)
     end
     
     -- Reset color
     love.graphics.setColor(1, 1, 1)
+    love.graphics.setFont(default_font)
 end
 
 function Chat:mousepressed(x, y)
