@@ -147,29 +147,82 @@ function MusicApp:draw(x, y, width, height)
         local albumArt = love.graphics.newImage(albumArtPath)
         love.graphics.draw(albumArt, albumArtX, albumArtY, 0, albumArtSize / albumArt:getWidth(), albumArtSize / albumArt:getHeight())
 
+        -- Draw volume bar (vertical)
+        local volumeBarWidth = 10  -- Width of the volume bar
+        local volumeBarHeight = albumArtSize  -- Height of the volume bar (matches album art height)
+        local volumeBarX = albumArtX - volumeBarWidth - 20  -- Position to the left of the album art
+        local volumeBarY = albumArtY
+
+        -- Draw the volume bar background
+        love.graphics.setColor(0.2, 0.2, 0.2)  -- Dark gray background
+        love.graphics.rectangle("fill", volumeBarX, volumeBarY, volumeBarWidth, volumeBarHeight)
+
+        -- Draw the current volume level
+        love.graphics.setColor(0.2, 0.6, 1)  -- Spotify-like blue for the volume level
+        local volumeLevelHeight = volumeBarHeight * self.volume
+        love.graphics.rectangle("fill", volumeBarX, volumeBarY + (volumeBarHeight - volumeLevelHeight), volumeBarWidth, volumeLevelHeight)
+
+        -- Draw the volume handle (draggable circle)
+        local handleRadius = 8
+        local handleX = volumeBarX + volumeBarWidth / 2
+        local handleY = volumeBarY + (volumeBarHeight - volumeLevelHeight)
+        love.graphics.setColor(1, 1, 1)  -- White handle
+        love.graphics.circle("fill", handleX, handleY, handleRadius)
+
         -- Draw playback controls
         local controlsY = albumArtY + albumArtSize + 20
-        local playPauseX = self.panel.x + (self.panel.width - self.buttonSize * 3 - 20 * 2) / 2
+        local totalButtonsWidth = self.buttonSize * 3 + 20 * 2  -- Width of all buttons including spacing
+        local playPauseX = self.panel.x + (self.panel.width - totalButtonsWidth) / 2 + 60
 
         -- Previous button
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.polygon("fill", playPauseX - self.buttonSize - 20, controlsY + self.buttonSize / 2,
-                              playPauseX - 20, controlsY,
-                              playPauseX - 20, controlsY + self.buttonSize)
+        local prevButtonX = playPauseX - self.buttonSize - 20
+        local prevButtonY = controlsY
+        local outlinePadding = 5  -- Padding around the button for the outline
+
+        -- Draw outline for Previous button
+        love.graphics.setColor(1, 1, 1)  -- White outline
+        love.graphics.rectangle("line", prevButtonX - outlinePadding, prevButtonY - outlinePadding,
+                               self.buttonSize + 2 * outlinePadding, self.buttonSize + 2 * outlinePadding)
+
+        -- Draw Previous button
+        love.graphics.setColor(0.3, 0.3, 0.3)  -- Gray color for the button
+        love.graphics.polygon("fill", prevButtonX, prevButtonY + self.buttonSize / 2,
+                              prevButtonX + self.buttonSize, prevButtonY,
+                              prevButtonX + self.buttonSize, prevButtonY + self.buttonSize)
 
         -- Play/Pause button
+        local playPauseButtonX = playPauseX
+        local playPauseButtonY = controlsY
+
+        -- Draw outline for Play/Pause button
+        love.graphics.setColor(1, 1, 1)  -- White outline
+        love.graphics.rectangle("line", playPauseButtonX - outlinePadding, playPauseButtonY - outlinePadding,
+                               self.buttonSize + 2 * outlinePadding, self.buttonSize + 2 * outlinePadding)
+
+        -- Draw Play/Pause button
+        love.graphics.setColor(0.3, 0.3, 0.3)  -- Gray color for the button
         if self.isPlaying then
-            love.graphics.rectangle("fill", playPauseX, controlsY, self.buttonSize, self.buttonSize)
+            love.graphics.rectangle("fill", playPauseButtonX, playPauseButtonY, self.buttonSize, self.buttonSize)
         else
-            love.graphics.polygon("fill", playPauseX, controlsY,
-                                  playPauseX + self.buttonSize, controlsY + self.buttonSize / 2,
-                                  playPauseX, controlsY + self.buttonSize)
+            love.graphics.polygon("fill", playPauseButtonX, playPauseButtonY,
+                                  playPauseButtonX + self.buttonSize, playPauseButtonY + self.buttonSize / 2,
+                                  playPauseButtonX, playPauseButtonY + self.buttonSize)
         end
 
         -- Next button
-        love.graphics.polygon("fill", playPauseX + self.buttonSize + 20, controlsY,
-                              playPauseX + self.buttonSize * 2 + 20, controlsY + self.buttonSize / 2,
-                              playPauseX + self.buttonSize + 20, controlsY + self.buttonSize)
+        local nextButtonX = playPauseX + self.buttonSize + 20
+        local nextButtonY = controlsY
+
+        -- Draw outline for Next button
+        love.graphics.setColor(1, 1, 1)  -- White outline
+        love.graphics.rectangle("line", nextButtonX - outlinePadding, nextButtonY - outlinePadding,
+                               self.buttonSize + 2 * outlinePadding, self.buttonSize + 2 * outlinePadding)
+
+        -- Draw Next button
+        love.graphics.setColor(0.3, 0.3, 0.3)  -- Gray color for the button
+        love.graphics.polygon("fill", nextButtonX, nextButtonY,
+                              nextButtonX + self.buttonSize, nextButtonY + self.buttonSize / 2,
+                              nextButtonX, nextButtonY + self.buttonSize)
 
         -- Draw playlist
         love.graphics.setColor(unpack(self.config.text_color))
@@ -192,8 +245,8 @@ function MusicApp:draw(x, y, width, height)
     love.graphics.circle("fill", self.button.x + self.button.radius, self.button.y + self.button.radius, self.button.radius)
 
     -- Draw music logo (vertical lines that go from small to big to small)
-    local logoX = self.button.x + self.button.radius - 10  -- Center the logo horizontally
-    local logoY = self.button.y + self.button.radius - 10  -- Center the logo vertically
+    local logoX = self.button.x + self.button.radius - 11  -- Center the logo horizontally
+    local logoY = self.button.y + self.button.radius - 7  -- Center the logo vertically
     local lineWidth = 3  -- Width of each line
     local lineHeights = {5, 10, 15, 10, 5}  -- Heights of the lines (small to big to small)
 
@@ -215,23 +268,41 @@ function MusicApp:mousepressed(x, y, button)
         return true
     end
 
+    -- Handle volume bar interaction
+    if self.panel.visible then
+        local albumArtSize = 150
+        local albumArtX = self.panel.x + (self.panel.width - albumArtSize) / 2
+        local volumeBarX = albumArtX - 30  -- Position to the left of the album art
+        local volumeBarY = self.panel.y + 20
+        local volumeBarHeight = albumArtSize
+
+        if x >= volumeBarX and x <= volumeBarX + 10 and y >= volumeBarY and y <= volumeBarY + volumeBarHeight then
+            self.draggingVolume = true
+            self:updateVolumeFromMouse(y)
+        end
+    end
+
     -- Handle playlist item clicks
     if self.panel.visible and x >= self.panel.x and x <= self.panel.x + self.panel.width then
-        local playlistY = self.panel.y + 50
-        for i, song in ipairs(self.playlist) do
-            if y >= playlistY and y <= playlistY + 30 then
-                self.currentSongIndex = i
-                self:loadSong(i)
-                break
+        -- Calculate the starting Y position of the playlist
+        local controlsY = self.panel.y + 20 + 150 + 20  -- Y position of playback controls
+        local playlistStartY = controlsY + self.buttonSize + 50  -- Starting Y position of the playlist
+
+        -- Check if the click is within the playlist area
+        if y >= playlistStartY and y <= playlistStartY + (#self.playlist * 30) then
+            -- Calculate which song was clicked
+            local songIndex = math.floor((y - playlistStartY) / 30) + 1
+            if songIndex >= 1 and songIndex <= #self.playlist then
+                self.currentSongIndex = songIndex
+                self:loadSong(songIndex)
             end
-            playlistY = playlistY + 30
         end
     end
 
     -- Handle playback controls
     if self.panel.visible then
         local controlsY = self.panel.y + 20 + 150 + 20
-        local playPauseX = self.panel.x + (self.panel.width - self.buttonSize * 3 - 20 * 2) / 2
+        local playPauseX = self.panel.x + (self.panel.width - self.buttonSize * 3 - 20 * 2) / 2 + 60
 
         -- Check if previous button is clicked
         if x >= playPauseX - self.buttonSize - 20 and x <= playPauseX - 20 and
@@ -251,6 +322,31 @@ function MusicApp:mousepressed(x, y, button)
             self:nextSong()
         end
     end
+end
+function MusicApp:mousemoved(x, y, dx, dy)
+    if self.draggingVolume then
+        self:updateVolumeFromMouse(y)
+    end
+end
+
+function MusicApp:updateVolumeFromMouse(y)
+    local albumArtSize = 150
+    local albumArtY = self.panel.y + 20
+    local volumeBarHeight = albumArtSize
+
+    -- Calculate volume based on mouse position
+    local volumeY = math.max(albumArtY, math.min(albumArtY + volumeBarHeight, y))
+    self.volume = 1 - ((volumeY - albumArtY) / volumeBarHeight)
+    self.volume = math.max(0, math.min(1, self.volume))  -- Clamp between 0 and 1
+
+    -- Update audio volume
+    if self.currentAudioSource then
+        self.currentAudioSource:setVolume(self.volume)
+    end
+end
+
+function MusicApp:mousereleased(x, y, button)
+    self.draggingVolume = false
 end
 
 function MusicApp:keypressed(key)
