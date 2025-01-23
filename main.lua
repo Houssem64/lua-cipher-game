@@ -2,129 +2,142 @@ local Desktop = require("desktop")
 local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
 local NetworkManager = require("modules.network_manager")
---local debug = require('libraries.lovedebug')
 local FileSystem = require("filesystem")
 local Chat = require 'chat'
-
-
-
-
-
-
+local Missions = require("missions")
+local MissionsManager = require("missions_manager")
+local MainMenu = require("main_menu")  -- Add this line to import MainMenu
 
 local desktop
 local statusBar
 local windowManager
 local networkManager
+local mainMenu  -- Add this line to declare mainMenu globally
 
 function love.load()
     FileSystem:loadState() 
- -- Enable antialiasing
- love.graphics.setDefaultFilter("nearest", "nearest", 1)
     
- -- Set up the font with a size that works well for 1080p
- --font = love.graphics.newFont(32)
- --love.graphics.setFont(font)
- 
- chat = Chat.new(nil, nil, {
-    button_color = {0.3, 0.7, 0.9},
-    panel_width = 350
-})
+    -- Initialize main menu first
+    mainMenu = MainMenu.new()
+    
+    love.graphics.setDefaultFilter("nearest", "nearest", 1)
+    
+    chat = Chat.new(nil, nil, {
+        button_color = {0.3, 0.7, 0.9},
+        panel_width = 350
+    })
 
--- Set message callback
-chat:setMessageCallback(function(message)
-    -- Simulate AI response
-    chat:addMessage("I received: " .. message)
-end)
+    chat:setMessageCallback(function(message)
+        chat:addMessage("I received: " .. message)
+    end)
 
+    -- Rest of the existing load function remains the same...
+    missions = Missions.new(0, 0)
+    missionsManager = MissionsManager.new()
 
- -- Get the screen dimensions
- screenWidth = love.graphics.getWidth()
- screenHeight = love.graphics.getHeight()
- 
- -- Set up virtual resolution scaling
- gameWidth = 1920
- gameHeight = 1080
- 
- -- Calculate scaling factors
- scaleX = screenWidth / gameWidth
- scaleY = screenHeight / gameHeight
- scale = math.min(scaleX, scaleY)
- 
- -- Calculate the offset to center the game window
- offsetX = (screenWidth - (gameWidth * scale)) / 2
- offsetY = (screenHeight - (gameHeight * scale)) / 2
+    -- Get the screen dimensions
+    screenWidth = love.graphics.getWidth()
+    screenHeight = love.graphics.getHeight()
+    
+    -- Set up virtual resolution scaling
+    gameWidth = 1920
+    gameHeight = 1080
+    
+    -- Calculate scaling factors
+    scaleX = screenWidth / gameWidth
+    scaleY = screenHeight / gameHeight
+    scale = math.min(scaleX, scaleY)
+    
+    -- Calculate the offset to center the game window
+    offsetX = (screenWidth - (gameWidth * scale)) / 2
+    offsetY = (screenHeight - (gameHeight * scale)) / 2
 
-  
- 
-    --love.window.setFullscreen(true, "exclusive")
+    missionsManager:addMission("Find the lost artifact")
+    missionsManager:addMission("Defeat the dragon")
+    missionsManager:addMission("Rescue the villagers")
+    
+    for _, mission in ipairs(missionsManager:getMissions()) do
+        missions:addMission(mission)
+    end
 
-    -- Initialize desktop, window manager, and status bar
-   --[[  love.graphics.setDefaultFilter("nearest", "nearest") ]]
     desktop = Desktop:new()
     windowManager = WindowManager:new()
-  --  networkManager = NetworkManager:new()
     statusBar = StatusBar:new(networkManager)
     statusBar.windowManager = windowManager
-
-    -- Initialize some sample networks
-  --[[   networkManager:addNetwork("Home WiFi", 80, true)
-    networkManager:addNetwork("Coffee Shop", 60, false)
-    networkManager:addNetwork("Office Network", 100, true) ]]
 end
 
 function love.update(dt)
-    windowManager:update(dt)
-    chat:update(dt)
-    -- NetworkManager doesn't have an update function in the simplified version
+    -- Update main menu first
+    mainMenu:update(dt)
+    
+    -- Only update other components if main menu is not active
+    if not mainMenu.isActive then
+        windowManager:update(dt)
+        chat:update(dt)
+        missions:update(dt)
+    end
 end
 
---[[ font = love.graphics.newFont("rob.ttf",256)
-font:setFilter("nearest", "nearest") ]]
-
 function love.draw()
-    
-     -- Set up the coordinate system for 1080p
-     love.graphics.push()
-     love.graphics.translate(offsetX, offsetY)
-     love.graphics.scale(scale, scale)
+    love.graphics.push()
+    love.graphics.translate(offsetX, offsetY)
+    love.graphics.scale(scale, scale)
   
-   windowManager:draw()
-   chat:draw()
-   statusBar:draw()
+    -- Draw game components only if main menu is not active
+    if not mainMenu.isActive then
+        windowManager:draw()
+        chat:draw()
+        missions:draw()
+        statusBar:draw()
+    end
    
-  
-
-  
-
-   -- networkManager:draw(love.graphics.getWidth() - 200, 0)  -- Adjust position as needed
-   love.graphics.pop()
+    -- Always draw main menu (it will handle its own visibility)
+    mainMenu:draw()
    
+    love.graphics.pop()
 end
 
 function love.keypressed(key)
+    -- Always check main menu first
+    if mainMenu:keypressed(key) then
+        return  -- If main menu handled the key, don't process other inputs
+    end
+    
     windowManager:keypressed(key)
     chat:keypressed(key)
---    networkManager:keypressed(key)
+
+    if key == "c" then
+        missionsManager:completeMission(1)
+        missions:completeMission(1)
+    end
 end
 
 function love.textinput(text)
-    windowManager:textinput(text)
-    chat:textinput(text)
-  --  networkManager:textinput(text)
+    -- Only process text input if main menu is not active
+    if not mainMenu.isActive then
+        windowManager:textinput(text)
+        chat:textinput(text)
+    end
 end
 
 function love.mousepressed(x, y, button)
-    -- Convert screen coordinates to game coordinates
     local virtualX = (x - offsetX) / scale
     local virtualY = (y - offsetY) / scale
     
-    if virtualY <= STATUSBAR_HEIGHT then
-        statusBar:mousepressed(virtualX, virtualY, button)
-    else
-        windowManager:mousepressed(virtualX, virtualY, button)
+    -- Always check main menu first
+    if mainMenu:mousepressed(virtualX, virtualY) then
+        return  -- If main menu handled the mouse press, don't process other inputs
     end
-    chat:mousepressed(virtualX, virtualY)
+    
+    if not mainMenu.isActive then
+        if virtualY <= STATUSBAR_HEIGHT then
+            statusBar:mousepressed(virtualX, virtualY, button)
+        else
+            windowManager:mousepressed(virtualX, virtualY, button)
+        end
+        chat:mousepressed(virtualX, virtualY)
+        missions:mousepressed(virtualX, virtualY)
+    end
 end
 
 function love.mousereleased(x, y, button)
