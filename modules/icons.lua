@@ -15,7 +15,8 @@ function Icons:load()
         terminal = self:createTerminalIcon(),
         files = self:createFilesIcon(),
         email = self:createEmailIcon(),
-        text_editor = self:createTextEditorIcon()
+        text_editor = self:createTextEditorIcon(),
+        music = self:createMusicIcon()  -- Add the music icon
     }
 end
 local default_font = love.graphics.getFont()
@@ -91,7 +92,33 @@ function Icons:createTextEditorIcon()
     love.graphics.setCanvas()
     return canvas
 end
+function Icons:createMusicIcon()
+    local canvas = love.graphics.newCanvas(64, 64)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear()
 
+    -- Draw a music note icon
+    love.graphics.setColor(0.6, 0.2, 0.8)  -- Purple color for the music note
+    love.graphics.circle("fill", 32, 32, 20)  -- Head of the note
+    love.graphics.rectangle("fill", 28, 52, 8, 20)  -- Stem of the note
+
+    -- Add a highlight to the note
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.circle("fill", 32, 32, 18)  -- Highlight on the head
+    love.graphics.rectangle("fill", 28, 52, 8, 18)  -- Highlight on the stem
+
+    -- Add a second smaller note for detail
+    love.graphics.setColor(0.6, 0.2, 0.8)
+    love.graphics.circle("fill", 48, 16, 12)  -- Head of the second note
+    love.graphics.rectangle("fill", 46, 28, 4, 12)  -- Stem of the second note
+
+    -- Add a border around the icon
+    love.graphics.setColor(0.7, 0.7, 0.7)
+    love.graphics.rectangle("line", 4, 4, 56, 56)
+
+    love.graphics.setCanvas()
+    return canvas
+end
 function Icons:get(name)
     return self.icons[name]
 end

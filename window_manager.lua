@@ -244,6 +244,7 @@ function WindowManager:createWindow(title, x, y, width, height, app)
     local window = Window:new(title, width, height)
     if type(app) == "table" then
         window.app = app
+            
     end
     table.insert(self.windows, window)
     self.activeWindow = window

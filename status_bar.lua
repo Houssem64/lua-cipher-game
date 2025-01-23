@@ -2,6 +2,7 @@ local Terminal = require("apps.terminal")
 local TextEditor = require("apps.text_editor")
 local FileManager = require("apps.file_manager")
 local EmailClient = require("apps.email_client")
+local MusicApp = require("apps.music_app")
 local Icons = require("modules.icons")
 
 local StatusBar = {}
@@ -25,7 +26,8 @@ function StatusBar:new()
             {name = "Terminal", icon = "terminal", class = Terminal},
             {name = "Files", icon = "files", class = FileManager},
             {name = "Email", icon = "email", class = EmailClient},
-            {name = "Text Editor", icon = "text_editor", class = TextEditor}
+            {name = "Text Editor", icon = "text_editor", class = TextEditor},
+            {name = "Music", icon = "music", class = MusicApp}
         }
     }
     obj.icons:load()

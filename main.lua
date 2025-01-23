@@ -7,12 +7,14 @@ local Chat = require 'chat'
 local Missions = require("missions")
 local MissionsManager = require("missions_manager")
 local MainMenu = require("main_menu")  -- Add this line to import MainMenu
+local MusicApp = require("apps.music_app")  -- Add this line to import MusicApp
 
 local desktop
 local statusBar
 local windowManager
 local networkManager
 local mainMenu  -- Add this line to declare mainMenu globally
+local musicApp  -- Add this line to declare musicApp globally
 
 function love.load()
     FileSystem:loadState() 
@@ -21,7 +23,10 @@ function love.load()
     mainMenu = MainMenu.new()
     
     love.graphics.setDefaultFilter("nearest", "nearest", 1)
-    
+
+
+ 
+
     chat = Chat.new(nil, nil, {
         button_color = {0.3, 0.7, 0.9},
         panel_width = 350
@@ -59,6 +64,7 @@ function love.load()
     for _, mission in ipairs(missionsManager:getMissions()) do
         missions:addMission(mission)
     end
+    musicApp = MusicApp.new()  -- Create a new instance of MusicApp
 
     desktop = Desktop:new()
     windowManager = WindowManager:new()
@@ -75,6 +81,8 @@ function love.update(dt)
         windowManager:update(dt)
         chat:update(dt)
         missions:update(dt)
+        musicApp:update(dt)  -- Update MusicApp
+
     end
 end
 
@@ -86,8 +94,11 @@ function love.draw()
     -- Draw game components only if main menu is not active
     if not mainMenu.isActive then
         windowManager:draw()
+        musicApp:draw(0, 0, gameWidth, gameHeight)  -- Draw MusicApp
         chat:draw()
         missions:draw()
+      
+
         statusBar:draw()
     end
    
@@ -110,6 +121,8 @@ function love.keypressed(key)
         missionsManager:completeMission(1)
         missions:completeMission(1)
     end
+    musicApp:keypressed(key)  -- Pass key events to MusicApp
+
 end
 
 function love.textinput(text)
@@ -137,7 +150,10 @@ function love.mousepressed(x, y, button)
         end
         chat:mousepressed(virtualX, virtualY)
         missions:mousepressed(virtualX, virtualY)
+        musicApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to MusicApp
+
     end
+    
 end
 
 function love.mousereleased(x, y, button)
@@ -152,4 +168,5 @@ function love.mousemoved(x, y, dx, dy)
     local virtualDX = dx / scale
     local virtualDY = dy / scale
     windowManager:mousemoved(virtualX, virtualY, virtualDX, virtualDY)
+    mainMenu:mousemoved(virtualX, virtualY)
 end
