@@ -25,7 +25,7 @@ function Chat.new(x, y, config)
     self.gameHeight = 500
     
     -- Y offset for dynamic positioning
-    self.y_offset = 200 or 0  -- Default to 0 if not provided
+    self.y_offset = 250 or 0  -- Default to 0 if not provided
     
     -- Button properties (positioned relative to virtual resolution)
     self.button = {

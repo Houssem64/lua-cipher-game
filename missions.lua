@@ -22,7 +22,7 @@ function Missions.new(x, y, config)
     self.gameHeight = 500
     
     -- Y offset for dynamic positioning
-    self.y_offset = 200 or 0  -- Default to 0 if not provided
+    self.y_offset = 250 or 0  -- Default to 0 if not provided
     
     -- Mission button properties
     self.button = {
