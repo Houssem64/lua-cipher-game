@@ -145,6 +145,8 @@ function MusicApp:draw(x, y, width, height)
 
         local albumArtPath = self.playlist[self.currentSongIndex].albumArt
         local albumArt = love.graphics.newImage(albumArtPath)
+        love.graphics.setColor(1, 1, 1, 0.6)  -- Slightly transparent
+
         love.graphics.draw(albumArt, albumArtX, albumArtY, 0, albumArtSize / albumArt:getWidth(), albumArtSize / albumArt:getHeight())
 
         -- Draw volume bar (vertical)
@@ -236,6 +238,8 @@ function MusicApp:draw(x, y, width, height)
                 love.graphics.setColor(self.textColor)
             end
             love.graphics.print(song.title, self.panel.x + 10, playlistY)
+            love.graphics.print("|", self.panel.x + 150, playlistY)
+            love.graphics.print(song.artist, self.panel.x+200 , playlistY)
             playlistY = playlistY + 30
         end
     end

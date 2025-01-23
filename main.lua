@@ -8,6 +8,7 @@ local Missions = require("missions")
 local MissionsManager = require("missions_manager")
 local MainMenu = require("main_menu")  -- Add this line to import MainMenu
 local MusicApp = require("apps.music_app")  -- Add this line to import MusicApp
+local moonshine = require 'moonshine'
 
 local desktop
 local statusBar
@@ -18,7 +19,11 @@ local musicApp  -- Add this line to declare musicApp globally
 
 function love.load()
     FileSystem:loadState() 
-    
+    effect = moonshine(moonshine.effects.filmgrain)
+    .chain(moonshine.effects.vignette)
+effect.filmgrain.size = 2
+
+
     -- Initialize main menu first
     mainMenu = MainMenu.new()
     
@@ -93,18 +98,19 @@ function love.draw()
   
     -- Draw game components only if main menu is not active
     if not mainMenu.isActive then
+
         windowManager:draw()
         musicApp:draw(0, 0, gameWidth, gameHeight)  -- Draw MusicApp
         chat:draw()
         missions:draw()
-      
+
 
         statusBar:draw()
     end
-   
+
     -- Always draw main menu (it will handle its own visibility)
     mainMenu:draw()
-   
+
     love.graphics.pop()
 end
 
