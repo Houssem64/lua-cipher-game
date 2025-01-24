@@ -130,8 +130,7 @@ function MusicApp:draw(x, y, width, height)
     love.graphics.setFont(font)
 
     -- Draw background
-    love.graphics.setColor(self.backgroundColor)
-    love.graphics.rectangle("fill", x, y, width, height)
+
 
     -- Draw sliding panel
     if self.panel.x < self.gameWidth then

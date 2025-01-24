@@ -9,7 +9,7 @@ local MissionsManager = require("missions_manager")
 local MainMenu = require("main_menu")  -- Add this line to import MainMenu
 local MusicApp = require("apps.music_app")  -- Add this line to import MusicApp
 local moonshine = require 'moonshine'
-
+local ReelsApp = require("apps.reelsapp")
 local desktop
 local statusBar
 local windowManager
@@ -70,7 +70,7 @@ effect.filmgrain.size = 2
         missions:addMission(mission)
     end
     musicApp = MusicApp.new()  -- Create a new instance of MusicApp
-
+    reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
     desktop = Desktop:new()
     windowManager = WindowManager:new()
     statusBar = StatusBar:new(networkManager)
@@ -87,6 +87,7 @@ function love.update(dt)
         chat:update(dt)
         missions:update(dt)
         musicApp:update(dt)  -- Update MusicApp
+        reelsApp:update(dt)  -- Update ReelsApp
 
     end
 end
@@ -98,14 +99,15 @@ function love.draw()
   
     -- Draw game components only if main menu is not active
     if not mainMenu.isActive then
-
+      
         windowManager:draw()
-        musicApp:draw(0, 0, gameWidth, gameHeight)  -- Draw MusicApp
+        reelsApp:draw()  -- Draw ReelsApp
+        musicApp:draw(0,0,gameWidth,gameHeight)  -- Draw MusicApp
         chat:draw()
         missions:draw()
-
-
+       
         statusBar:draw()
+      
     end
 
     -- Always draw main menu (it will handle its own visibility)
@@ -128,6 +130,7 @@ function love.keypressed(key)
         missions:completeMission(1)
     end
     musicApp:keypressed(key)  -- Pass key events to MusicApp
+    reelsApp:keypressed(key)  -- Pass key events to ReelsApp
 
 end
 
@@ -157,7 +160,7 @@ function love.mousepressed(x, y, button)
         chat:mousepressed(virtualX, virtualY)
         missions:mousepressed(virtualX, virtualY)
         musicApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to MusicApp
-
+        reelsApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to ReelsApp
     end
     
 end
