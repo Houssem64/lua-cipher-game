@@ -4,9 +4,19 @@ local Missions = {
         button_radius = 20,
         panel_width = 500,
         slide_speed = 1000,
-        button_color = {0.6, 0.4, 1},  -- Purple color for mission button
-        panel_color = {1, 1, 1, 0.9},  -- Semi-transparent white
-        text_color = {0, 0, 0},        -- Black text
+        button_color = {0.6, 0.4, 1},
+        panel_color = {0.95, 0.95, 0.98, 0.95},  -- Lighter background
+        text_color = {0.2, 0.2, 0.2},
+        panel_border_color = {0.8, 0.8, 0.85},
+        panel_radius = 15,
+        mission_height = 60,
+        mission_padding = 15,
+        hover_color = {0.97, 0.97, 1, 0.95},
+        progress_bar_color = {0.6, 0.4, 1, 0.8},
+        progress_bg_color = {0.9, 0.9, 0.9},
+        completed_color = {0.4, 0.8, 0.4},
+        header_size = 24,
+        mission_size = 18
     }
 }
 Missions.__index = Missions
@@ -62,18 +72,30 @@ end
 
 function Missions:draw()
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 18)  -- Size for 1080p
-    font:setFilter("nearest", "nearest")  -- Set filter to nearest
-    love.graphics.setFont(font)
+    local header_font = love.graphics.newFont("joty.otf", self.config.header_size)
+    local mission_font = love.graphics.newFont("joty.otf", self.config.mission_size)
+    header_font:setFilter("nearest", "nearest")
+    mission_font:setFilter("nearest", "nearest")
 
-    -- Draw mission button
+    -- Draw mission button with glow effect
+    love.graphics.setColor(self.config.button_color[1], self.config.button_color[2], 
+        self.config.button_color[3], 0.3)
+    love.graphics.circle('fill', 
+        self.button.x + self.button.radius, 
+        self.button.y + self.button.radius, 
+        self.button.radius + 4)
+    
     love.graphics.setColor(unpack(self.config.button_color))
     love.graphics.circle('fill', 
         self.button.x + self.button.radius, 
         self.button.y + self.button.radius, 
         self.button.radius)
-        
-    -- Draw "M" text on mission button
+    
+    -- Draw "M" text with shadow
+    love.graphics.setColor(0, 0, 0, 0.2)
+    love.graphics.print("M", 
+        self.button.x + 13, 
+        self.button.y + 11)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("M", 
         self.button.x + 12, 
@@ -81,37 +103,98 @@ function Missions:draw()
 
     -- Draw mission panel
     if self.panel.x < self.gameWidth then
+        -- Panel background with rounded corners
         love.graphics.setColor(unpack(self.config.panel_color))
         love.graphics.rectangle('fill', 
             self.panel.x, 
             self.panel.y, 
             self.panel.width, 
-            self.panel.height)
+            self.panel.height,
+            self.config.panel_radius)
+            
+        -- Panel border
+        love.graphics.setColor(unpack(self.config.panel_border_color))
+        love.graphics.rectangle('line', 
+            self.panel.x, 
+            self.panel.y, 
+            self.panel.width, 
+            self.panel.height,
+            self.config.panel_radius)
         
-        -- Draw mission content
+        -- Header
+        love.graphics.setFont(header_font)
         love.graphics.setColor(unpack(self.config.text_color))
         love.graphics.print("Missions", 
-            self.panel.x + 10, 
-            self.panel.y + 10)
+            self.panel.x + 20, 
+            self.panel.y + 20)
         
-        -- Draw list of missions
-        local mission_y = self.panel.y + 50
+        -- Draw missions list
+        love.graphics.setFont(mission_font)
+        local mission_y = self.panel.y + 80
+        
         for i, mission in ipairs(self.missions) do
-            if mission.completed then
-                love.graphics.setColor(0, 1, 0)  -- Green for completed missions
+            -- Mission background (with hover effect)
+            local hover = love.mouse.getY() >= mission_y and 
+                         love.mouse.getY() <= mission_y + self.config.mission_height
+            
+            if hover then
+                love.graphics.setColor(unpack(self.config.hover_color))
             else
-                love.graphics.setColor(unpack(self.config.text_color))  -- Default color
+                love.graphics.setColor(1, 1, 1, 0.5)
             end
-            love.graphics.print(mission.text, self.panel.x + 10, mission_y)
-            mission_y = mission_y + 30
+            
+            love.graphics.rectangle('fill',
+                self.panel.x + 10,
+                mission_y,
+                self.panel.width - 20,
+                self.config.mission_height,
+                8)
+            
+            -- Progress bar
+            love.graphics.setColor(unpack(self.config.progress_bg_color))
+            love.graphics.rectangle('fill',
+                self.panel.x + 20,
+                mission_y + self.config.mission_height - 12,
+                self.panel.width - 40,
+                4,
+                2)
+                
+            if mission.completed then
+                love.graphics.setColor(unpack(self.config.completed_color))
+                love.graphics.rectangle('fill',
+                    self.panel.x + 20,
+                    mission_y + self.config.mission_height - 12,
+                    self.panel.width - 40,
+                    4,
+                    2)
+            else
+                love.graphics.setColor(unpack(self.config.progress_bar_color))
+                love.graphics.rectangle('fill',
+                    self.panel.x + 20,
+                    mission_y + self.config.mission_height - 12,
+                    (self.panel.width - 40) * (mission.progress or 0),
+                    4,
+                    2)
+            end
+            
+            -- Mission text
+            if mission.completed then
+                love.graphics.setColor(unpack(self.config.completed_color))
+            else
+                love.graphics.setColor(unpack(self.config.text_color))
+            end
+            
+            love.graphics.print(mission.text,
+                self.panel.x + 25,
+                mission_y + self.config.mission_padding)
+                
+            mission_y = mission_y + self.config.mission_height + 10
         end
     end
     
-    -- Reset color
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(default_font)
 end
-
 function Missions:mousepressed(x, y)
     -- Check if mission button was clicked
     local dx = x - (self.button.x + self.button.radius)

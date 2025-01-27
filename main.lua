@@ -62,13 +62,39 @@ effect.filmgrain.size = 2
     offsetX = (screenWidth - (gameWidth * scale)) / 2
     offsetY = (screenHeight - (gameHeight * scale)) / 2
 
-    missionsManager:addMission("Find the lost artifact")
-    missionsManager:addMission("Defeat the dragon")
-    missionsManager:addMission("Rescue the villagers")
-    
+  -- Initialize mission systems
+  missionsManager = MissionsManager.new()
+  missions = Missions.new()
+  
+  -- Add some example missions
+  missionsManager:addMission({
+      text = "Collect 10 coins",
+      description = "Find and collect 10 gold coins",
+      reward = "100 XP"
+  })
+  
+  missionsManager:addMission({
+      text = "Defeat the boss",
+      description = "Find and defeat the dungeon boss",
+      reward = "Legendary Sword"
+  })
+  
+  missionsManager:addMission({
+      text = "Explore the cave",
+      description = "Discover all areas of the mysterious cave",
+      reward = "Map Fragment"
+  })
+   -- Sync missions with display
     for _, mission in ipairs(missionsManager:getMissions()) do
-        missions:addMission(mission)
+        missions:addMission(mission.text)
     end
+    
+    -- Set some progress for demonstration
+    missionsManager:updateProgress(1, 0.7) -- 70% complete
+    missionsManager:completeMission(2)     -- Completed
+    missionsManager:updateProgress(3, 0.3) -- 30% complete
+    
+
     musicApp = MusicApp.new()  -- Create a new instance of MusicApp
     reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
     desktop = Desktop:new()
