@@ -319,47 +319,49 @@ end
 local default_font = love.graphics.getFont()
 
 function Terminal:draw(x, y, width, height)
-    -- Terminal background
-    love.graphics.setColor(0, 0, 0)
+    -- Draw terminal background
+    love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, width, height)
     
     -- Draw terminal text
     love.graphics.setColor(0, 1, 0)  -- Green text
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 24)  -- Adjusted font size for 1080p
-    font:setFilter("nearest", "nearest")  -- Set filter to nearest
-
+    
+    -- Use a monospace font that properly supports UTF-8
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 24)
+    font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
     
-    local lineHeight = font:getHeight() * 1.2  -- Add some line spacing
+    local lineHeight = font:getHeight() * 1.2
     local visibleLines = {}
     
-    -- Add history lines
+    -- Safely process history lines
     for _, line in ipairs(self.history) do
-        table.insert(visibleLines, line)
+        -- Ensure the line is a valid string
+        if type(line) == "string" then
+            table.insert(visibleLines, line)
+        end
     end
     
-    -- Add current prompt and line
+    -- Add current prompt and line with proper UTF-8 handling
     local prompt = self:getCurrentPrompt()
-    local currentText = prompt .. (self.state == States.PASSWORD and string.rep("*", #self.currentLine) or self.currentLine)
+    local currentText = prompt
+    if self.state == States.PASSWORD then
+        currentText = currentText .. string.rep("*", #self.currentLine)
+    else
+        -- Ensure currentLine is a valid string
+        currentText = currentText .. (type(self.currentLine) == "string" and self.currentLine or "")
+    end
     table.insert(visibleLines, currentText)
     
     -- Draw visible lines with scrolling
     local startLine = math.max(1, #visibleLines - math.floor((height - 20) / lineHeight) + 1)
     for i = startLine, #visibleLines do
-        local lineY = y + ((i - startLine) * lineHeight) + 10  -- Add top padding
-        if lineY + lineHeight > y + height - 10 then break end  -- Add bottom padding
-        love.graphics.print(visibleLines[i], x + 20, lineY)  -- Increased left padding
+        local lineY = y + ((i - startLine) * lineHeight) + 10
+        -- Safe print with error handling
+        pcall(love.graphics.print, visibleLines[i], x + 10, lineY)
     end
     
-    -- Draw cursor
-    if self.cursorBlink and visibleLines[#visibleLines] then
-        local cursorX = x + 20 + font:getWidth(currentText)
-        local cursorY = y + ((#visibleLines - startLine) * lineHeight) + 10
-        love.graphics.rectangle("fill", cursorX, cursorY, 2, lineHeight - 2)  -- Thinner cursor
-    end
-    love.graphics.setColor(0.3, 0.3, 0.3)
-    love.graphics.rectangle("line", x, y, width, height)
     love.graphics.setFont(default_font)
 end
 
