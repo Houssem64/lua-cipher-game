@@ -89,10 +89,19 @@ local mission1 = missionsManager:addMission({
 
 -- Sync missions with display
 for _, mission in ipairs(missionsManager:getMissions()) do
+    local formattedSubtasks = {}
+    for _, subtask in ipairs(mission.subtasks) do
+        if type(subtask) == "table" then
+            table.insert(formattedSubtasks, subtask.text)
+        else
+            table.insert(formattedSubtasks, subtask)
+        end
+    end
+    
     missions:addMission({
         text = mission.text,
         description = mission.description,
-        subtasks = mission.subtasks,
+        subtasks = formattedSubtasks,
         completed = mission.completed,
         progress = mission.progress,
         subtaskProgress = mission.completedSubtasks and (mission.completedSubtasks / #mission.subtasks) or 0
@@ -187,10 +196,19 @@ if key == "c" then
         missionsManager:updateProgress(1, nextSubtaskIndex, true)
         
         -- Update mission display
+        local formattedSubtasks = {}
+        for _, subtask in ipairs(currentMission.subtasks) do
+            if type(subtask) == "table" then
+                table.insert(formattedSubtasks, subtask.text)
+            else
+                table.insert(formattedSubtasks, subtask)
+            end
+        end
+        
         missions.missions[1] = {
             text = currentMission.text,
             description = currentMission.description,
-            subtasks = currentMission.subtasks,
+            subtasks = formattedSubtasks,
             completed = currentMission.completed,
             progress = currentMission.progress,
             subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks
