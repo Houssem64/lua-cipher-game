@@ -1,7 +1,7 @@
 local Chat = {
     config = {
         button_radius = 20,
-        panel_width = 500,
+        panel_width = 400, -- Increased panel width
         slide_speed = 1000,
         button_color = {0.4, 0.6, 1},
         panel_color = {1, 1, 1, 0.9},
@@ -23,10 +23,11 @@ function Chat.new(x, y, config)
     -- Merge provided config with defaults
     self.config = setmetatable(config or {}, {__index = Chat.config})
     
-    -- Available commands with subcommands
+    -- Available commands with subcommands and responses
     self.commands = {
         help = {
             desc = "Show available commands",
+            response = "I'm here to assist you with various hacking and security tasks. Here are the available topics:",
             subcommands = {
                 "network - Network penetration basics",
                 "encryption - Encryption and decryption guides",
@@ -38,22 +39,27 @@ function Chat.new(x, y, config)
         },
         scan = {
             desc = "Scan for vulnerabilities",
+            response = "Initiating system scan for potential vulnerabilities. This may take a few moments...",
             subcommands = {}
         },
         exploit = {
             desc = "Run exploit tools",
+            response = "Preparing exploit toolkit. Please specify your target and desired exploit method.",
             subcommands = {}
         },
         decrypt = {
             desc = "Decrypt secured data",
+            response = "Ready to decrypt data. Please provide the encrypted content and any known encryption parameters.",
             subcommands = {}
         },
         clear = {
             desc = "Clear chat history",
+            response = "Chat history has been cleared.",
             subcommands = {}
         },
         save = {
             desc = "Save chat history",
+            response = "Chat history has been saved successfully.",
             subcommands = {}
         }
     }
@@ -108,6 +114,17 @@ function Chat.new(x, y, config)
     self.input_text = ""  -- Current input text
     self.callback = nil  -- Callback for sending messages
     
+    -- Typing animation state
+    self.typing = {
+        active = false,
+        full_text = "",
+        current_text = "",
+        word_index = 1,
+        words = {},
+        timer = 0,
+        speed = 0.05  -- Time between words
+    }
+    
     -- Siri animation state
     self.siri = {
         state = "idle",  -- Current state (idle, thinking, talking, happy, sad)
@@ -131,6 +148,28 @@ function Chat:update(dt)
         self.panel.x = math.min(self.gameWidth, 
             self.panel.x + self.config.slide_speed * dt)
     end
+
+    -- Update typing animation (letter by letter)
+    if self.typing.active then
+        self.typing.timer = self.typing.timer + dt
+        if self.typing.timer >= self.typing.speed then
+            self.typing.timer = 0
+            local next_char_pos = #self.typing.current_text + 1
+            if next_char_pos <= #self.typing.full_text then
+                self.typing.current_text = self.typing.full_text:sub(1, next_char_pos)
+                
+                -- Update the last message with current text
+                if #self.messages > 0 then
+                    local timestamp = os.date("%H:%M")
+                    self.messages[#self.messages] = string.format("[%s] AI: %s", timestamp, self.typing.current_text)
+                end
+            else
+                self.typing.active = false
+                self.siri.state = "idle"
+            end
+        end
+    end
+
     
     -- Update Siri animations
     self.siri.timer = self.siri.timer + dt
@@ -432,24 +471,12 @@ function Chat:keypressed(key, scancode, isrepeat)
         -- Process commands
         if self.input_text:sub(1,1) == "/" then
             local cmd = self.input_text:match("^/(%w+)")
-            if self.commands[cmd] then
-                -- Add user message
-                table.insert(self.messages, "You: " .. self.input_text)
-                
-                -- Call message callback if set
-                if self.callback then
-                    self.callback(self.input_text)
-                end
-            end
-        else
-            -- Add user message
-            table.insert(self.messages, "You: " .. self.input_text)
-            
-            -- Call message callback if set
-            if self.callback then
-                self.callback(self.input_text)
+            if self.commands[cmd] and self.commands[cmd].response then
+                -- Add AI response with typing animation
+                self:addMessage(self.commands[cmd].response)
             end
         end
+
         
         -- Clear input and hide dropdown
         self.input_text = ""
@@ -526,10 +553,32 @@ function Chat:addMessage(text, from)
                :gsub(":heart:", "❤️")
     end
     
-    -- Add AI response with timestamp
-    local timestamp = os.date("%H:%M")
-    local message = string.format("[%s] %s: %s", timestamp, from or "AI", text)
-    table.insert(self.messages, message)
+    if from then
+        -- Add user message immediately
+        local timestamp = os.date("%H:%M")
+        local message = string.format("[%s] %s: %s", timestamp, from, text)
+        table.insert(self.messages, message)
+        
+        -- If it's a command, get the response
+        if text:sub(1,1) == "/" then
+            local cmd = text:match("^/(%w+)")
+            if self.commands[cmd] and self.commands[cmd].response then
+                -- Add AI response with typing animation
+                self:addMessage(self.commands[cmd].response)
+            end
+        end
+    else
+        -- Start typing animation for AI response
+        local timestamp = os.date("%H:%M")
+        table.insert(self.messages, string.format("[%s] AI: ", timestamp))
+        
+        self.typing.full_text = text
+        self.typing.current_text = ""
+        self.typing.timer = 0
+        self.typing.active = true
+        self.typing.speed = 0.03  -- Faster speed for letter-by-letter typing
+        self.siri.state = "talking"
+    end
     
     -- Keep last 5 messages instead of just 2
     while #self.messages > 5 do
@@ -549,7 +598,19 @@ function Chat:addMessage(text, from)
 end
 
 function Chat:setMessageCallback(callback)
-    self.callback = callback
+    -- Wrap the callback to handle responses
+    self.callback = function(text)
+        -- Get command response if it's a command
+        if text:sub(1,1) == "/" then
+            local cmd = text:match("^/(%w+)")
+            if self.commands[cmd] and self.commands[cmd].response then
+                self:addMessage(self.commands[cmd].response)
+                return
+            end
+        end
+        -- For non-commands, add typing animation response
+        self:addMessage("I am processing your request...")
+    end
 end
 
 return Chat
