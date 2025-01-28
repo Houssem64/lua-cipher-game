@@ -93,17 +93,13 @@ function Missions:draw()
         self.button.y + self.button.radius, 
         self.button.radius)
     
-    -- Draw "M" text with shadow
-    love.graphics.setColor(0, 0, 0, 0.2)
-    love.graphics.print("M", 
-        self.button.x + 13, 
-        self.button.y + 11)
+    -- Draw "M" text
     love.graphics.setColor(1, 1, 1)
-    
     love.graphics.setFont(text_size)
     love.graphics.print("M", 
         self.button.x + 12, 
         self.button.y + 10)
+
 
     -- Draw mission panel
     if self.panel.x < self.gameWidth then
@@ -154,34 +150,7 @@ function Missions:draw()
                 self.config.mission_height,
                 8)
             
-            -- Progress bar
-            love.graphics.setColor(unpack(self.config.progress_bg_color))
-            love.graphics.rectangle('fill',
-                self.panel.x + 20,
-                mission_y + self.config.mission_height - 12,
-                self.panel.width - 40,
-                4,
-                2)
-                
-            if mission.completed then
-                love.graphics.setColor(unpack(self.config.completed_color))
-                love.graphics.rectangle('fill',
-                    self.panel.x + 20,
-                    mission_y + self.config.mission_height - 12,
-                    self.panel.width - 40,
-                    4,
-                    2)
-            else
-                love.graphics.setColor(unpack(self.config.progress_bar_color))
-                love.graphics.rectangle('fill',
-                    self.panel.x + 20,
-                    mission_y + self.config.mission_height - 12,
-                    (self.panel.width - 40) * (mission.progress or 0),
-                    4,
-                    2)
-            end
-            
-            -- Mission text
+            -- Mission text first
             if mission.completed then
                 love.graphics.setColor(unpack(self.config.completed_color))
             else
@@ -191,6 +160,109 @@ function Missions:draw()
             love.graphics.print(mission.text,
                 self.panel.x + 25,
                 mission_y + self.config.mission_padding)
+
+            -- Draw description if present
+            if mission.description and mission.description ~= "" then
+                love.graphics.setColor(0.7, 0.7, 0.7)
+                love.graphics.print(mission.description,
+                    self.panel.x + 25,
+                    mission_y + self.config.mission_padding + 25)
+            end
+
+            -- Draw subtasks if any
+            if mission.subtasks and #mission.subtasks > 0 then
+                local subtaskY = mission_y + self.config.mission_padding + 50
+                local subtaskHeight = 25
+                local checkboxSize = 18
+                
+                -- Calculate completed subtasks
+                local completedSubtasks = 0
+                for _, subtask in ipairs(mission.subtasks) do
+                    if subtask.completed then
+                        completedSubtasks = completedSubtasks + 1
+                    end
+                end
+                
+                -- Update mission progress based on subtasks
+                mission.progress = completedSubtasks / #mission.subtasks
+                mission.subtaskProgress = mission.progress
+                
+                for i, subtask in ipairs(mission.subtasks) do
+                    -- Draw checkbox
+                    love.graphics.setColor(0.8, 0.8, 0.8)
+                    love.graphics.rectangle('line', 
+                        self.panel.x + 40, 
+                        subtaskY, 
+                        checkboxSize, 
+                        checkboxSize,
+                        3)  -- Rounded corners
+                    
+                    if subtask.completed then
+                        love.graphics.setColor(unpack(self.config.completed_color))
+                        love.graphics.rectangle('fill', 
+                            self.panel.x + 42, 
+                            subtaskY + 2, 
+                            checkboxSize - 4, 
+                            checkboxSize - 4,
+                            2)  -- Rounded corners for fill
+                    end
+                    
+                    -- Draw subtask text
+                    love.graphics.setColor(0.7, 0.7, 0.7)
+                    love.graphics.print(subtask,
+                        self.panel.x + 65,
+                        subtaskY + 2)
+                    
+                    subtaskY = subtaskY + subtaskHeight
+                end
+                
+                -- Update mission height to accommodate subtasks
+                mission_y = subtaskY + 10
+            else
+                -- Regular progress bar for missions without subtasks
+                love.graphics.setColor(unpack(self.config.progress_bg_color))
+                love.graphics.rectangle('fill',
+                    self.panel.x + 20,
+                    mission_y + self.config.mission_height - 12,
+                    self.panel.width - 40,
+                    8,
+                    4)
+                    
+                if mission.completed then
+                    love.graphics.setColor(unpack(self.config.completed_color))
+                    love.graphics.rectangle('fill',
+                        self.panel.x + 20,
+                        mission_y + self.config.mission_height - 12,
+                        self.panel.width - 40,
+                        8,
+                        4)
+                    love.graphics.setColor(1, 1, 1, 0.8)
+                    love.graphics.circle('fill',
+                        self.panel.x + self.panel.width - 35,
+                        mission_y + self.config.mission_height - 8,
+                        6)
+                else
+                    love.graphics.setColor(unpack(self.config.progress_bar_color))
+                    local progress = mission.subtaskProgress or 0
+                    local progressWidth = (self.panel.width - 40) * progress
+                    love.graphics.rectangle('fill',
+                        self.panel.x + 20,
+                        mission_y + self.config.mission_height - 12,
+                        progressWidth,
+                        8,
+                        4)
+                    love.graphics.setColor(1, 1, 1, 0.9)
+                    love.graphics.printf(math.floor(progress * 100) .. "%",
+                        self.panel.x + 20,
+                        mission_y + self.config.mission_height - 25,
+                        self.panel.width - 40,
+                        "right")
+                end
+                
+                mission_y = mission_y + self.config.mission_height + 10
+            end
+            
+           
                 
             mission_y = mission_y + self.config.mission_height + 10
         end
@@ -211,7 +283,7 @@ function Missions:mousepressed(x, y)
 end
 
 function Missions:addMission(mission)
-    table.insert(self.missions, { text = mission, completed = false })
+    table.insert(self.missions, mission)
 end
 
 function Missions:completeMission(index)

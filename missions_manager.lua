@@ -8,22 +8,49 @@ function MissionsManager.new()
 end
 
 function MissionsManager:addMission(mission)
-    table.insert(self.missions, {
+    local newMission = {
         text = mission.text or mission,
         description = mission.description or "",
-        progress = 0,
         completed = false,
         reward = mission.reward,
-        requirements = mission.requirements or {}
-    })
+        requirements = mission.requirements or {},
+        subtasks = mission.subtasks or {},
+        completedSubtasks = 0
+    }
+    
+    -- Initialize subtasks if provided
+    for i, subtask in ipairs(newMission.subtasks) do
+        newMission.subtasks[i] = {
+            text = subtask,
+            completed = false
+        }
+    end
+    
+    table.insert(self.missions, newMission)
     return #self.missions
 end
 
-function MissionsManager:updateProgress(index, progress)
-    if self.missions[index] then
-        self.missions[index].progress = math.min(1, math.max(0, progress))
-        if self.missions[index].progress >= 1 then
-            self.missions[index].completed = true
+function MissionsManager:updateProgress(index, subtaskIndex, complete)
+    if self.missions[index] and self.missions[index].subtasks[subtaskIndex] then
+        local mission = self.missions[index]
+        
+        -- Set subtask completion state
+        mission.subtasks[subtaskIndex].completed = complete
+        
+        -- Recalculate completed subtasks count
+        mission.completedSubtasks = 0
+        for _, subtask in ipairs(mission.subtasks) do
+            if subtask.completed then
+                mission.completedSubtasks = mission.completedSubtasks + 1
+            end
+        end
+        
+        -- Update progress
+        mission.progress = mission.completedSubtasks / #mission.subtasks
+        
+        -- Check if all subtasks are completed
+        if mission.completedSubtasks == #mission.subtasks then
+            mission.completed = true
         end
     end
 end
@@ -68,5 +95,28 @@ function MissionsManager:getCompletedMissions()
     end
     return completed
 end
+
+function MissionsManager:getSubtasks(index)
+    if self.missions[index] then
+        return self.missions[index].subtasks
+    end
+    return {}
+end
+
+function MissionsManager:getSubtaskProgress(index)
+    if self.missions[index] then
+        local mission = self.missions[index]
+        return mission.completedSubtasks / #mission.subtasks
+    end
+    return 0
+end
+
+function MissionsManager:isSubtaskCompleted(missionIndex, subtaskIndex)
+    if self.missions[missionIndex] and self.missions[missionIndex].subtasks[subtaskIndex] then
+        return self.missions[missionIndex].subtasks[subtaskIndex].completed
+    end
+    return false
+end
+
 
 return MissionsManager

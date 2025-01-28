@@ -71,38 +71,44 @@ effect.filmgrain.size = 2
     offsetX = math.floor((screenWidth - (gameWidth * scale)) / 2)
     offsetY = math.floor((screenHeight - (gameHeight * scale)) / 2)
 
-  -- Initialize mission systems
-  missionsManager = MissionsManager.new()
-  missions = Missions.new()
-  
-  -- Add some example missions
-  missionsManager:addMission({
-      text = "Collect 10 coins",
-      description = "Find and collect 10 gold coins",
-      reward = "100 XP"
-  })
-  
-  missionsManager:addMission({
-      text = "Defeat the boss",
-      description = "Find and defeat the dungeon boss",
-      reward = "Legendary Sword"
-  })
-  
-  missionsManager:addMission({
-      text = "Explore the cave",
-      description = "Discover all areas of the mysterious cave",
-      reward = "Map Fragment"
-  })
-   -- Sync missions with display
-    for _, mission in ipairs(missionsManager:getMissions()) do
-        missions:addMission(mission.text)
-    end
-    
-    -- Set some progress for demonstration
-    missionsManager:updateProgress(1, 0.7) -- 70% complete
-    missionsManager:completeMission(2)     -- Completed
-    missionsManager:updateProgress(3, 0.3) -- 30% complete
-    
+-- Initialize mission systems
+missions = Missions.new(0, 0)
+missionsManager = MissionsManager.new()
+
+-- Add example missions with subtasks
+local mission1 = missionsManager:addMission({
+    text = "Collect 10 coins",
+    description = "Find and collect 10 gold coins",
+    reward = "100 XP",
+    subtasks = {
+        "Find the coin map",
+        "Reach the treasure room", 
+        "Collect all coins"
+    }
+})
+
+-- Sync missions with display
+for _, mission in ipairs(missionsManager:getMissions()) do
+    missions:addMission({
+        text = mission.text,
+        description = mission.description,
+        subtasks = mission.subtasks,
+        completed = mission.completed,
+        progress = mission.progress,
+        subtaskProgress = mission.completedSubtasks and (mission.completedSubtasks / #mission.subtasks) or 0
+    })
+end
+
+
+
+
+-- Set progress after syncing
+missionsManager:updateProgress(1, 1, true) -- Complete first subtask
+missionsManager:updateProgress(1, 2, false) -- Second subtask in progress
+missionsManager:completeMission(2)
+missionsManager:updateProgress(3, 1, true) -- Complete first subtask
+
+
 
     musicApp = MusicApp.new()  -- Create a new instance of MusicApp
     reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
@@ -123,9 +129,10 @@ function love.update(dt)
         missions:update(dt)
         musicApp:update(dt)  -- Update MusicApp
         reelsApp:update(dt)  -- Update ReelsApp
-
     end
+
 end
+
 
 function love.draw()
     -- Clear the screen with black bars
@@ -163,10 +170,35 @@ function love.keypressed(key)
     windowManager:keypressed(key)
     chat:keypressed(key)
 
-    if key == "c" then
-        missionsManager:completeMission(1)
-        missions:completeMission(1)
+if key == "c" then
+    -- Get current mission
+    local currentMission = missionsManager:getMission(1)
+    if currentMission and not currentMission.completed then
+        -- Get next incomplete subtask
+        local nextSubtaskIndex = 1
+        for i, subtask in ipairs(currentMission.subtasks) do
+            if not subtask.completed then
+                nextSubtaskIndex = i
+                break
+            end
+        end
+        
+        -- Complete the next subtask
+        missionsManager:updateProgress(1, nextSubtaskIndex, true)
+        
+        -- Update mission display
+        missions.missions[1] = {
+            text = currentMission.text,
+            description = currentMission.description,
+            subtasks = currentMission.subtasks,
+            completed = currentMission.completed,
+            progress = currentMission.progress,
+            subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks
+        }
     end
+end
+
+
     musicApp:keypressed(key)  -- Pass key events to MusicApp
     reelsApp:keypressed(key)  -- Pass key events to ReelsApp
 
