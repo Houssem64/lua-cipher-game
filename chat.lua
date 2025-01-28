@@ -20,6 +20,58 @@ function Chat.new(x, y, config)
     -- Merge provided config with defaults
     self.config = setmetatable(config or {}, {__index = Chat.config})
     
+    -- Available commands with subcommands
+    self.commands = {
+        help = {
+            desc = "Show available commands",
+            subcommands = {
+                "network - Network penetration basics",
+                "encryption - Encryption and decryption guides",
+                "exploits - Common system vulnerabilities",
+                "security - System security fundamentals",
+                "tools - Available hacking tools",
+                "forensics - Digital forensics basics"
+            }
+        },
+        scan = {
+            desc = "Scan for vulnerabilities",
+            subcommands = {}
+        },
+        exploit = {
+            desc = "Run exploit tools",
+            subcommands = {}
+        },
+        decrypt = {
+            desc = "Decrypt secured data",
+            subcommands = {}
+        },
+        clear = {
+            desc = "Clear chat history",
+            subcommands = {}
+        },
+        save = {
+            desc = "Save chat history",
+            subcommands = {}
+        }
+    }
+    
+    -- Dropdown menu state
+    self.dropdown = {
+        visible = false,
+        selected_command = nil,
+        showing_subcommands = false
+    }
+    
+    -- Additional chat features
+    self.emoji_mode = false
+    self.text_colors = {
+        default = {0, 0, 0},
+        blue = {0, 0, 1},
+        red = {1, 0, 0},
+        green = {0, 1, 0}
+    }
+    self.current_text_color = "default"
+    
     -- Initialize state using virtual resolution
     self.gameWidth = 1920
     self.gameHeight = 500
@@ -51,12 +103,14 @@ function Chat.new(x, y, config)
     self.input_text = ""  -- Current input text
     self.callback = nil  -- Callback for sending messages
     
-    -- Avatar state
-    self.avatar = {
+    -- Siri animation state
+    self.siri = {
         state = "idle",  -- Current state (idle, thinking, talking, happy, sad)
         timer = 0,  -- Timer for animations
-        blink_timer = 0,  -- Timer for blinking
-        mouth_open = false,  -- For talking animation
+        radius = 30,  -- Base radius
+        wave_offset = 0,  -- Wave animation offset
+        particles = {},  -- Particles for animation
+        color = {0.4, 0.6, 1, 0.9}  -- Siri orb color
     }
     
     return self
@@ -73,72 +127,56 @@ function Chat:update(dt)
             self.panel.x + self.config.slide_speed * dt)
     end
     
-    -- Update avatar animations
-    self.avatar.timer = self.avatar.timer + dt
-    self.avatar.blink_timer = self.avatar.blink_timer + dt
+    -- Update Siri animations
+    self.siri.timer = self.siri.timer + dt
+    self.siri.wave_offset = self.siri.wave_offset + dt * 2
     
-    -- Blinking animation
-    if self.avatar.blink_timer > 3 then
-        self.avatar.blink_timer = 0
+    -- Update particle animations based on state
+    if self.siri.state == "talking" then
+        -- Create wave effect
+        self.siri.radius = 30 + math.sin(self.siri.timer * 5) * 5
+    elseif self.siri.state == "thinking" then
+        -- Pulsing effect
+        self.siri.radius = 30 + math.sin(self.siri.timer * 2) * 3
+    elseif self.siri.state == "happy" then
+        -- Expand slightly
+        self.siri.radius = 35
+    elseif self.siri.state == "sad" then
+        -- Contract slightly
+        self.siri.radius = 25
+    else
+        -- Gentle idle animation
+        self.siri.radius = 30 + math.sin(self.siri.timer) * 2
+    end
+end
+
+function Chat:drawSiri(x, y)
+    -- Draw main orb
+    love.graphics.setColor(unpack(self.siri.color))
+    love.graphics.circle('fill', x, y, self.siri.radius)
+    
+    -- Draw wave effect
+    if self.siri.state == "talking" then
+        for i = 1, 3 do
+            local wave_radius = self.siri.radius + (i * 10)
+            local alpha = 0.3 - (i * 0.1)
+            love.graphics.setColor(self.siri.color[1], self.siri.color[2], self.siri.color[3], alpha)
+            love.graphics.circle('line', x, y, wave_radius + math.sin(self.siri.wave_offset + i) * 3)
+        end
     end
     
-    -- Talking animation
-    if self.avatar.state == "talking" then
-        if self.avatar.timer > 0.2 then
-            self.avatar.timer = 0
-            self.avatar.mouth_open = not self.avatar.mouth_open
+    -- Draw thinking animation
+    if self.siri.state == "thinking" then
+        for i = 1, 3 do
+            local angle = self.siri.timer * 2 + (i * math.pi / 1.5)
+            local dot_x = x + math.cos(angle) * (self.siri.radius + 10)
+            local dot_y = y + math.sin(angle) * (self.siri.radius + 10)
+            love.graphics.circle('fill', dot_x, dot_y, 3)
         end
     end
 end
 
-function Chat:drawAvatar(x, y)
-    local head_radius = 40
-    local eye_radius = 5
-    local mouth_width = 30
-    local mouth_height = 10
-    
-    -- Draw head
-    love.graphics.setColor(1, 0.8, 0.6)  -- Skin color
-    love.graphics.circle("fill", x, y, head_radius)
-    
-    -- Draw eyes
-    love.graphics.setColor(0, 0, 0)  -- Black for eyes
-    local eye_offset = 15
-    local eye_y = y - 15
-    love.graphics.circle("fill", x - eye_offset, eye_y, eye_radius)
-    love.graphics.circle("fill", x + eye_offset, eye_y, eye_radius)
-    
-    -- Blinking animation
-    if self.avatar.blink_timer > 2.8 then
-        love.graphics.setColor(1, 0.8, 0.6)  -- Skin color to "close" eyes
-        love.graphics.rectangle("fill", x - eye_offset - eye_radius, eye_y - eye_radius, eye_radius * 2, eye_radius * 2)
-        love.graphics.rectangle("fill", x + eye_offset - eye_radius, eye_y - eye_radius, eye_radius * 2, eye_radius * 2)
-    end
-    
-    -- Draw mouth based on state
-    if self.avatar.state == "idle" then
-        love.graphics.setColor(0, 0, 0)
-        love.graphics.arc("line", "open", x, y + 10, mouth_width / 2, 0, math.pi)
-    elseif self.avatar.state == "talking" then
-        love.graphics.setColor(0, 0, 0)
-        if self.avatar.mouth_open then
-            love.graphics.rectangle("fill", x - mouth_width / 2, y + 10, mouth_width, mouth_height)
-        else
-            love.graphics.arc("line", "open", x, y + 10, mouth_width / 2, 0, math.pi)
-        end
-    elseif self.avatar.state == "happy" then
-        love.graphics.setColor(0, 0, 0)
-        love.graphics.arc("line", "open", x, y + 10, mouth_width / 2, 0.2, math.pi - 0.2)
-    elseif self.avatar.state == "sad" then
-        love.graphics.setColor(0, 0, 0)
-        love.graphics.arc("line", "open", x, y + 20, mouth_width / 2, math.pi + 0.2, 2 * math.pi - 0.2)
-    elseif self.avatar.state == "thinking" then
-        love.graphics.setColor(0, 0, 0)
-        love.graphics.circle("fill", x, y + 15, 3)
-        love.graphics.circle("fill", x - 10, y + 20, 3)
-        love.graphics.circle("fill", x + 10, y + 20, 3)
-    end
-end
+
 
 function Chat:draw()
     local default_font = love.graphics.getFont()
@@ -168,10 +206,10 @@ function Chat:draw()
             self.panel.width, 
             self.panel.height)
         
-        -- Draw animated avatar at the top of the chat panel
-        local avatar_x = self.panel.x + (self.panel.width) / 2
-        local avatar_y = self.panel.y + 100
-        self:drawAvatar(avatar_x, avatar_y)
+        -- Draw animated Siri orb at the top of the chat panel
+        local siri_x = self.panel.x + (self.panel.width) / 2
+        local siri_y = self.panel.y + 100
+        self:drawSiri(siri_x, siri_y)
         
         -- Draw messages (only the latest player message and AI response)
         love.graphics.setColor(unpack(self.config.text_color))
@@ -193,6 +231,47 @@ function Chat:draw()
         love.graphics.print(self.input_text, 
             self.panel.x + 15, 
             self.panel.y + self.panel.height - 35)
+            
+        -- Draw command dropdown if visible
+        if self.dropdown.visible then
+            local dropdown_y = self.panel.y + self.panel.height - 70
+            love.graphics.setColor(0.9, 0.9, 0.9, 0.95)
+            
+            if self.dropdown.showing_subcommands and self.dropdown.selected_command then
+                -- Draw subcommands for selected command
+                local subcommands = self.commands[self.dropdown.selected_command].subcommands
+                local height = #subcommands * 25 + 10
+                love.graphics.rectangle('fill',
+                    self.panel.x + 10,
+                    dropdown_y - height,
+                    self.panel.width - 20,
+                    height)
+                    
+                love.graphics.setColor(0, 0, 0)
+                for i, subcmd in ipairs(subcommands) do
+                    love.graphics.print(subcmd,
+                        self.panel.x + 15,
+                        dropdown_y - height + (i-1)*25 + 5)
+                end
+            else
+                -- Draw main commands
+                local height = #self.commands * 25 + 10
+                love.graphics.rectangle('fill',
+                    self.panel.x + 10,
+                    dropdown_y - height,
+                    self.panel.width - 20,
+                    height)
+                    
+                love.graphics.setColor(0, 0, 0)
+                local i = 1
+                for cmd, data in pairs(self.commands) do
+                    love.graphics.print("/" .. cmd .. " - " .. data.desc,
+                        self.panel.x + 15,
+                        dropdown_y - height + (i-1)*25 + 5)
+                    i = i + 1
+                end
+            end
+        end
     end
     
     -- Reset color
@@ -214,13 +293,64 @@ end
 function Chat:keypressed(key)
     if not self.panel.visible then return false end
     
-    if key == "return" and self.input_text ~= "" then
-        -- Add user message
-        table.insert(self.messages, "You: " .. self.input_text)
-        
-        -- Call message callback if set
-        if self.callback then
-            self.callback(self.input_text)
+    if key == "/" and self.input_text == "" then
+        -- Show command dropdown
+        self.dropdown.visible = true
+        self.dropdown.showing_subcommands = false
+        self.dropdown.selected_command = nil
+        self.input_text = "/"
+        return true
+    elseif key == "tab" and self.input_text:sub(1,1) == "/" then
+        -- Command auto-completion
+        local partial = self.input_text:sub(2)
+        for cmd, data in pairs(self.commands) do
+            if cmd:sub(1, #partial) == partial then
+                self.input_text = "/" .. cmd .. " "
+                -- Show subcommands if available
+                if #data.subcommands > 0 then
+                    self.dropdown.visible = true
+                    self.dropdown.showing_subcommands = true
+                    self.dropdown.selected_command = cmd
+                end
+                return true
+            end
+        end
+    elseif key == "return" and self.input_text ~= "" then
+        -- Process commands
+        if self.input_text:sub(1,1) == "/" then
+            local cmd = self.input_text:match("^/(%w+)")
+            if cmd == "emoji" then
+                self.emoji_mode = not self.emoji_mode
+                table.insert(self.messages, "System: Emoji mode " .. (self.emoji_mode and "enabled" or "disabled"))
+            elseif cmd == "color" then
+                local color = self.input_text:match("^/color%s+(%w+)")
+                if self.text_colors[color] then
+                    self.current_text_color = color
+                    table.insert(self.messages, "System: Text color changed to " .. color)
+                end
+            elseif cmd == "mood" then
+                local mood = self.input_text:match("^/mood%s+(%w+)")
+                if mood then
+                    self.avatar.state = mood
+                    table.insert(self.messages, "System: AI mood changed to " .. mood)
+                end
+            else
+                -- Add user message
+                table.insert(self.messages, "You: " .. self.input_text)
+                
+                -- Call message callback if set
+                if self.callback then
+                    self.callback(self.input_text)
+                end
+            end
+        else
+            -- Add user message
+            table.insert(self.messages, "You: " .. self.input_text)
+            
+            -- Call message callback if set
+            if self.callback then
+                self.callback(self.input_text)
+            end
         end
         
         -- Clear input
@@ -231,8 +361,8 @@ function Chat:keypressed(key)
             table.remove(self.messages, 1)  -- Remove the oldest message
         end
         
-        -- Set avatar state to "talking"
-        self.avatar.state = "talking"
+        -- Set Siri state to "talking"
+        self.siri.state = "talking"
         
         return true
     elseif key == "backspace" then
@@ -251,21 +381,33 @@ function Chat:textinput(text)
 end
 
 function Chat:addMessage(text, from)
-    -- Add AI response
-    table.insert(self.messages, (from or "AI") .. ": " .. text)
-    
-    -- Keep only the latest player message and AI response
-    if #self.messages > 2 then
-        table.remove(self.messages, 1)  -- Remove the oldest message
+    -- Process emojis if emoji mode is on
+    if self.emoji_mode then
+        text = text:gsub(":happy:", "😊")
+               :gsub(":sad:", "😢")
+               :gsub(":laugh:", "😄")
+               :gsub(":heart:", "❤️")
     end
     
-    -- Set avatar state based on the AI response
-    if text:lower():find("happy") then
-        self.avatar.state = "happy"
-    elseif text:lower():find("sad") then
-        self.avatar.state = "sad"
+    -- Add AI response with timestamp
+    local timestamp = os.date("%H:%M")
+    local message = string.format("[%s] %s: %s", timestamp, from or "AI", text)
+    table.insert(self.messages, message)
+    
+    -- Keep last 5 messages instead of just 2
+    while #self.messages > 5 do
+        table.remove(self.messages, 1)
+    end
+    
+    -- Set Siri state based on the AI response
+    if text:lower():find("happy") or text:lower():find("😊") then
+        self.siri.state = "happy"
+    elseif text:lower():find("sad") or text:lower():find("😢") then
+        self.siri.state = "sad"
+    elseif text:lower():find("think") then
+        self.siri.state = "thinking"
     else
-        self.avatar.state = "idle"
+        self.siri.state = "idle"
     end
 end
 
