@@ -10,6 +10,7 @@ local FileSystem = require("filesystem")
 local Chat = require 'chat'
 local Missions = require("missions")
 local MissionsManager = require("missions_manager")
+local StoryMissions = require("story_missions")
 local MainMenu = require("main_menu")
 local MusicApp = require("apps.music_app")
 local moonshine = require 'moonshine'
@@ -75,17 +76,11 @@ effect.filmgrain.size = 2
 missions = Missions.new(0, 0)
 missionsManager = MissionsManager.new()
 
--- Add example missions with subtasks
-local mission1 = missionsManager:addMission({
-    text = "Collect 10 coins",
-    description = "Find and collect 10 gold coins",
-    reward = "100 XP",
-    subtasks = {
-        "Find the coin map",
-        "Reach the treasure room", 
-        "Collect all coins"
-    }
-})
+-- Load all story missions
+for _, missionData in ipairs(StoryMissions.getAllMissions()) do
+    missionsManager:addMission(missionData)
+end
+
 
 -- Sync missions with display
 for _, mission in ipairs(missionsManager:getMissions()) do
@@ -180,7 +175,7 @@ function love.keypressed(key)
     chat:keypressed(key)
 
 if key == "c" then
-    -- Get current mission
+    -- Get current mission by ID 1
     local currentMission = missionsManager:getMission(1)
     if currentMission and not currentMission.completed then
         -- Get next incomplete subtask
@@ -192,8 +187,8 @@ if key == "c" then
             end
         end
         
-        -- Complete the next subtask
-        missionsManager:updateProgress(1, nextSubtaskIndex, true)
+        -- Complete the next subtask using mission ID
+        missionsManager:updateProgress(currentMission.id, nextSubtaskIndex, true)
         
         -- Update mission display
         local formattedSubtasks = {}
@@ -205,14 +200,20 @@ if key == "c" then
             end
         end
         
-        missions.missions[1] = {
-            text = currentMission.text,
-            description = currentMission.description,
-            subtasks = formattedSubtasks,
-            completed = currentMission.completed,
-            progress = currentMission.progress,
-            subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks
-        }
+        -- Update the mission in the display list by finding it by text
+        for i, displayMission in ipairs(missions.missions) do
+            if displayMission.text == currentMission.text then
+                missions.missions[i] = {
+                    text = currentMission.text,
+                    description = currentMission.description,
+                    subtasks = formattedSubtasks,
+                    completed = currentMission.completed,
+                    progress = currentMission.progress,
+                    subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks
+                }
+                break
+            end
+        end
     end
 end
 

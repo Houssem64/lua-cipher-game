@@ -283,7 +283,36 @@ function Missions:mousepressed(x, y)
 end
 
 function Missions:addMission(mission)
-    table.insert(self.missions, mission)
+    -- Add mission with its ID
+    table.insert(self.missions, {
+        id = mission.id,
+        text = mission.text,
+        description = mission.description,
+        subtasks = mission.subtasks,
+        completed = mission.completed,
+        progress = mission.progress or 0,
+        subtaskProgress = mission.subtaskProgress or 0
+    })
+end
+
+-- Get mission by ID
+function Missions:getMissionById(id)
+    for _, mission in ipairs(self.missions) do
+        if mission.id == id then
+            return mission
+        end
+    end
+    return nil
+end
+
+-- Update mission by ID
+function Missions:updateMission(id, updatedMission)
+    for i, mission in ipairs(self.missions) do
+        if mission.id == id then
+            self.missions[i] = updatedMission
+            break
+        end
+    end
 end
 
 function Missions:completeMission(index)

@@ -9,6 +9,7 @@ end
 
 function MissionsManager:addMission(mission)
     local newMission = {
+        id = mission.id,
         text = mission.text or mission,
         description = mission.description or "",
         completed = false,
@@ -27,13 +28,23 @@ function MissionsManager:addMission(mission)
     end
     
     table.insert(self.missions, newMission)
-    return #self.missions
+    return newMission.id
 end
 
-function MissionsManager:updateProgress(index, subtaskIndex, complete)
-    if self.missions[index] and self.missions[index].subtasks[subtaskIndex] then
-        local mission = self.missions[index]
-        
+function MissionsManager:updateProgress(id, subtaskIndex, complete)
+    local mission = nil
+    local index = nil
+    
+    -- Find mission by ID
+    for i, m in ipairs(self.missions) do
+        if m.id == id then
+            mission = m
+            index = i
+            break
+        end
+    end
+    
+    if mission and mission.subtasks[subtaskIndex] then
         -- Set subtask completion state
         mission.subtasks[subtaskIndex].completed = complete
         
@@ -55,10 +66,13 @@ function MissionsManager:updateProgress(index, subtaskIndex, complete)
     end
 end
 
-function MissionsManager:completeMission(index)
-    if self.missions[index] then
-        self.missions[index].completed = true
-        self.missions[index].progress = 1
+function MissionsManager:completeMission(id)
+    for _, mission in ipairs(self.missions) do
+        if mission.id == id then
+            mission.completed = true
+            mission.progress = 1
+            break
+        end
     end
 end
 
@@ -66,13 +80,21 @@ function MissionsManager:getMissions()
     return self.missions
 end
 
-function MissionsManager:getMission(index)
-    return self.missions[index]
+function MissionsManager:getMission(id)
+    for _, mission in ipairs(self.missions) do
+        if mission.id == id then
+            return mission
+        end
+    end
+    return nil
 end
 
-function MissionsManager:removeMission(index)
-    if self.missions[index] then
-        table.remove(self.missions, index)
+function MissionsManager:removeMission(id)
+    for i, mission in ipairs(self.missions) do
+        if mission.id == id then
+            table.remove(self.missions, i)
+            break
+        end
     end
 end
 
@@ -96,27 +118,28 @@ function MissionsManager:getCompletedMissions()
     return completed
 end
 
-function MissionsManager:getSubtasks(index)
-    if self.missions[index] then
-        return self.missions[index].subtasks
+function MissionsManager:getSubtasks(id)
+    local mission = self:getMission(id)
+    if mission then
+        return mission.subtasks
     end
     return {}
 end
 
-function MissionsManager:getSubtaskProgress(index)
-    if self.missions[index] then
-        local mission = self.missions[index]
+function MissionsManager:getSubtaskProgress(id)
+    local mission = self:getMission(id)
+    if mission then
         return mission.completedSubtasks / #mission.subtasks
     end
     return 0
 end
 
-function MissionsManager:isSubtaskCompleted(missionIndex, subtaskIndex)
-    if self.missions[missionIndex] and self.missions[missionIndex].subtasks[subtaskIndex] then
-        return self.missions[missionIndex].subtasks[subtaskIndex].completed
+function MissionsManager:isSubtaskCompleted(missionId, subtaskIndex)
+    local mission = self:getMission(missionId)
+    if mission and mission.subtasks[subtaskIndex] then
+        return mission.subtasks[subtaskIndex].completed
     end
     return false
 end
-
 
 return MissionsManager
