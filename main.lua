@@ -86,14 +86,14 @@ end
 for _, mission in ipairs(missionsManager:getMissions()) do
     local formattedSubtasks = {}
     for _, subtask in ipairs(mission.subtasks) do
-        if type(subtask) == "table" then
-            table.insert(formattedSubtasks, subtask.text)
-        else
-            table.insert(formattedSubtasks, subtask)
-        end
+        table.insert(formattedSubtasks, {
+            text = subtask.text,
+            completed = subtask.completed
+        })
     end
     
     missions:addMission({
+        id = mission.id,
         text = mission.text,
         description = mission.description,
         subtasks = formattedSubtasks,
@@ -193,17 +193,17 @@ if key == "c" then
         -- Update mission display
         local formattedSubtasks = {}
         for _, subtask in ipairs(currentMission.subtasks) do
-            if type(subtask) == "table" then
-                table.insert(formattedSubtasks, subtask.text)
-            else
-                table.insert(formattedSubtasks, subtask)
-            end
+            table.insert(formattedSubtasks, {
+                text = subtask.text,
+                completed = subtask.completed
+            })
         end
         
-        -- Update the mission in the display list by finding it by text
+        -- Update the mission in the display list by finding it by ID
         for i, displayMission in ipairs(missions.missions) do
-            if displayMission.text == currentMission.text then
+            if displayMission.id == currentMission.id then
                 missions.missions[i] = {
+                    id = currentMission.id,
                     text = currentMission.text,
                     description = currentMission.description,
                     subtasks = formattedSubtasks,

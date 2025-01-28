@@ -15,15 +15,15 @@ function MissionsManager:addMission(mission)
         completed = false,
         reward = mission.reward,
         requirements = mission.requirements or {},
-        subtasks = mission.subtasks or {},
+        subtasks = {},
         completedSubtasks = 0
     }
     
-    -- Initialize subtasks if provided
-    for i, subtask in ipairs(newMission.subtasks) do
+    -- Initialize subtasks as objects with text and completed state
+    for i, subtask in ipairs(mission.subtasks or {}) do
         newMission.subtasks[i] = {
-            text = subtask,
-            completed = false
+            text = type(subtask) == "table" and subtask.text or subtask,
+            completed = type(subtask) == "table" and subtask.completed or false
         }
     end
     

@@ -9,7 +9,8 @@ local StoryMissions = {
 			subtasks = {
 				"Find the coin map",
 				"Reach the treasure room", 
-				"Collect all coins"
+				"Collect all coins",
+                "test"
 			}
 		}
 		-- Add more missions here with incrementing IDs

@@ -205,11 +205,15 @@ function Missions:draw()
                             checkboxSize - 4, 
                             checkboxSize - 4,
                             2)  -- Rounded corners for fill
+                        -- Draw subtask text in completed color
+                        love.graphics.setColor(unpack(self.config.completed_color))
+                    else
+                        -- Draw subtask text in normal color
+                        love.graphics.setColor(unpack(self.config.text_color))
                     end
                     
                     -- Draw subtask text
-                    love.graphics.setColor(0.7, 0.7, 0.7)
-                    love.graphics.print(subtask,
+                    love.graphics.print(subtask.text,
                         self.panel.x + 65,
                         subtaskY + 2)
                     
@@ -283,12 +287,24 @@ function Missions:mousepressed(x, y)
 end
 
 function Missions:addMission(mission)
-    -- Add mission with its ID
+    -- Convert subtasks to proper format with completed state
+    local formattedSubtasks = {}
+    for _, subtask in ipairs(mission.subtasks) do
+        if type(subtask) == "table" then
+            table.insert(formattedSubtasks, subtask)
+        else
+            table.insert(formattedSubtasks, {
+                text = subtask,
+                completed = false
+            })
+        end
+    end
+
     table.insert(self.missions, {
         id = mission.id,
         text = mission.text,
         description = mission.description,
-        subtasks = mission.subtasks,
+        subtasks = formattedSubtasks,
         completed = mission.completed,
         progress = mission.progress or 0,
         subtaskProgress = mission.subtaskProgress or 0
