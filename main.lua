@@ -106,12 +106,12 @@ end
 
 
 
--- Set progress after syncing
+--[[ -- Set progress after syncing
 missionsManager:updateProgress(1, 1, true) -- Complete first subtask
 missionsManager:updateProgress(1, 2, false) -- Second subtask in progress
 missionsManager:completeMission(2)
 missionsManager:updateProgress(3, 1, true) -- Complete first subtask
-
+ ]]
 
 
     musicApp = MusicApp.new()  -- Create a new instance of MusicApp
