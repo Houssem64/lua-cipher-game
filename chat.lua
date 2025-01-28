@@ -17,6 +17,9 @@ Chat.__index = Chat
 function Chat.new(x, y, config)
     local self = setmetatable({}, Chat)
     
+    -- Enable key repeat for proper input handling
+    love.keyboard.setKeyRepeat(true)
+    
     -- Merge provided config with defaults
     self.config = setmetatable(config or {}, {__index = Chat.config})
     
@@ -55,11 +58,13 @@ function Chat.new(x, y, config)
         }
     }
     
-    -- Dropdown menu state
+    -- Initialize dropdown state
     self.dropdown = {
         visible = false,
         selected_command = nil,
-        showing_subcommands = false
+        showing_subcommands = false,
+        y_offset = 0,
+        initialized = true  -- Add flag to track initialization
     }
     
     -- Additional chat features
@@ -180,8 +185,8 @@ end
 
 function Chat:draw()
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 18)  -- Size for 1080p
-    font:setFilter("nearest", "nearest")  -- Set filter to nearest
+    local font = love.graphics.newFont("joty.otf", 18)
+    font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
 
     -- Draw chat button
@@ -198,7 +203,7 @@ function Chat:draw()
         self.button.y + 10)
 
     if self.panel.x < self.gameWidth then
-        -- Draw chat panel
+        -- Draw chat panel background
         love.graphics.setColor(unpack(self.config.panel_color))
         love.graphics.rectangle('fill', 
             self.panel.x, 
@@ -206,12 +211,12 @@ function Chat:draw()
             self.panel.width, 
             self.panel.height)
         
-        -- Draw animated Siri orb at the top of the chat panel
+        -- Draw animated Siri orb
         local siri_x = self.panel.x + (self.panel.width) / 2
         local siri_y = self.panel.y + 100
         self:drawSiri(siri_x, siri_y)
         
-        -- Draw messages (only the latest player message and AI response)
+        -- Draw messages
         love.graphics.setColor(unpack(self.config.text_color))
         local message_y = self.panel.y + 200
         for i, msg in ipairs(self.messages) do
@@ -219,7 +224,14 @@ function Chat:draw()
             message_y = message_y + 30
         end
         
-        -- Draw input box at bottom
+        -- Draw input box
+        love.graphics.setColor(0.9, 0.9, 0.9, 1)
+        love.graphics.rectangle('fill', 
+            self.panel.x + 10, 
+            self.panel.y + self.panel.height - 40, 
+            self.panel.width - 20, 
+            30)
+        
         love.graphics.setColor(0, 0, 0)
         love.graphics.rectangle('line', 
             self.panel.x + 10, 
@@ -227,80 +239,166 @@ function Chat:draw()
             self.panel.width - 20, 
             30)
         
-        love.graphics.setColor(0, 0, 0)
         love.graphics.print(self.input_text, 
             self.panel.x + 15, 
             self.panel.y + self.panel.height - 35)
             
         -- Draw command dropdown if visible
-        if self.dropdown.visible then
-            local dropdown_y = self.panel.y + self.panel.height - 70
-            love.graphics.setColor(0.9, 0.9, 0.9, 0.95)
+        if self.dropdown and self.dropdown.visible then
+            print("Drawing dropdown") -- Debug print
+            local dropdown_y = self.panel.y + self.panel.height - 80
+            
+            -- Draw semi-transparent background behind dropdown
+            love.graphics.setColor(0, 0, 0, 0.5)
+            love.graphics.rectangle('fill',
+                self.panel.x,
+                0,
+                self.panel.width,
+                self.gameHeight)
+            
+            -- Draw dropdown
+            love.graphics.setColor(0.2, 0.2, 0.2, 0.95)
             
             if self.dropdown.showing_subcommands and self.dropdown.selected_command then
-                -- Draw subcommands for selected command
                 local subcommands = self.commands[self.dropdown.selected_command].subcommands
-                local height = #subcommands * 25 + 10
+                local height = #subcommands * 30 + 10
+                
+                -- Draw dropdown background with border
                 love.graphics.rectangle('fill',
                     self.panel.x + 10,
                     dropdown_y - height,
                     self.panel.width - 20,
                     height)
+                love.graphics.setColor(1, 1, 1, 0.3)
+                love.graphics.rectangle('line',
+                    self.panel.x + 10,
+                    dropdown_y - height,
+                    self.panel.width - 20,
+                    height)
                     
-                love.graphics.setColor(0, 0, 0)
+                -- Draw subcommands
+                love.graphics.setColor(1, 1, 1)
                 for i, subcmd in ipairs(subcommands) do
                     love.graphics.print(subcmd,
                         self.panel.x + 15,
-                        dropdown_y - height + (i-1)*25 + 5)
+                        dropdown_y - height + (i-1)*30 + 5)
                 end
             else
-                -- Draw main commands
-                local height = #self.commands * 25 + 10
+                -- Count commands
+                local count = 0
+                for _ in pairs(self.commands) do count = count + 1 end
+                local height = count * 30 + 10
+                
+                -- Draw dropdown background with border
                 love.graphics.rectangle('fill',
                     self.panel.x + 10,
                     dropdown_y - height,
                     self.panel.width - 20,
                     height)
+                love.graphics.setColor(1, 1, 1, 0.3)
+                love.graphics.rectangle('line',
+                    self.panel.x + 10,
+                    dropdown_y - height,
+                    self.panel.width - 20,
+                    height)
                     
-                love.graphics.setColor(0, 0, 0)
+                -- Draw commands
+                love.graphics.setColor(1, 1, 1)
                 local i = 1
                 for cmd, data in pairs(self.commands) do
                     love.graphics.print("/" .. cmd .. " - " .. data.desc,
                         self.panel.x + 15,
-                        dropdown_y - height + (i-1)*25 + 5)
+                        dropdown_y - height + (i-1)*30 + 5)
                     i = i + 1
                 end
             end
         end
     end
     
-    -- Reset color
+    -- Reset color and font
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(default_font)
 end
 
+function Chat:isSlashPressed()
+    return love.keyboard.isDown('slash') or love.keyboard.isDown('/')
+end
+
 function Chat:mousepressed(x, y)
-    -- Check if chat button was clicked using virtual coordinates
+    -- Check if chat button was clicked
     local dx = x - (self.button.x + self.button.radius)
     local dy = y - (self.button.y + self.button.radius)
     if dx * dx + dy * dy <= self.button.radius * self.button.radius then
         self.panel.visible = not self.panel.visible
+        self:hideDropdown() -- Use the hideDropdown function
         return true
+    end
+    
+    -- Handle dropdown clicks if visible
+    if self.panel.visible and self.dropdown.visible then
+        local dropdown_y = self.panel.y + self.panel.height - 80 + self.dropdown.y_offset
+        
+        -- Check if click is outside dropdown area
+        local count = 0
+        for _ in pairs(self.commands) do count = count + 1 end
+        local height = self.dropdown.showing_subcommands and 
+            (#self.commands[self.dropdown.selected_command].subcommands * 30 + 10) or
+            (count * 30 + 10)
+            
+        if x < self.panel.x + 10 or x > self.panel.x + self.panel.width - 10 or
+           y < dropdown_y - height or y > dropdown_y then
+            self:hideDropdown()
+            return true
+        end
+        
+        if self.dropdown.showing_subcommands and self.dropdown.selected_command then
+            -- Handle subcommand clicks
+            local subcommands = self.commands[self.dropdown.selected_command].subcommands
+            local item_idx = math.floor((y - (dropdown_y - height)) / 30) + 1
+            if item_idx <= #subcommands then
+                local subcmd = subcommands[item_idx]:match("^([^%s]+)")
+                self.input_text = "/" .. self.dropdown.selected_command .. " " .. subcmd
+                self:hideDropdown()
+                return true
+            end
+        else
+            -- Handle main command clicks
+            local item_idx = math.floor((y - (dropdown_y - height)) / 30) + 1
+            local i = 1
+            for cmd, data in pairs(self.commands) do
+                if i == item_idx then
+                    self.input_text = "/" .. cmd .. " "
+                    if #data.subcommands > 0 then
+                        self.dropdown.showing_subcommands = true
+                        self.dropdown.selected_command = cmd
+                    else
+                        self:hideDropdown()
+                    end
+                    return true
+                end
+                i = i + 1
+            end
+        end
     end
     return false
 end
 
-function Chat:keypressed(key)
+
+function Chat:keypressed(key, scancode, isrepeat)
     if not self.panel.visible then return false end
     
-    if key == "/" and self.input_text == "" then
+    self:ensureDropdownState()  -- Ensure dropdown state exists
+    
+    if scancode == "slash" then
         -- Show command dropdown
+        print("Slash key pressed") -- Debug print
+        self.input_text = "/"
         self.dropdown.visible = true
         self.dropdown.showing_subcommands = false
         self.dropdown.selected_command = nil
-        self.input_text = "/"
         return true
     elseif key == "tab" and self.input_text:sub(1,1) == "/" then
+
         -- Command auto-completion
         local partial = self.input_text:sub(2)
         for cmd, data in pairs(self.commands) do
@@ -311,30 +409,30 @@ function Chat:keypressed(key)
                     self.dropdown.visible = true
                     self.dropdown.showing_subcommands = true
                     self.dropdown.selected_command = cmd
+                else
+                    self.dropdown.visible = false
                 end
                 return true
             end
         end
-    elseif key == "return" and self.input_text ~= "" then
+    elseif key == "backspace" then
+        if #self.input_text > 0 then
+            self.input_text = self.input_text:sub(1, -2)
+            -- Show/hide dropdown based on input
+            if self.input_text == "/" then
+                self.dropdown.visible = true
+                self.dropdown.showing_subcommands = false
+                self.dropdown.selected_command = nil
+            elseif self.input_text == "" then
+                self:hideDropdown()
+            end
+            return true
+        end
+    elseif key == "return" then
         -- Process commands
         if self.input_text:sub(1,1) == "/" then
             local cmd = self.input_text:match("^/(%w+)")
-            if cmd == "emoji" then
-                self.emoji_mode = not self.emoji_mode
-                table.insert(self.messages, "System: Emoji mode " .. (self.emoji_mode and "enabled" or "disabled"))
-            elseif cmd == "color" then
-                local color = self.input_text:match("^/color%s+(%w+)")
-                if self.text_colors[color] then
-                    self.current_text_color = color
-                    table.insert(self.messages, "System: Text color changed to " .. color)
-                end
-            elseif cmd == "mood" then
-                local mood = self.input_text:match("^/mood%s+(%w+)")
-                if mood then
-                    self.avatar.state = mood
-                    table.insert(self.messages, "System: AI mood changed to " .. mood)
-                end
-            else
+            if self.commands[cmd] then
                 -- Add user message
                 table.insert(self.messages, "You: " .. self.input_text)
                 
@@ -353,31 +451,70 @@ function Chat:keypressed(key)
             end
         end
         
-        -- Clear input
+        -- Clear input and hide dropdown
         self.input_text = ""
+        self.dropdown.visible = false
         
         -- Keep only the latest player message and AI response
         if #self.messages > 2 then
-            table.remove(self.messages, 1)  -- Remove the oldest message
+            table.remove(self.messages, 1)
         end
         
         -- Set Siri state to "talking"
         self.siri.state = "talking"
         
         return true
-    elseif key == "backspace" then
-        self.input_text = self.input_text:sub(1, -2)
-        return true
     end
     return false
 end
 
+
 function Chat:textinput(text)
-    if self.panel.visible then
-        self.input_text = self.input_text .. text
+    if not self.panel.visible then return false end
+    
+    self:ensureDropdownState()  -- Ensure dropdown state exists
+    
+    -- Handle "/" input
+    if text == "/" then
+        print("Showing dropdown") -- Debug print
+        self.input_text = "/"
+        self.dropdown.visible = true
+        self.dropdown.showing_subcommands = false
+        self.dropdown.selected_command = nil
         return true
     end
-    return false
+    
+    -- Handle other text input
+    self.input_text = self.input_text .. text
+    
+    -- Show/hide dropdown based on input
+    if self.input_text:sub(1,1) == "/" then
+        self.dropdown.visible = true
+    else
+        self:hideDropdown()
+    end
+    
+    return true
+end
+
+
+
+function Chat:ensureDropdownState()
+    if not self.dropdown or not self.dropdown.initialized then
+        self.dropdown = {
+            visible = false,
+            selected_command = nil,
+            showing_subcommands = false,
+            y_offset = 0,
+            initialized = true
+        }
+    end
+end
+
+function Chat:hideDropdown()
+    self.dropdown.visible = false
+    self.dropdown.showing_subcommands = false
+    self.dropdown.selected_command = nil
 end
 
 function Chat:addMessage(text, from)

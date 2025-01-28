@@ -23,6 +23,9 @@ local mainMenu  -- Add this line to declare mainMenu globally
 local musicApp  -- Add this line to declare musicApp globally
 
 function love.load()
+    -- Enable key repeat for proper input handling
+    love.keyboard.setKeyRepeat(true)
+
     FileSystem:loadState() 
     effect = moonshine(moonshine.effects.filmgrain)
     .chain(moonshine.effects.vignette)
@@ -226,6 +229,9 @@ end
 function love.textinput(text)
     -- Only process text input if main menu is not active
     if not mainMenu.isActive then
+        if text == "/" then
+            print("Main textinput received /") -- Debug print
+        end
         windowManager:textinput(text)
         chat:textinput(text)
     end
