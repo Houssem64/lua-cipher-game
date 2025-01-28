@@ -1,3 +1,7 @@
+-- Base resolution constants
+local BASE_WIDTH = 1920
+local BASE_HEIGHT = 1080
+
 local Desktop = require("desktop")
 local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
@@ -6,8 +10,8 @@ local FileSystem = require("filesystem")
 local Chat = require 'chat'
 local Missions = require("missions")
 local MissionsManager = require("missions_manager")
-local MainMenu = require("main_menu")  -- Add this line to import MainMenu
-local MusicApp = require("apps.music_app")  -- Add this line to import MusicApp
+local MainMenu = require("main_menu")
+local MusicApp = require("apps.music_app")
 local moonshine = require 'moonshine'
 local ReelsApp = require("apps.reelsapp")
 local desktop
@@ -45,22 +49,27 @@ effect.filmgrain.size = 2
     missions = Missions.new(0, 0)
     missionsManager = MissionsManager.new()
 
-    -- Get the screen dimensions
-    screenWidth = love.graphics.getWidth()
-    screenHeight = love.graphics.getHeight()
+    -- Get desktop dimensions for dynamic scaling
+    local desktopWidth, desktopHeight = love.window.getDesktopDimensions()
+    screenWidth = desktopWidth
+    screenHeight = desktopHeight
     
-    -- Set up virtual resolution scaling
-    gameWidth = 1920
-    gameHeight = 1080
+    -- Set up virtual resolution (target: BASE_WIDTH x BASE_HEIGHT)
+    gameWidth = BASE_WIDTH
+    gameHeight = BASE_HEIGHT
     
-    -- Calculate scaling factors
+    -- Calculate integer scaling factors for crisp rendering
     scaleX = screenWidth / gameWidth
     scaleY = screenHeight / gameHeight
     scale = math.min(scaleX, scaleY)
     
+    -- Ensure scale is an integer for pixel-perfect rendering
+    scale = math.floor(scale)
+    if scale < 1 then scale = 1 end
+    
     -- Calculate the offset to center the game window
-    offsetX = (screenWidth - (gameWidth * scale)) / 2
-    offsetY = (screenHeight - (gameHeight * scale)) / 2
+    offsetX = math.floor((screenWidth - (gameWidth * scale)) / 2)
+    offsetY = math.floor((screenHeight - (gameHeight * scale)) / 2)
 
   -- Initialize mission systems
   missionsManager = MissionsManager.new()
@@ -119,21 +128,24 @@ function love.update(dt)
 end
 
 function love.draw()
+    -- Clear the screen with black bars
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.rectangle("fill", 0, 0, screenWidth, screenHeight)
+    love.graphics.setColor(1, 1, 1)
+    
+    -- Apply scaling and centering
     love.graphics.push()
     love.graphics.translate(offsetX, offsetY)
     love.graphics.scale(scale, scale)
-  
+    
     -- Draw game components only if main menu is not active
     if not mainMenu.isActive then
-      
         windowManager:draw()
-        reelsApp:draw()  -- Draw ReelsApp
-        musicApp:draw(0,0,gameWidth,gameHeight)  -- Draw MusicApp
+        reelsApp:draw()
+        musicApp:draw(0, 0, gameWidth, gameHeight)
         chat:draw()
         missions:draw()
-       
         statusBar:draw()
-      
     end
 
     -- Always draw main menu (it will handle its own visibility)

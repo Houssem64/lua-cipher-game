@@ -16,7 +16,8 @@ local Missions = {
         progress_bg_color = {0.9, 0.9, 0.9},
         completed_color = {0.4, 0.8, 0.4},
         header_size = 24,
-        mission_size = 18
+        mission_size = 18,
+        M_size = 18
     }
 }
 Missions.__index = Missions
@@ -74,6 +75,7 @@ function Missions:draw()
     local default_font = love.graphics.getFont()
     local header_font = love.graphics.newFont("joty.otf", self.config.header_size)
     local mission_font = love.graphics.newFont("joty.otf", self.config.mission_size)
+    local text_size = love.graphics.newFont("joty.otf", self.config.M_size)
     header_font:setFilter("nearest", "nearest")
     mission_font:setFilter("nearest", "nearest")
 
@@ -97,6 +99,8 @@ function Missions:draw()
         self.button.x + 13, 
         self.button.y + 11)
     love.graphics.setColor(1, 1, 1)
+    
+    love.graphics.setFont(text_size)
     love.graphics.print("M", 
         self.button.x + 12, 
         self.button.y + 10)

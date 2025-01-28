@@ -7,8 +7,8 @@ function love.conf(t)
    t.window.vsync = true
    t.window.minwidth = 800
    t.window.minheight = 600
-   t.window.fullscreen = true
-   
+   t.window.fullscreen = false
+   t.window.usedpiscale = false
    -- Enable all modules
    t.modules.audio = true
    t.modules.data = true
