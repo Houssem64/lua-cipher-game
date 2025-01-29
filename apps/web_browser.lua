@@ -2,6 +2,10 @@ local WebBrowser = {}
 
 -- Helper functions to generate content
 local function generateSearchResults(query)
+	if not query or query == "" then
+		return {}
+	end
+
 	local results = {
 		{
 			title = "Advanced Network Penetration Techniques",
@@ -752,8 +756,8 @@ function WebBrowser:mousepressed(x, y, button)
 		end
 		
 		-- Check search result clicks
-		if self.currentURL == "search_results" then
-			local results = generateSearchResults(self.searchText)
+		if self.currentURL == "search_results" and self.pages.search_results and self.pages.search_results.results then
+			local results = self.pages.search_results.results
 			local resultY = 250
 			for _, result in ipairs(results) do
 				if y >= resultY and y <= resultY + 80 and
@@ -783,7 +787,7 @@ Related Topics:
 					end
 					return true
 				end
-				resultY = resultY + 100
+				resultY = resultY + 140
 			end
 		end
 
@@ -937,6 +941,10 @@ function WebBrowser:keypressed(key)
 end
 
 function WebBrowser:search(query, params)
+	if not query or query == "" then
+		return
+	end
+	
 	local results = generateSearchResults(query)
 	
 	-- Apply filters if advanced search parameters are provided
