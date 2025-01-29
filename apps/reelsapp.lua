@@ -8,7 +8,8 @@ local ReelsApp = {
         text_color = {1, 1, 1},
         accent_color = {1, 0, 0.4},
         icon_scale = 3,
-        loading_speed = 5
+        loading_speed = 5,
+        icon_spacing = 70
     }
 }
 ReelsApp.__index = ReelsApp
@@ -355,7 +356,7 @@ function ReelsApp:draw()
             -- Draw interaction buttons with new style
             local actionBarX = self.panel.x + self.panel.width - 70
             local actionBarY = videoY + videoHeight / 2
-            local iconSpacing = 70
+            local iconSpacing = self.config.icon_spacing
             local iconSize = 0.8 * self.config.icon_scale
 
             -- Like button with animation
@@ -508,10 +509,10 @@ function ReelsApp:mousepressed(x, y, button)
             self.iconScales.like = 1.3
             self:toggleLike()
             return true
-        elseif checkIconClick(x, y, actionBarX + 20, actionBarY + iconSpacing) then
+        elseif checkIconClick(x, y, actionBarX + 20, actionBarY + self.config.icon_spacing) then
             self.iconScales.comment = 1.3
             return true
-        elseif checkIconClick(x, y, actionBarX + 20, actionBarY + iconSpacing * 2) then
+        elseif checkIconClick(x, y, actionBarX + 20, actionBarY + self.config.icon_spacing * 2) then
             self.iconScales.share = 1.3
             return true
         end
