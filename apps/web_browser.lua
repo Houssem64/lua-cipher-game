@@ -1,5 +1,136 @@
 local WebBrowser = {}
 
+-- Helper functions to generate content
+local function generateSearchResults(query)
+	local results = {
+		{
+			title = "Advanced Network Penetration Techniques",
+			url = "network/pentest-guide",
+			description = "Comprehensive guide to network penetration testing, including advanced techniques and tools.",
+			relevance = 95,
+			date = os.time() - 86400, -- 1 day ago
+			popularity = 98,
+			verified = true,
+			highSecurity = true,
+			category = "Network Security"
+		},
+		{
+			title = "Zero-Day Vulnerability Database",
+			url = "security/vulnerabilities",
+			description = "Latest zero-day vulnerabilities and exploits. Updated daily with new security threats.",
+			relevance = 92,
+			date = os.time() - 3600, -- 1 hour ago
+			popularity = 95,
+			verified = true,
+			highSecurity = true,
+			category = "Exploit Development"
+		},
+		{
+			title = "Encryption Methods in Cybersecurity",
+			url = "security/encryption",
+			description = "Analysis of modern encryption methods used in cybersecurity applications.",
+			relevance = 88,
+			date = os.time() - 604800, -- 1 week ago
+			popularity = 85,
+			verified = true,
+			highSecurity = false,
+			category = "Cryptography"
+		},
+		{
+			title = "Ethical Hacking Certification Guide",
+			url = "training/certification",
+			description = "Complete guide to ethical hacking certifications and career paths.",
+			relevance = 85,
+			date = os.time() - 2592000, -- 1 month ago
+			popularity = 90,
+			verified = true,
+			highSecurity = false,
+			category = "Security"
+		},
+		{
+			title = "Malware Analysis Techniques",
+			url = "security/malware-analysis",
+			description = "Advanced techniques for analyzing and understanding malware behavior.",
+			relevance = 82,
+			date = os.time() - 172800, -- 2 days ago
+			popularity = 88,
+			verified = true,
+			highSecurity = true,
+			category = "Malware Analysis"
+		}
+	}
+	
+	-- Filter results based on query
+	local filtered = {}
+	for _, result in ipairs(results) do
+		if result.title:lower():find(query:lower()) or 
+		   result.description:lower():find(query:lower()) or
+		   result.category:lower():find(query:lower()) then
+			table.insert(filtered, result)
+		end
+	end
+	return filtered
+end
+
+local function generateMessages()
+	return {
+		{
+			channel = "Project Alpha",
+			online = 5,
+			messages = {
+				{ user = "CyberPro", text = "Found a critical vulnerability in the target system", time = "14:23", encrypted = true },
+				{ user = "HackMaster", text = "Running analysis on the vulnerability now", time = "14:24", encrypted = true },
+				{ user = "SecurityGuru", text = "I'll verify the exploit path", time = "14:25", encrypted = true },
+				{ user = "NetRunner", text = "Checking for similar patterns in other systems", time = "14:26", encrypted = true }
+			}
+		},
+		{
+			channel = "Security Research",
+			online = 3,
+			messages = {
+				{ user = "DataWizard", text = "New quantum encryption breakthrough paper", time = "13:15", encrypted = true },
+				{ user = "CipherMaster", text = "Analyzing the implications for current systems", time = "13:17", encrypted = true },
+				{ user = "QuantumHacker", text = "This could revolutionize our approach to encryption", time = "13:20", encrypted = true }
+			}
+		},
+		{
+			channel = "Vulnerability Disclosure",
+			online = 8,
+			messages = {
+				{ user = "BugHunter", text = "Critical zero-day found in popular framework", time = "15:01", encrypted = true },
+				{ user = "SecOps", text = "Beginning impact assessment", time = "15:03", encrypted = true },
+				{ user = "PatchMaster", text = "Working on emergency mitigation", time = "15:05", encrypted = true }
+			}
+		}
+	}
+end
+
+local function generatePosts()
+	return {
+		{
+			user = "CyberPro",
+			content = "Just discovered a new vulnerability in OpenSSL. Working on a detailed report. #CyberSecurity",
+			likes = 145,
+			comments = 23,
+			timestamp = "2 hours ago"
+		},
+		{
+			user = "HackMaster",
+			content = "Hosting a workshop on advanced penetration testing next week. DM for details! #Hacking #Workshop",
+			likes = 89,
+			comments = 15,
+			timestamp = "5 hours ago"
+		},
+		{
+			user = "SecurityGuru",
+			content = "Released a new tool for network analysis. Check it out on my GitHub! #Tools #NetSec",
+			likes = 234,
+			comments = 45,
+			timestamp = "1 day ago"
+		}
+	}
+end
+
 function WebBrowser:new()
 	local obj = {
 		-- Browser state
@@ -8,86 +139,228 @@ function WebBrowser:new()
 		history = {"home"},
 		historyIndex = 1,
 		isEditing = false,
+		isSearching = false,
+		searchText = nil,
 		
 		-- Pages content
 		pages = {
 			home = {
-				title = "Home",
+				title = "HackerSearch",
 				content = [[
-Welcome to the Hacker Browser
-============================
+HackerSearch
+===========
 
-Quick Links:
-- Network Tools
-- Encryption Services
-- Vulnerability Scanner
-- System Diagnostics
+The Hacker's Search Engine
+Secure. Anonymous. Powerful.
+
+[Search Box]
 				]],
 				links = {
-					["Network Tools"] = "network",
-					["Encryption Services"] = "encryption",
-					["Vulnerability Scanner"] = "scanner",
-					["System Diagnostics"] = "diagnostics"
-				}
+					["Advanced Search"] = "advanced_search",
+					["Security Tools"] = "tools",
+					["Recent Searches"] = "history"
+				},
+				isSearch = true
 			},
-			network = {
-				title = "Network Tools",
+			advanced_search = {
+				title = "Advanced Search",
 				content = [[
-Network Analysis Tools
-====================
-
-- Port Scanner
-- Network Monitor
-- Traffic Analyzer
-- Packet Inspector
-				]],
-				links = {
-					["Home"] = "home"
-				}
-			},
-			encryption = {
-				title = "Encryption Services",
-				content = [[
-Encryption Tools
-==============
-
-- File Encryption
-- Message Encryption
-- Key Generator
-- Hash Calculator
-				]],
-				links = {
-					["Home"] = "home"
-				}
-			},
-			scanner = {
-				title = "Vulnerability Scanner",
-				content = [[
-System Vulnerability Scanner
-=========================
-
-- Quick Scan
-- Deep Scan
-- Custom Scan
-- Scan History
-				]],
-				links = {
-					["Home"] = "home"
-				}
-			},
-			diagnostics = {
-				title = "System Diagnostics",
-				content = [[
-System Diagnostics Tools
+Advanced Search Options
 =====================
 
-- System Info
-- Process Monitor
-- Resource Usage
-- Log Analyzer
+Search Filters:
+□ Network Security
+□ Exploit Development
+□ Malware Analysis
+□ Cryptography
+□ Forensics
+
+Time Range:
+○ Any time
+○ Past 24 hours
+○ Past week
+○ Past month
+○ Custom range
+
+Sort By:
+○ Relevance
+○ Date
+○ Popularity
+
+Security Level:
+○ All Results
+○ Verified Sources Only
+○ High Security Only
+
+[Search Box]
 				]],
 				links = {
-					["Home"] = "home"
+					["Basic Search"] = "home",
+					["Search History"] = "history"
+				},
+				isSearch = true,
+				interactive = {
+					toggleFilter = function(self, filter)
+						self.activeFilters = self.activeFilters or {}
+						self.activeFilters[filter] = not self.activeFilters[filter]
+					end,
+					setTimeRange = function(self, range)
+						self.timeRange = range
+					end,
+					setSortBy = function(self, sort)
+						self.sortBy = sort
+					end,
+					setSecurityLevel = function(self, level)
+						self.securityLevel = level
+					end
+				}
+			},
+			search_results = {
+				title = "Search Results",
+				content = "",
+				links = {
+					["Back to Search"] = "home"
+				}
+			},
+			social = {
+				title = "Social Hub",
+				content = [[
+Social Hub
+=========
+
+Connect with other hackers and security professionals:
+
+- HackerNet (Professional Network)
+- SecureChat (Encrypted Messaging)
+- CodeShare (Project Collaboration)
+				]],
+				links = {
+					["Home"] = "home",
+					["HackerNet"] = "hackernet",
+					["SecureChat"] = "securechat",
+					["CodeShare"] = "codeshare"
+				}
+			},
+			hackernet = {
+				title = "HackerNet",
+				content = function(self)
+					local posts = generatePosts()
+					local content = [[
+HackerNet - Professional Network
+==============================
+
+Your Profile
+-----------
+@WhiteHat
+Skills: Network Security, Penetration Testing
+Reputation: ★★★★☆
+Connections: 150
+
+Recent Posts
+-----------
+]]
+					for _, post in ipairs(posts) do
+						content = content .. string.format([[
+
+%s (@%s) - %s
+%s
+❤ %d   💬 %s
+]], post.user, post.user:lower(), post.timestamp, post.content, post.likes, post.comments)
+					end
+					return content
+				end,
+				links = {
+					["Home"] = "home",
+					["Profile"] = "profile",
+					["Messages"] = "messages",
+					["New Post"] = "new_post"
+				},
+				interactive = {
+					like = function(self, postIndex)
+						local posts = generatePosts()
+						if posts[postIndex] then
+							posts[postIndex].likes = posts[postIndex].likes + 1
+						end
+					end,
+					comment = function(self, postIndex)
+						self.commenting = postIndex
+					end
+				}
+			},
+			securechat = {
+				title = "SecureChat",
+				content = function(self)
+					local chats = generateMessages()
+					local content = [[
+SecureChat - End-to-End Encrypted Messaging
+=========================================
+
+Active Channels:
+]]
+					for _, chat in ipairs(chats) do
+						content = content .. string.format("\n🟢 %s (%d online) - 🔒 Encrypted\n", chat.channel, chat.online)
+						if self.activeChat == chat.channel then
+							content = content .. "\nMessages:\n"
+							for _, msg in ipairs(chat.messages) do
+								local encryptedStatus = msg.encrypted and "🔒" or ""
+								content = content .. string.format("[%s] %s %s: %s\n", 
+									msg.time, encryptedStatus, msg.user, msg.text)
+							end
+							content = content .. "\n[Encrypted Message Input]"
+						end
+					end
+					return content
+				end,
+				links = {
+					["Home"] = "home",
+					["New Chat"] = "new_chat",
+					["Settings"] = "chat_settings"
+				},
+				interactive = {
+					selectChat = function(self, channel)
+						self.activeChat = channel
+						self.isTyping = false
+						self.messageText = ""
+					end,
+					startTyping = function(self)
+						self.isTyping = true
+						self.messageText = self.messageText or ""
+					end,
+					sendMessage = function(self, text)
+						if self.activeChat then
+							local chats = generateMessages()
+							for _, chat in ipairs(chats) do
+								if chat.channel == self.activeChat then
+									table.insert(chat.messages, {
+										user = "You",
+										text = text,
+										time = os.date("%H:%M")
+									})
+									break
+								end
+							end
+						end
+						self.isTyping = false
+						self.messageText = ""
+					end
+				}
+			},
+			tools = {
+				title = "Hacking Tools",
+				content = [[
+Hacking Tools
+===========
+
+- Network Analysis
+- Encryption Tools
+- Vulnerability Scanners
+- Security Auditing
+				]],
+				links = {
+					["Home"] = "home",
+					["Network Tools"] = "network",
+					["Encryption"] = "encryption",
+					["Scanner"] = "scanner"
 				}
 			}
 		}
@@ -139,11 +412,247 @@ function WebBrowser:draw(x, y, width, height)
 		love.graphics.setColor(0, 0, 0)
 		love.graphics.print(page.title, x + 20, y + 70)
 		
+		-- Draw search box if this is a search page
+		if page.isSearch then
+			-- Draw search box background
+			love.graphics.setColor(0.95, 0.95, 0.95)
+			love.graphics.rectangle("fill", x + 20, y + 120, width - 40, 40)
+			love.graphics.setColor(0.8, 0.8, 0.8)
+			love.graphics.rectangle("line", x + 20, y + 120, width - 40, 40)
+			
+			-- Draw search icon
+			love.graphics.setColor(0.5, 0.5, 0.5)
+			love.graphics.circle("line", x + 45, y + 140, 8)
+			love.graphics.line(x + 51, y + 146, x + 55, y + 150)
+			
+			-- Draw search text
+			love.graphics.setColor(0, 0, 0)
+			love.graphics.print(self.isSearching and self.searchText or "Search securely...",
+				x + 60, y + 130)
+				
+			-- Draw search button
+			if self.searchText and self.searchText ~= "" then
+				love.graphics.setColor(0.2, 0.4, 0.8)
+				love.graphics.rectangle("fill", x + width - 100, y + 125, 70, 30)
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.print("Search", x + width - 90, y + 132)
+			end
+		end
+		
 		-- Draw content
-		love.graphics.printf(page.content, x + 20, y + 100, width - 40)
+		love.graphics.setColor(0, 0, 0)
+		local content = type(page.content) == "function" and page.content(self) or page.content
+		love.graphics.printf(content, x + 20, y + 180, width - 40)
+		
+		-- Draw advanced search interface
+		if self.currentURL == "advanced_search" then
+			-- Draw filter checkboxes
+			local filterY = y + 250
+			local filters = {"Network Security", "Exploit Development", "Malware Analysis", "Cryptography", "Forensics"}
+			for _, filter in ipairs(filters) do
+				-- Checkbox
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.rectangle("fill", x + 30, filterY, 20, 20)
+				love.graphics.setColor(0, 0, 0)
+				love.graphics.rectangle("line", x + 30, filterY, 20, 20)
+				if self.activeFilters and self.activeFilters[filter] then
+					love.graphics.print("✓", x + 33, filterY)
+				end
+				
+				-- Label
+				love.graphics.print(filter, x + 60, filterY)
+				filterY = filterY + 30
+			end
+			
+			-- Draw time range radio buttons
+			local radioY = y + 450
+			love.graphics.setColor(0, 0, 0)
+			love.graphics.print("Time Range:", x + 30, radioY)
+			radioY = radioY + 30
+			
+			local timeRanges = {"Any time", "Past 24 hours", "Past week", "Past month", "Custom range"}
+			for _, range in ipairs(timeRanges) do
+				-- Radio button
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.circle("fill", x + 40, radioY + 10, 10)
+				love.graphics.setColor(0, 0, 0)
+				love.graphics.circle("line", x + 40, radioY + 10, 10)
+				if self.timeRange == range then
+					love.graphics.circle("fill", x + 40, radioY + 10, 5)
+				end
+				
+				-- Label
+				love.graphics.print(range, x + 60, radioY)
+				radioY = radioY + 30
+			end
+
+			-- Draw sort options
+			local sortY = y + 650
+			love.graphics.setColor(0, 0, 0)
+			love.graphics.print("Sort By:", x + 30, sortY)
+			sortY = sortY + 30
+			
+			local sortOptions = {"Relevance", "Date", "Popularity"}
+			for _, option in ipairs(sortOptions) do
+				-- Radio button
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.circle("fill", x + 40, sortY + 10, 10)
+				love.graphics.setColor(0, 0, 0)
+				love.graphics.circle("line", x + 40, sortY + 10, 10)
+				if self.sortBy == option then
+					love.graphics.circle("fill", x + 40, sortY + 10, 5)
+				end
+				
+				-- Label
+				love.graphics.print(option, x + 60, sortY)
+				sortY = sortY + 30
+			end
+			
+			-- Draw security level options
+			local securityY = y + 800
+			love.graphics.setColor(0, 0, 0)
+			love.graphics.print("Security Level:", x + 30, securityY)
+			securityY = securityY + 30
+			
+			local securityLevels = {"All Results", "Verified Sources Only", "High Security Only"}
+			for _, level in ipairs(securityLevels) do
+				-- Radio button
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.circle("fill", x + 40, securityY + 10, 10)
+				love.graphics.setColor(0, 0, 0)
+				love.graphics.circle("line", x + 40, securityY + 10, 10)
+				if self.securityLevel == level then
+					love.graphics.circle("fill", x + 40, securityY + 10, 5)
+				end
+				
+				-- Label
+				love.graphics.print(level, x + 60, securityY)
+				securityY = securityY + 30
+			end
+
+			-- Draw advanced search button
+			love.graphics.setColor(0.2, 0.4, 0.8)
+			love.graphics.rectangle("fill", x + width - 150, y + height - 60, 130, 40)
+			love.graphics.setColor(1, 1, 1)
+			love.graphics.print("Advanced Search", x + width - 140, y + height - 50)
+		end
+		
+		-- Draw enhanced search results
+		if self.currentURL == "search_results" then
+			local resultY = y + 200
+			for _, result in ipairs(self.pages.search_results.results) do
+				-- Draw result box
+				love.graphics.setColor(0.95, 0.95, 0.95)
+				love.graphics.rectangle("fill", x + 20, resultY, width - 40, 120)
+				love.graphics.setColor(0.9, 0.9, 0.9)
+				love.graphics.rectangle("line", x + 20, resultY, width - 40, 120)
+				
+				-- Draw title
+				love.graphics.setColor(0.2, 0.4, 0.8)
+				love.graphics.print(result.title, x + 30, resultY + 10)
+				
+				-- Draw URL and category
+				love.graphics.setColor(0.3, 0.6, 0.3)
+				love.graphics.print("🔗 " .. result.url, x + 30, resultY + 30)
+				love.graphics.print("📁 " .. result.category, x + width - 200, resultY + 30)
+				
+				-- Draw metadata
+				love.graphics.setColor(0.5, 0.5, 0.5)
+				local timeAgo = os.time() - result.date
+				local timeStr = ""
+				if timeAgo < 3600 then
+					timeStr = math.floor(timeAgo/60) .. " minutes ago"
+				elseif timeAgo < 86400 then
+					timeStr = math.floor(timeAgo/3600) .. " hours ago"
+				else
+					timeStr = math.floor(timeAgo/86400) .. " days ago"
+				end
+				
+				-- Draw badges
+				local badgeX = x + 30
+				if result.verified then
+					love.graphics.setColor(0.2, 0.7, 0.3)
+					love.graphics.rectangle("fill", badgeX, resultY + 50, 80, 20)
+					love.graphics.setColor(1, 1, 1)
+					love.graphics.print("✓ Verified", badgeX + 5, resultY + 52)
+					badgeX = badgeX + 90
+				end
+				if result.highSecurity then
+					love.graphics.setColor(0.7, 0.2, 0.2)
+					love.graphics.rectangle("fill", badgeX, resultY + 50, 100, 20)
+					love.graphics.setColor(1, 1, 1)
+					love.graphics.print("🔒 High Security", badgeX + 5, resultY + 52)
+				end
+				
+				-- Draw metrics
+				love.graphics.setColor(0.5, 0.5, 0.5)
+				love.graphics.print("🕒 " .. timeStr, x + width - 200, resultY + 50)
+				love.graphics.print("👥 Popularity: " .. result.popularity .. "%", x + width - 200, resultY + 70)
+				
+				-- Draw description
+				love.graphics.setColor(0.3, 0.3, 0.3)
+				love.graphics.printf(result.description, x + 30, resultY + 80, width - 60)
+				
+				resultY = resultY + 140
+			end
+		end
+		
+		-- Draw chat interface
+		if self.currentURL == "securechat" then
+			local chats = generateMessages()
+			local chatY = y + 250
+			
+			-- Draw chat list
+			for _, chat in ipairs(chats) do
+				-- Chat channel button
+				if self.activeChat == chat.channel then
+					love.graphics.setColor(0.3, 0.6, 0.9)
+				else
+					love.graphics.setColor(0.4, 0.4, 0.4)
+				end
+				love.graphics.rectangle("fill", x + 20, chatY, width - 40, 40)
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.print(chat.channel, x + 30, chatY + 10)
+				chatY = chatY + 50
+			end
+			
+			-- Draw message input if a chat is active
+			if self.activeChat then
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.rectangle("fill", x + 20, y + height - 60, width - 40, 40)
+				love.graphics.setColor(0, 0, 0)
+				love.graphics.rectangle("line", x + 20, y + height - 60, width - 40, 40)
+				love.graphics.print(self.isTyping and self.messageText or "Type a message...", 
+					x + 30, y + height - 50)
+			end
+		end
+		
+		-- Draw interactive elements
+		if page.interactive then
+			-- Draw like and comment buttons for posts
+			if self.currentURL == "hackernet" then
+				local posts = generatePosts()
+				local buttonY = y + 400
+				for i, post in ipairs(posts) do
+					-- Like button
+					love.graphics.setColor(0.9, 0.3, 0.3)
+					love.graphics.rectangle("fill", x + 20, buttonY, 60, 25)
+					love.graphics.setColor(1, 1, 1)
+					love.graphics.print("Like", x + 30, buttonY + 5)
+					
+					-- Comment button
+					love.graphics.setColor(0.3, 0.6, 0.9)
+					love.graphics.rectangle("fill", x + 90, buttonY, 80, 25)
+					love.graphics.setColor(1, 1, 1)
+					love.graphics.print("Comment", x + 95, buttonY + 5)
+					
+					buttonY = buttonY + 100
+				end
+			end
+		end
 		
 		-- Draw links
-		local linkY = y + 300
+		local linkY = y + 400
 		for text, url in pairs(page.links) do
 			love.graphics.setColor(0.2, 0.4, 0.8)
 			love.graphics.print(text, x + 20, linkY)
@@ -156,6 +665,170 @@ end
 
 function WebBrowser:mousepressed(x, y, button)
 	if button == 1 then
+		local page = self.pages[self.currentURL]
+		
+		-- Handle advanced search interactions
+		if self.currentURL == "advanced_search" then
+			-- Check filter checkboxes
+			local filterY = 250
+			local filters = {"Network Security", "Exploit Development", "Malware Analysis", "Cryptography", "Forensics"}
+			for _, filter in ipairs(filters) do
+				if y >= filterY and y <= filterY + 20 and
+				   x >= 30 and x <= 50 then
+					self.pages.advanced_search.interactive.toggleFilter(self, filter)
+					return true
+				end
+				filterY = filterY + 30
+			end
+			
+			-- Check time range radio buttons
+			local radioY = 480
+			local timeRanges = {"Any time", "Past 24 hours", "Past week", "Past month", "Custom range"}
+			for _, range in ipairs(timeRanges) do
+				if y >= radioY and y <= radioY + 20 and
+				   x >= 30 and x <= 50 then
+					self.pages.advanced_search.interactive.setTimeRange(self, range)
+					return true
+				end
+				radioY = radioY + 30
+			end
+
+			-- Check sort options
+			local sortY = 680
+			local sortOptions = {"Relevance", "Date", "Popularity"}
+			for _, option in ipairs(sortOptions) do
+				if y >= sortY and y <= sortY + 20 and
+				   x >= 30 and x <= 50 then
+					self.pages.advanced_search.interactive.setSortBy(self, option)
+					return true
+				end
+				sortY = sortY + 30
+			end
+			
+			-- Check security levels
+			local securityY = 830
+			local securityLevels = {"All Results", "Verified Sources Only", "High Security Only"}
+			for _, level in ipairs(securityLevels) do
+				if y >= securityY and y <= securityY + 20 and
+				   x >= 30 and x <= 50 then
+					self.pages.advanced_search.interactive.setSecurityLevel(self, level)
+					return true
+				end
+				securityY = securityY + 30
+			end
+
+			-- Check advanced search button
+			if y >= self.height - 60 and y <= self.height - 20 and
+			   x >= self.width - 150 and x <= self.width - 20 then
+				-- Perform advanced search with all selected options
+				local searchParams = {
+					filters = self.activeFilters,
+					timeRange = self.timeRange,
+					sortBy = self.sortBy,
+					securityLevel = self.securityLevel
+				}
+				if self.searchText and self.searchText ~= "" then
+					self:search(self.searchText, searchParams)
+				end
+				return true
+			end
+		end
+		
+		if page and page.isSearch then
+			-- Check search box click
+			if y >= 120 and y <= 160 and x >= 20 and x <= self.width - 20 then
+				self.isSearching = true
+				self.searchText = self.searchText or ""
+				return true
+			end
+			
+			-- Check search button click
+			if self.searchText and self.searchText ~= "" and
+			   y >= 125 and y <= 155 and
+			   x >= self.width - 100 and x <= self.width - 30 then
+				self:search(self.searchText)
+				return true
+			end
+		end
+		
+		-- Check search result clicks
+		if self.currentURL == "search_results" then
+			local results = generateSearchResults(self.searchText)
+			local resultY = 250
+			for _, result in ipairs(results) do
+				if y >= resultY and y <= resultY + 80 and
+				   x >= 20 and x <= self.width - 20 then
+					-- Navigate to the result URL
+					if self.pages[result.url] then
+						self:navigate(result.url)
+					else
+						-- Create a new page for this result
+						self.pages[result.url] = {
+							title = result.title,
+							content = string.format([[
+%s
+%s
+
+Related Topics:
+- Network Security
+- Penetration Testing
+- Security Tools
+]], result.title, result.description),
+							links = {
+								["Back to Results"] = "search_results",
+								["Home"] = "home"
+							}
+						}
+						self:navigate(result.url)
+					end
+					return true
+				end
+				resultY = resultY + 100
+			end
+		end
+
+		if self.currentURL == "securechat" then
+			local chats = generateMessages()
+			local chatY = 250
+			
+			-- Check chat channel clicks
+			for _, chat in ipairs(chats) do
+				if y >= chatY and y <= chatY + 40 and
+				   x >= 20 and x <= self.width - 20 then
+					self.pages.securechat.interactive.selectChat(self, chat.channel)
+					return true
+				end
+				chatY = chatY + 50
+			end
+			
+			-- Check message input click
+			if self.activeChat and
+			   y >= self.height - 60 and y <= self.height - 20 and
+			   x >= 20 and x <= self.width - 20 then
+				self.pages.securechat.interactive.startTyping(self)
+				return true
+			end
+		end
+
+		if page and page.interactive then
+			if self.currentURL == "hackernet" then
+				local buttonY = 400
+				local posts = generatePosts()
+				for i, _ in ipairs(posts) do
+					-- Check like button
+					if y >= buttonY and y <= buttonY + 25 then
+						if x >= 20 and x <= 80 then
+							page.interactive.like(self, i)
+							return true
+						elseif x >= 90 and x <= 170 then
+							page.interactive.comment(self, i)
+							return true
+						end
+					end
+					buttonY = buttonY + 100
+				end
+			end
+		end
 		-- All coordinates are already relative to content area
 		-- Check back button
 		if y >= 10 and y <= 40 then
@@ -214,13 +887,42 @@ function WebBrowser:navigate(url)
 end
 
 function WebBrowser:textinput(text)
-	if self.isEditing then
+	if self.currentURL == "securechat" and self.isTyping then
+		self.messageText = (self.messageText or "") .. text
+		return true
+	elseif self.isSearching then
+		self.searchText = (self.searchText or "") .. text
+		return true
+	elseif self.isEditing then
 		self.urlInput = self.urlInput .. text
+		return true
 	end
 end
 
 function WebBrowser:keypressed(key)
-	if self.isEditing then
+	if self.currentURL == "securechat" and self.isTyping then
+		if key == "return" and self.messageText ~= "" then
+			self.pages.securechat.interactive.sendMessage(self, self.messageText)
+		elseif key == "escape" then
+			self.isTyping = false
+			self.messageText = ""
+		elseif key == "backspace" then
+			self.messageText = self.messageText:sub(1, -2)
+		end
+		return true
+	elseif self.isSearching then
+		if key == "return" then
+			self:search(self.searchText)
+			self.isSearching = false
+			self.searchText = nil
+		elseif key == "escape" then
+			self.isSearching = false
+			self.searchText = nil
+		elseif key == "backspace" then
+			self.searchText = self.searchText:sub(1, -2)
+		end
+		return true
+	elseif self.isEditing then
 		if key == "return" then
 			if self.pages[self.urlInput] then
 				self:navigate(self.urlInput)
@@ -234,8 +936,99 @@ function WebBrowser:keypressed(key)
 	end
 end
 
+function WebBrowser:search(query, params)
+	local results = generateSearchResults(query)
+	
+	-- Apply filters if advanced search parameters are provided
+	if params then
+		local filtered = {}
+		for _, result in ipairs(results) do
+			local matchesFilters = true
+			
+			-- Apply category filters
+			if params.filters and next(params.filters) then
+				local hasMatchingFilter = false
+				for filter, active in pairs(params.filters) do
+					if active and result.title:lower():find(filter:lower()) then
+						hasMatchingFilter = true
+						break
+					end
+				end
+				matchesFilters = hasMatchingFilter
+			end
+			
+			-- Apply security level filter
+			if params.securityLevel then
+				if params.securityLevel == "Verified Sources Only" and not result.verified then
+					matchesFilters = false
+				elseif params.securityLevel == "High Security Only" and not result.highSecurity then
+					matchesFilters = false
+				end
+			end
+			
+			if matchesFilters then
+				table.insert(filtered, result)
+			end
+		end
+		
+		-- Sort results based on selected option
+		if params.sortBy then
+			table.sort(filtered, function(a, b)
+				if params.sortBy == "Relevance" then
+					return a.relevance > b.relevance
+				elseif params.sortBy == "Date" then
+					return a.date > b.date
+				elseif params.sortBy == "Popularity" then
+					return a.popularity > b.popularity
+				end
+				return a.relevance > b.relevance
+			end)
+		end
+		
+		results = filtered
+	end
+	
+	-- Generate content with search parameters info
+	local content = string.format([[
+Search Results for: "%s"
+=====================
+
+Found %d results in 0.12 seconds
+%s
+]], query, #results, 
+	params and string.format("\nFilters: %s\nSort: %s\nSecurity: %s", 
+		next(params.filters or {}) and table.concat(params.filters, ", ") or "None",
+		params.sortBy or "Relevance",
+		params.securityLevel or "All Results") or "")
+
+	for _, result in ipairs(results) do
+		content = content .. string.format([[
+
+[%s]
+🔗 %s
+Relevance: %d%%
+───────────────────────────
+%s
+───────────────────────────
+
+]], result.title, result.url, result.relevance, result.description)
+	end
+	
+	self.pages.search_results = {
+		title = string.format('Search Results - "%s"', query),
+		content = content,
+		links = {
+			["New Search"] = "home",
+			["Advanced Search"] = "advanced_search",
+			["Search History"] = "history"
+		},
+		results = results
+	}
+	self:navigate("search_results")
+end
+
 function WebBrowser:update(dt)
-    -- Add any animation or state updates here if needed
+	-- Add any animation or state updates here if needed
 end
 
 return WebBrowser
