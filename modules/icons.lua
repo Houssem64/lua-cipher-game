@@ -16,7 +16,8 @@ function Icons:load()
         files = self:createFilesIcon(),
         email = self:createEmailIcon(),
         text_editor = self:createTextEditorIcon(),
-        music = self:createMusicIcon()  -- Add the music icon
+        music = self:createMusicIcon(),  -- Add the music icon
+        browser = self:createBrowserIcon()  -- Add browser icon
     }
 end
 local default_font = love.graphics.getFont()
@@ -92,6 +93,36 @@ function Icons:createTextEditorIcon()
     love.graphics.setCanvas()
     return canvas
 end
+function Icons:createBrowserIcon()
+    local canvas = love.graphics.newCanvas(64, 64)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear()
+    
+    -- Draw globe background
+    love.graphics.setColor(0.2, 0.4, 0.8)
+    love.graphics.circle("fill", 32, 32, 28)
+    
+    -- Draw grid lines (latitude)
+    love.graphics.setColor(1, 1, 1, 0.3)
+    for i = -2, 2 do
+        love.graphics.line(4, 32 + i * 10, 60, 32 + i * 10)
+    end
+    
+    -- Draw grid lines (longitude)
+    love.graphics.setColor(1, 1, 1, 0.3)
+    for i = -2, 2 do
+        local x = 32 + i * 10
+        love.graphics.line(x, 4, x, 60)
+    end
+    
+    -- Add highlight
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.circle("fill", 24, 24, 12)
+    
+    love.graphics.setCanvas()
+    return canvas
+end
+
 function Icons:createMusicIcon()
     local canvas = love.graphics.newCanvas(64, 64)
     love.graphics.setCanvas(canvas)

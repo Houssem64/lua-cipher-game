@@ -16,11 +16,13 @@ local MusicApp = require("apps.music_app")
 local moonshine = require 'moonshine'
 local ReelsApp = require("apps.reelsapp")
 local desktop
+
 local statusBar
 local windowManager
 local networkManager
 local mainMenu  -- Add this line to declare mainMenu globally
 local musicApp  -- Add this line to declare musicApp globally
+local webBrowser
 
 function love.load()
     -- Enable key repeat for proper input handling
@@ -120,6 +122,7 @@ missionsManager:updateProgress(3, 1, true) -- Complete first subtask
     musicApp = MusicApp.new()  -- Create a new instance of MusicApp
     reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
     desktop = Desktop:new()
+
     windowManager = WindowManager:new()
     statusBar = StatusBar:new(networkManager)
     statusBar.windowManager = windowManager
@@ -137,6 +140,7 @@ function love.update(dt)
         musicApp:update(dt)  -- Update MusicApp
         reelsApp:update(dt)  -- Update ReelsApp
     end
+
 
 end
 
@@ -162,6 +166,7 @@ function love.draw()
         statusBar:draw()
     end
 
+
     -- Always draw main menu (it will handle its own visibility)
     mainMenu:draw()
 
@@ -176,6 +181,7 @@ function love.keypressed(key)
     
     windowManager:keypressed(key)
     chat:keypressed(key)
+
 
 if key == "c" then
     -- Get current mission by ID 1
@@ -235,6 +241,7 @@ function love.textinput(text)
         windowManager:textinput(text)
         chat:textinput(text)
     end
+
 end
 
 function love.mousepressed(x, y, button)
@@ -257,6 +264,7 @@ function love.mousepressed(x, y, button)
         musicApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to MusicApp
         reelsApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to ReelsApp
     end
+
     
 end
 
