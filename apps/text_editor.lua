@@ -34,7 +34,7 @@ function TextEditor:refreshFileList()
 end
 function TextEditor:draw(x, y, width, height)
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 21)  -- Adjusted font size for 1080p
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 21)  -- Adjusted font size for 1080p
     font:setFilter("nearest", "nearest")  -- Set filter to nearest for crisp text
     love.graphics.setFont(font)
 

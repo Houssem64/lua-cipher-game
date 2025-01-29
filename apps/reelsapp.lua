@@ -7,7 +7,7 @@ local ReelsApp = {
         panel_color = {0.1, 0.1, 0.1, 0.95},
         text_color = {1, 1, 1},
         accent_color = {1, 0, 0.4},
-        icon_scale = 1.0,
+        icon_scale = 3,
         loading_speed = 5
     }
 }
@@ -94,6 +94,7 @@ function ReelsApp:new()
         y = 240,
         radius = obj.config.button_radius
     }
+
     
     obj.panel = {
         x = obj.gameWidth,
@@ -277,38 +278,13 @@ end
 
 function ReelsApp:draw()
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 18)
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 18)
     font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
 
-    -- Draw toggle button
-    love.graphics.setColor(unpack(self.config.button_color))
-    local buttonCenterX = self.button.x + self.button.radius
-    local buttonCenterY = self.button.y + self.button.radius
-    
-    -- Draw the button
-    love.graphics.circle("fill", buttonCenterX, buttonCenterY, self.button.radius)
-    
-    -- Debug: Draw hit area
-    love.graphics.setColor(1, 1, 1, 0.2)
-    love.graphics.circle("line", buttonCenterX, buttonCenterY, self.button.radius)
+    -- Draw panel content first
 
-    -- Draw reel icon
-    love.graphics.setColor(1, 1, 1)
-    local iconX = self.button.x + self.button.radius - 10
-    local iconY = self.button.y + self.button.radius - 10
-    
-    -- Draw film reel circles
-    love.graphics.circle("line", iconX + 10, iconY + 10, 8)
-    love.graphics.circle("fill", iconX + 10, iconY + 10, 3)
-    
-    -- Draw sprockets
-    for i = 1, 6 do
-        local angle = (i - 1) * math.pi / 3
-        local sprocketX = iconX + 10 + math.cos(angle) * 6
-        local sprocketY = iconY + 10 + math.sin(angle) * 6
-        love.graphics.circle("fill", sprocketX, sprocketY, 1.5)
-    end
+
 
     if self.panel.x < self.gameWidth then
         local reel = self.reels[self.currentReelIndex]
@@ -415,8 +391,8 @@ function ReelsApp:draw()
             
             -- Info text with improved typography
             love.graphics.setColor(1, 1, 1)
-            local titleFont = love.graphics.newFont("joty.otf", 24)
-            local descFont = love.graphics.newFont("joty.otf", 16)
+            local titleFont = love.graphics.newFont("fonts/FiraCode.ttf", 24)
+            local descFont = love.graphics.newFont("fonts/FiraCode.ttf", 16)
             
             love.graphics.setFont(titleFont)
             love.graphics.print("@" .. reel.title, videoX + 20, infoY + 20)
@@ -433,9 +409,41 @@ function ReelsApp:draw()
     end
 
     love.graphics.setFont(default_font)
+    
+    -- Draw toggle button
+    love.graphics.setColor(unpack(self.config.button_color))
+    local buttonCenterX = self.button.x + self.button.radius
+    local buttonCenterY = self.button.y + self.button.radius
+    
+    -- Draw the button
+    love.graphics.circle("fill", buttonCenterX, buttonCenterY, self.button.radius)
+    
+    -- Debug: Draw hit area
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.circle("line", buttonCenterX, buttonCenterY, self.button.radius)
+
+    -- Draw reel icon
+    love.graphics.setColor(1, 1, 1)
+    local iconX = self.button.x + self.button.radius - 10
+    local iconY = self.button.y + self.button.radius - 10
+    
+    -- Draw film reel circles
+    love.graphics.circle("line", iconX + 10, iconY + 10, 8)
+    love.graphics.circle("fill", iconX + 10, iconY + 10, 3)
+    
+    -- Draw sprockets
+    for i = 1, 6 do
+        local angle = (i - 1) * math.pi / 3
+        local sprocketX = iconX + 10 + math.cos(angle) * 6
+        local sprocketY = iconY + 10 + math.sin(angle) * 6
+        love.graphics.circle("fill", sprocketX, sprocketY, 1.5)
+    end
 end
 
 function ReelsApp:mousepressed(x, y, button)
+
+
+
     local dx = x - (self.button.x + self.button.radius)
     local dy = y - (self.button.y + self.button.radius)
     if dx * dx + dy * dy <= self.button.radius * self.button.radius then

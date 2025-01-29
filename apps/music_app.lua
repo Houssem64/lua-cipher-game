@@ -125,7 +125,7 @@ function MusicApp:draw(x, y, width, height)
     self.height = height
 
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 18)  -- Spotify-like font size
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 18)  -- Spotify-like font size
     font:setFilter("nearest", "nearest")  -- Crisp text
     love.graphics.setFont(font)
 
