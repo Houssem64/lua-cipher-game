@@ -320,23 +320,30 @@ function EmailClient:mousepressed(x, y, button)
         end
 
         if self.state == EmailStates.COMPOSE then
+            -- Adjust y coordinate to account for toolbar offset
+            local adjustedY = y - 70  -- Subtract toolbar height (60) and spacing (10)
+            
             -- Check input field clicks and send button
-            if y >= 70 and y <= 110 then  -- Adjusted for "To" field
+            if adjustedY >= 30 and adjustedY <= 70 then  -- "To" field
                 if x >= 150 and x <= self.width - 30 then
                     self.composeData.activeField = "to"
+                    return
                 end
-            elseif y >= 120 and y <= 160 then  -- Adjusted for "Subject" field
+            elseif adjustedY >= 80 and adjustedY <= 120 then  -- "Subject" field
                 if x >= 150 and x <= self.width - 30 then
                     self.composeData.activeField = "subject"
+                    return
                 end
-            elseif y >= 170 and y <= self.height - 60 then  -- Adjusted for body field
+            elseif adjustedY >= 130 and adjustedY <= self.height - 130 then  -- Body field
                 if x >= 30 and x <= self.width - 30 then
                     self.composeData.activeField = "body"
+                    return
                 end
             end
             
-            -- Check send button
-            if y >= self.height - 60 and x >= self.width - 150 and x <= self.width - 30 then  -- Adjusted for send button
+            -- Check send button (at bottom of compose area)
+            if adjustedY >= self.height - 130 and adjustedY <= self.height - 80 and
+               x >= self.width - 150 and x <= self.width - 30 then
                 self:sendEmail()
                 return
             end
