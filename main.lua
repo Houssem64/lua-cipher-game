@@ -211,15 +211,22 @@ if key == "c" then
         -- Update the mission in the display list by finding it by ID
         for i, displayMission in ipairs(missions.missions) do
             if displayMission.id == currentMission.id then
+                local wasNotCompleted = not missions.missions[i].completed
                 missions.missions[i] = {
                     id = currentMission.id,
+                    title = currentMission.text,
                     text = currentMission.text,
                     description = currentMission.description,
                     subtasks = formattedSubtasks,
                     completed = currentMission.completed,
                     progress = currentMission.progress,
-                    subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks
+                    subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks,
+                    hover = false
                 }
+                -- Trigger notification if mission just got completed
+                if currentMission.completed and wasNotCompleted then
+                    missions:completeMission(i)
+                end
                 break
             end
         end

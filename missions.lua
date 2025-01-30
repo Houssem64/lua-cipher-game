@@ -31,6 +31,10 @@ function Missions.new(x, y, config)
     -- Initialize state using virtual resolution
     self.gameWidth = 1920
     self.gameHeight = 500
+
+    -- Load task completion sound
+    local success, result = pcall(function()
+        return love.audio.newSource("task_complete.wav", "static")
     
     -- Y offset for dynamic positioning
     self.y_offset = 300 or 0  -- Default to 0 if not provided
@@ -57,6 +61,31 @@ function Missions.new(x, y, config)
     -- Mission state
     self.missions = {}  -- Stores the list of missions
     
+    -- Load completion sound
+    local success, result = pcall(function()
+        return love.audio.newSource("menuselect.wav", "static")
+    end)
+    if success then
+        self.completion_sound = result
+        print("Successfully loaded completion sound")
+    else
+        print("Failed to load completion sound:", result)
+        self.completion_sound = nil
+    end
+    
+    -- Notification state
+    self.notification = {
+        active = false,
+        progress = 0,
+        x = 0,
+        y = 0,
+        target_x = 0,
+        target_y = 0,
+        scale = 0,
+        alpha = 0,
+        text = ""
+    }
+    
     return self
 end
 
@@ -68,6 +97,36 @@ function Missions:update(dt)
     else
         self.panel.x = math.min(self.gameWidth, 
             self.panel.x + self.config.slide_speed * dt)
+    end
+
+    -- Update notification animation
+    if self.notification.active then
+        print("Notification state:", string.format(
+            "progress=%.2f, x=%.2f, y=%.2f, scale=%.2f, alpha=%.2f",
+            self.notification.progress,
+            self.notification.x,
+            self.notification.y,
+            self.notification.scale,
+            self.notification.alpha
+        ))
+        
+        self.notification.progress = self.notification.progress + dt * 1.5 -- Slower animation
+        
+        -- Animate position with easing
+        local t = math.min(1, self.notification.progress)
+        t = t * t * (3 - 2 * t) -- Smooth step interpolation
+        self.notification.x = self.button.x + self.button.radius + (self.notification.target_x - (self.button.x + self.button.radius)) * t
+        self.notification.y = self.button.y + self.button.radius + (self.notification.target_y - (self.button.y + self.button.radius)) * t
+        
+        -- Animate scale and alpha with smoother curves
+        self.notification.scale = math.sin(t * math.pi) * 1.5
+        self.notification.alpha = math.cos(t * math.pi / 2)
+        
+        -- End animation
+        if self.notification.progress >= 1 then
+            print("Notification animation complete")
+            self.notification.active = false
+        end
     end
 end
 
@@ -133,11 +192,29 @@ function Missions:draw()
         local mission_y = self.panel.y + 80
         
         for i, mission in ipairs(self.missions) do
-            -- Mission background (with hover effect)
-            local hover = love.mouse.getY() >= mission_y and 
-                         love.mouse.getY() <= mission_y + self.config.mission_height
+            local current_mission_height = self.config.mission_height
             
-            if hover then
+            -- Add height for description if present
+            if mission.description and mission.description ~= "" then
+                current_mission_height = current_mission_height + 25
+            end
+            
+            -- Add height for subtasks if present
+            if mission.subtasks and #mission.subtasks > 0 then
+                current_mission_height = current_mission_height + (#mission.subtasks * 25) + 10
+            end
+            
+            -- Update hover state
+            local mouse_x = love.mouse.getX()
+            local mouse_y = love.mouse.getY()
+            mission.hover = self.panel.visible and 
+                          mouse_y >= mission_y and 
+                          mouse_y <= mission_y + current_mission_height and
+                          mouse_x >= self.panel.x + 10 and 
+                          mouse_x <= self.panel.x + self.panel.width - 10
+            
+            -- Mission background (with hover effect)
+            if mission.hover then
                 love.graphics.setColor(unpack(self.config.hover_color))
             else
                 love.graphics.setColor(1, 1, 1, 0.5)
@@ -147,7 +224,7 @@ function Missions:draw()
                 self.panel.x + 10,
                 mission_y,
                 self.panel.width - 20,
-                self.config.mission_height,
+                current_mission_height,
                 8)
             
             -- Mission text first
@@ -187,7 +264,7 @@ function Missions:draw()
                 mission.progress = completedSubtasks / #mission.subtasks
                 mission.subtaskProgress = mission.progress
                 
-                for i, subtask in ipairs(mission.subtasks) do
+                for _, subtask in ipairs(mission.subtasks) do
                     -- Draw checkbox
                     love.graphics.setColor(0.8, 0.8, 0.8)
                     love.graphics.rectangle('line', 
@@ -219,9 +296,6 @@ function Missions:draw()
                     
                     subtaskY = subtaskY + subtaskHeight
                 end
-                
-                -- Update mission height to accommodate subtasks
-                mission_y = subtaskY + 10
             else
                 -- Regular progress bar for missions without subtasks
                 love.graphics.setColor(unpack(self.config.progress_bg_color))
@@ -262,18 +336,59 @@ function Missions:draw()
                         self.panel.width - 40,
                         "right")
                 end
-                
-                mission_y = mission_y + self.config.mission_height + 10
             end
             
-           
-                
-            mission_y = mission_y + self.config.mission_height + 10
+            -- Move to next mission position
+            mission_y = mission_y + current_mission_height + 10
         end
     end
     
+    -- Reset color and font
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(default_font)
+    
+    -- Draw notification last to ensure it's on top
+    if self.notification.active then
+        -- Draw glow effect
+        love.graphics.setColor(self.config.completed_color[1], 
+                             self.config.completed_color[2], 
+                             self.config.completed_color[3], 
+                             self.notification.alpha * 0.3)
+        love.graphics.circle('fill', self.notification.x, self.notification.y, 40 * self.notification.scale)
+        
+        -- Draw checkmark with color
+        love.graphics.setColor(self.config.completed_color[1], 
+                             self.config.completed_color[2], 
+                             self.config.completed_color[3], 
+                             self.notification.alpha)
+        
+        -- Save current transform
+        love.graphics.push()
+        
+        -- Set transform for checkmark
+        love.graphics.translate(self.notification.x, self.notification.y)
+        love.graphics.scale(self.notification.scale, self.notification.scale)
+        
+        -- Draw checkmark
+        local size = 30
+        love.graphics.setLineWidth(4)
+        love.graphics.line(-size/2, 0, -size/6, size/2)
+        love.graphics.line(-size/6, size/2, size/2, -size/2)
+        
+        -- Restore transform
+        love.graphics.pop()
+        love.graphics.setLineWidth(1)
+        
+        -- Draw completion text
+        local font = love.graphics.newFont(24)
+        love.graphics.setFont(font)
+        local textWidth = font:getWidth(self.notification.text)
+        love.graphics.print(self.notification.text, 
+            self.notification.x - textWidth/2,
+            self.notification.y + 40 * self.notification.scale,
+            0, self.notification.scale, self.notification.scale)
+    end
+
 end
 function Missions:mousepressed(x, y)
     -- Check if mission button was clicked
@@ -283,6 +398,42 @@ function Missions:mousepressed(x, y)
         self.panel.visible = not self.panel.visible
         return true
     end
+
+    -- Check mission clicks when panel is visible
+    if self.panel.visible and x >= self.panel.x then
+        local mission_y = self.panel.y + 80
+        
+        for i, mission in ipairs(self.missions) do
+            local current_mission_height = self.config.mission_height
+            
+            -- Add height for description if present
+            if mission.description and mission.description ~= "" then
+                current_mission_height = current_mission_height + 25
+            end
+            
+            -- Add height for subtasks if present
+            if mission.subtasks and #mission.subtasks > 0 then
+                current_mission_height = current_mission_height + (#mission.subtasks * 25) + 10
+            end
+            
+            -- Check if mission is clicked
+            if y >= mission_y and y <= mission_y + current_mission_height and
+               x >= self.panel.x + 10 and x <= self.panel.x + self.panel.width - 10 then
+                print("Mission clicked at y:", mission_y, "height:", current_mission_height)  -- Debug print
+                if not mission.completed then
+                    self:completeMission(i)
+                end
+                return true
+            end
+            
+            -- Update hover state
+            mission.hover = y >= mission_y and y <= mission_y + current_mission_height
+            
+            -- Move to next mission position
+            mission_y = mission_y + current_mission_height + 10
+        end
+    end
+    
     return false
 end
 
@@ -302,12 +453,14 @@ function Missions:addMission(mission)
 
     table.insert(self.missions, {
         id = mission.id,
+        title = mission.text,  -- Set title to match text
         text = mission.text,
         description = mission.description,
         subtasks = formattedSubtasks,
         completed = mission.completed,
         progress = mission.progress or 0,
-        subtaskProgress = mission.subtaskProgress or 0
+        subtaskProgress = mission.subtaskProgress or 0,
+        hover = false  -- Initialize hover state
     })
 end
 
@@ -333,7 +486,29 @@ end
 
 function Missions:completeMission(index)
     if self.missions[index] then
+        print("Completing mission: " .. self.missions[index].text)  -- Debug print
         self.missions[index].completed = true
+        
+        -- Play completion sound
+        if self.completion_sound then
+            print("Playing completion sound")  -- Debug print
+            self.completion_sound:stop()
+            self.completion_sound:play()
+        else
+            print("No completion sound loaded")  -- Debug print
+        end
+        
+        -- Start notification animation
+        print("Starting notification animation")  -- Debug print
+        self.notification.active = true
+        self.notification.progress = 0
+        self.notification.x = self.button.x + self.button.radius
+        self.notification.y = self.button.y + self.button.radius
+        self.notification.target_x = self.gameWidth / 2
+        self.notification.target_y = self.gameHeight / 3
+        self.notification.scale = 0
+        self.notification.alpha = 1
+        self.notification.text = "Mission Complete!"
     end
 end
 
