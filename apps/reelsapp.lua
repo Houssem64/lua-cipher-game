@@ -110,7 +110,7 @@ function ReelsApp:new()
     obj.reels = {
         {
             title = "cooluser123",
-            video = "test.ogv",
+            video = "reels/1.ogv",
             likes = 10200,
             comments = 1200,
             shares = 450,
@@ -120,13 +120,23 @@ function ReelsApp:new()
         },
         {
             title = "gamer_pro",
-            video = "test2.ogv",
+            video = "reels/2.ogv",
             likes = 5000,
             comments = 800,
             shares = 200,
             description = "Gaming moment 🎮 #gaming #fail",
             isLiked = false,
             music = "Funny Sound Effect"
+        },
+        {
+            title = "bendover",
+            video = "reels/3.ogv",
+            likes = 10200,
+            comments = 1200,
+            shares = 450,
+            description = "Check out this awesome video! #trending #fyp",
+            isLiked = false,
+            music = "Original Sound - cooluser123"
         }
     }
     

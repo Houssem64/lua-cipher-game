@@ -356,7 +356,7 @@ function EmailClient:mousepressed(x, y, button)
             -- Check delete button when viewing email
             if self.selectedEmail then
                 if x >= self.width - 80 and x <= self.width - 20 and
-                   y >= 20 and y <= 70 then  -- Adjusted for delete button
+                   y >= 80 and y <= 130 then  -- Adjusted for toolbar offset and button height
                     self:deleteEmail()
                     return
                 end

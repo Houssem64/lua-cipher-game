@@ -382,9 +382,15 @@ function WebBrowser:draw(x, y, width, height)
 	self.height = height
 	
 	local default_font = love.graphics.getFont()
-	local font = love.graphics.newFont("joty.otf", 18)
+	local font = love.graphics.newFont("fonts/firaCode.ttf", 16)
 	font:setFilter("nearest", "nearest")
 	love.graphics.setFont(font)
+	
+	-- Calculate text metrics
+	local font_height = font:getHeight()
+	local line_spacing = font_height * 1.2
+	local padding = font_height * 0.5
+	local nav_height = font_height * 3
 	
 	-- Draw browser background
 	love.graphics.setColor(1, 1, 1, 0.9)
@@ -392,37 +398,42 @@ function WebBrowser:draw(x, y, width, height)
 	
 	-- Draw navigation bar
 	love.graphics.setColor(0.95, 0.95, 0.95)
-	love.graphics.rectangle("fill", x, y, width, 50)
+	love.graphics.rectangle("fill", x, y, width, nav_height)
 	
 	-- Draw back/forward buttons
+	local button_size = nav_height * 0.6
+	local button_padding = (nav_height - button_size) / 2
 	love.graphics.setColor(0.8, 0.8, 0.8)
-	love.graphics.rectangle("fill", x + 10, y + 10, 30, 30)
-	love.graphics.rectangle("fill", x + 50, y + 10, 30, 30)
+	love.graphics.rectangle("fill", x + button_padding, y + button_padding, button_size, button_size)
+	love.graphics.rectangle("fill", x + button_padding * 3 + button_size, y + button_padding, button_size, button_size)
 	love.graphics.setColor(0.3, 0.3, 0.3)
-	love.graphics.print("←", x + 17, y + 15)
-	love.graphics.print("→", x + 57, y + 15)
+	love.graphics.print("←", x + button_padding + button_size/3, y + button_padding + button_size/4)
+	love.graphics.print("→", x + button_padding * 3 + button_size + button_size/3, y + button_padding + button_size/4)
 	
 	-- Draw URL bar
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.rectangle("fill", x + 90, y + 10, width - 100, 30)
+	love.graphics.rectangle("fill", x + nav_height * 1.8, y + button_padding, width - nav_height * 2, button_size)
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print(self.isEditing and self.urlInput or self.currentURL,
-		x + 100, y + 15)
+		x + nav_height * 1.9, y + button_padding + button_size/4)
 	
 	-- Draw page content
 	local page = self.pages[self.currentURL]
 	if page then
 		-- Draw title
 		love.graphics.setColor(0, 0, 0)
-		love.graphics.print(page.title, x + 20, y + 70)
+		love.graphics.print(page.title, x + padding, y + nav_height + padding)
 		
 		-- Draw search box if this is a search page
 		if page.isSearch then
+			local search_box_height = font_height * 2
+			local search_box_y = y + nav_height + padding * 3 + font_height
+			
 			-- Draw search box background
 			love.graphics.setColor(0.95, 0.95, 0.95)
-			love.graphics.rectangle("fill", x + 20, y + 120, width - 40, 40)
+			love.graphics.rectangle("fill", x + padding, search_box_y, width - padding * 2, search_box_height)
 			love.graphics.setColor(0.8, 0.8, 0.8)
-			love.graphics.rectangle("line", x + 20, y + 120, width - 40, 40)
+			love.graphics.rectangle("line", x + padding, search_box_y, width - padding * 2, search_box_height)
 			
 			-- Draw search icon
 			love.graphics.setColor(0.5, 0.5, 0.5)
