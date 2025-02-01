@@ -34,7 +34,17 @@ function Missions.new(x, y, config)
 
     -- Load task completion sound
     local success, result = pcall(function()
-        return love.audio.newSource("task_complete.wav", "static")
+        local source = love.audio.newSource("task_complete.wav", "static")
+        source:setVolume(1.0)  -- Ensure full volume
+        return source
+    end)
+    if success then
+        self.task_completion_sound = result
+        print("Successfully loaded task completion sound")
+    else
+        print("Failed to load task completion sound:", result)
+        self.task_completion_sound = nil
+    end
     
     -- Y offset for dynamic positioning
     self.y_offset = 300 or 0  -- Default to 0 if not provided
@@ -390,6 +400,9 @@ function Missions:draw()
     end
 
 end
+
+
+
 function Missions:mousepressed(x, y)
     -- Check if mission button was clicked
     local dx = x - (self.button.x + self.button.radius)
@@ -420,7 +433,47 @@ function Missions:mousepressed(x, y)
             if y >= mission_y and y <= mission_y + current_mission_height and
                x >= self.panel.x + 10 and x <= self.panel.x + self.panel.width - 10 then
                 print("Mission clicked at y:", mission_y, "height:", current_mission_height)  -- Debug print
-                if not mission.completed then
+                
+                -- Check for subtask clicks
+                if mission.subtasks and #mission.subtasks > 0 then
+                    local subtaskY = mission_y + self.config.mission_padding + 50
+                    local subtaskHeight = 25
+                    local checkboxSize = 18
+                    
+                    for j, subtask in ipairs(mission.subtasks) do
+                        if y >= subtaskY and y <= subtaskY + subtaskHeight and
+                           x >= self.panel.x + 40 and x <= self.panel.x + 40 + checkboxSize then
+                            if not subtask.completed then
+                                subtask.completed = true
+                                -- Play task completion sound
+                                local success, sound = pcall(function()
+                                    local src = love.audio.newSource("task_complete.wav", "static")
+                                    src:play()
+                                    return src
+                                end)
+
+
+
+
+                                
+                                -- Check if all subtasks are complete
+                                local allComplete = true
+                                for _, st in ipairs(mission.subtasks) do
+                                    if not st.completed then
+                                        allComplete = false
+                                        break
+                                    end
+                                end
+                                
+                                if allComplete then
+                                    self:completeMission(i)
+                                end
+                            end
+                            return true
+                        end
+                        subtaskY = subtaskY + subtaskHeight
+                    end
+                elseif not mission.completed then
                     self:completeMission(i)
                 end
                 return true
