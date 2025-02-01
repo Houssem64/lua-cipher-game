@@ -12,6 +12,18 @@ local StoryMissions = {
 				"Collect all coins",
                 "test"
 			}
+		},
+		{
+			id = 2,
+			text = "test",
+			description = "test",
+			reward = "100 XP",
+			subtasks = {
+				"Find the coin map",
+				"Reach the treasure room", 
+				"Collect all coins",
+                "test"
+			}
 		}
 		-- Add more missions here with incrementing IDs
 	}

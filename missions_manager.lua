@@ -45,6 +45,8 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
     end
     
     if mission and mission.subtasks[subtaskIndex] then
+        local wasNotCompleted = not mission.subtasks[subtaskIndex].completed
+        
         -- Set subtask completion state
         mission.subtasks[subtaskIndex].completed = complete
         
@@ -63,7 +65,11 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
         if mission.completedSubtasks == #mission.subtasks then
             mission.completed = true
         end
+        
+        -- Return if a task was newly completed
+        return wasNotCompleted and complete
     end
+    return false
 end
 
 function MissionsManager:completeMission(id)

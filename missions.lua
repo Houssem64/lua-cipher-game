@@ -32,20 +32,8 @@ function Missions.new(x, y, config)
     self.gameWidth = 1920
     self.gameHeight = 500
 
-    -- Load task completion sound
-    local success, result = pcall(function()
-        local source = love.audio.newSource("task_complete.wav", "static")
-        source:setVolume(1.0)  -- Ensure full volume
-        return source
-    end)
-    if success then
-        self.task_completion_sound = result
-        print("Successfully loaded task completion sound")
-    else
-        print("Failed to load task completion sound:", result)
-        self.task_completion_sound = nil
-    end
-    
+
+
     -- Y offset for dynamic positioning
     self.y_offset = 300 or 0  -- Default to 0 if not provided
     
@@ -82,7 +70,9 @@ function Missions.new(x, y, config)
         print("Failed to load completion sound:", result)
         self.completion_sound = nil
     end
-    
+
+
+
     -- Notification state
     self.notification = {
         active = false,
@@ -411,84 +401,9 @@ function Missions:mousepressed(x, y)
         self.panel.visible = not self.panel.visible
         return true
     end
-
-    -- Check mission clicks when panel is visible
-    if self.panel.visible and x >= self.panel.x then
-        local mission_y = self.panel.y + 80
-        
-        for i, mission in ipairs(self.missions) do
-            local current_mission_height = self.config.mission_height
-            
-            -- Add height for description if present
-            if mission.description and mission.description ~= "" then
-                current_mission_height = current_mission_height + 25
-            end
-            
-            -- Add height for subtasks if present
-            if mission.subtasks and #mission.subtasks > 0 then
-                current_mission_height = current_mission_height + (#mission.subtasks * 25) + 10
-            end
-            
-            -- Check if mission is clicked
-            if y >= mission_y and y <= mission_y + current_mission_height and
-               x >= self.panel.x + 10 and x <= self.panel.x + self.panel.width - 10 then
-                print("Mission clicked at y:", mission_y, "height:", current_mission_height)  -- Debug print
-                
-                -- Check for subtask clicks
-                if mission.subtasks and #mission.subtasks > 0 then
-                    local subtaskY = mission_y + self.config.mission_padding + 50
-                    local subtaskHeight = 25
-                    local checkboxSize = 18
-                    
-                    for j, subtask in ipairs(mission.subtasks) do
-                        if y >= subtaskY and y <= subtaskY + subtaskHeight and
-                           x >= self.panel.x + 40 and x <= self.panel.x + 40 + checkboxSize then
-                            if not subtask.completed then
-                                subtask.completed = true
-                                -- Play task completion sound
-                                local success, sound = pcall(function()
-                                    local src = love.audio.newSource("task_complete.wav", "static")
-                                    src:play()
-                                    return src
-                                end)
-
-
-
-
-                                
-                                -- Check if all subtasks are complete
-                                local allComplete = true
-                                for _, st in ipairs(mission.subtasks) do
-                                    if not st.completed then
-                                        allComplete = false
-                                        break
-                                    end
-                                end
-                                
-                                if allComplete then
-                                    self:completeMission(i)
-                                end
-                            end
-                            return true
-                        end
-                        subtaskY = subtaskY + subtaskHeight
-                    end
-                elseif not mission.completed then
-                    self:completeMission(i)
-                end
-                return true
-            end
-            
-            -- Update hover state
-            mission.hover = y >= mission_y and y <= mission_y + current_mission_height
-            
-            -- Move to next mission position
-            mission_y = mission_y + current_mission_height + 10
-        end
-    end
-    
     return false
 end
+
 
 function Missions:addMission(mission)
     -- Convert subtasks to proper format with completed state
@@ -538,9 +453,10 @@ function Missions:updateMission(id, updatedMission)
 end
 
 function Missions:completeMission(index)
-    if self.missions[index] then
-        print("Completing mission: " .. self.missions[index].text)  -- Debug print
-        self.missions[index].completed = true
+    local mission = type(index) == "number" and self.missions[index] or nil
+    if mission then
+        print("Completing mission: " .. mission.text)  -- Debug print
+        mission.completed = true
         
         -- Play completion sound
         if self.completion_sound then
@@ -553,6 +469,78 @@ function Missions:completeMission(index)
         
         -- Start notification animation
         print("Starting notification animation")  -- Debug print
+        self.notification.active = true
+        self.notification.progress = 0
+        self.notification.x = self.button.x + self.button.radius
+        self.notification.y = self.button.y + self.button.radius
+        self.notification.target_x = self.gameWidth / 2
+        self.notification.target_y = self.gameHeight / 3
+        self.notification.scale = 0
+        self.notification.alpha = 1
+        self.notification.text = "Mission Complete!"
+    end
+end
+
+function Missions:completeSubtask(missionId, subtaskIndex)
+    local mission = self:getMissionById(missionId)
+    if mission and mission.subtasks and mission.subtasks[subtaskIndex] then
+        -- Play task completion sound
+        if self.completion_sound then
+            local sound = self.completion_sound:clone()
+            if sound then
+                sound:setPitch(1.2)
+                sound:setVolume(0.5)
+                print("Playing task completion sound")
+                sound:play()
+            else
+                print("Failed to clone completion sound")
+            end
+        end
+
+        
+        -- Update mission progress
+        mission.subtasks[subtaskIndex].completed = true
+        
+        -- Check if all subtasks are complete
+        local allComplete = true
+        for _, subtask in ipairs(mission.subtasks) do
+            if not subtask.completed then
+                allComplete = false
+                break
+            end
+        end
+        
+        -- Complete mission if all subtasks are done
+        if allComplete then
+            self:completeMissionById(missionId)
+        end
+        
+        -- Update mission progress
+        local completedCount = 0
+        for _, subtask in ipairs(mission.subtasks) do
+            if subtask.completed then
+                completedCount = completedCount + 1
+            end
+        end
+        mission.progress = completedCount / #mission.subtasks
+        mission.subtaskProgress = mission.progress
+    end
+end
+
+function Missions:completeMissionById(missionId)
+    local mission = self:getMissionById(missionId)
+    if mission and not mission.completed then
+        mission.completed = true
+        mission.progress = 1
+        mission.subtaskProgress = 1
+        
+        -- Play completion sound
+        if self.completion_sound then
+            self.completion_sound:stop()
+            self.completion_sound:play()
+        end
+        
+        -- Start notification animation
         self.notification.active = true
         self.notification.progress = 0
         self.notification.x = self.button.x + self.button.radius
