@@ -52,8 +52,8 @@ effect.filmgrain.size = 2
     end)
 
     -- Rest of the existing load function remains the same...
-    missions = Missions.new(0, 0)
-    missionsManager = MissionsManager.new()
+    _G.missions = Missions.new(0, 0)
+    _G.missionsManager = MissionsManager.new()
 
     -- Get desktop dimensions for dynamic scaling
     local desktopWidth, desktopHeight = love.window.getDesktopDimensions()
@@ -78,17 +78,16 @@ effect.filmgrain.size = 2
     offsetY = math.floor((screenHeight - (gameHeight * scale)) / 2)
 
 -- Initialize mission systems
-missions = Missions.new(0, 0)
-missionsManager = MissionsManager.new()
+_G.missions = Missions.new(0, 0)
+_G.missionsManager = MissionsManager.new()
 
 -- Load all story missions
 for _, missionData in ipairs(StoryMissions.getAllMissions()) do
-    missionsManager:addMission(missionData)
+    _G.missionsManager:addMission(missionData)
 end
 
-
 -- Sync missions with display
-for _, mission in ipairs(missionsManager:getMissions()) do
+for _, mission in ipairs(_G.missionsManager:getMissions()) do
     local formattedSubtasks = {}
     for _, subtask in ipairs(mission.subtasks) do
         table.insert(formattedSubtasks, {
@@ -97,7 +96,7 @@ for _, mission in ipairs(missionsManager:getMissions()) do
         })
     end
     
-    missions:addMission({
+    _G.missions:addMission({
         id = mission.id,
         text = mission.text,
         description = mission.description,
@@ -107,6 +106,7 @@ for _, mission in ipairs(missionsManager:getMissions()) do
         subtaskProgress = mission.completedSubtasks and (mission.completedSubtasks / #mission.subtasks) or 0
     })
 end
+
 
 
 
@@ -136,7 +136,7 @@ function love.update(dt)
     if not mainMenu.isActive then
         windowManager:update(dt)
         chat:update(dt)
-        missions:update(dt)
+        _G.missions:update(dt)
         musicApp:update(dt)  -- Update MusicApp
         reelsApp:update(dt)  -- Update ReelsApp
     end
@@ -162,7 +162,7 @@ function love.draw()
         reelsApp:draw()
         musicApp:draw(0, 0, gameWidth, gameHeight)
         chat:draw()
-        missions:draw()
+        _G.missions:draw()
         statusBar:draw()
     end
 
@@ -185,7 +185,7 @@ function love.keypressed(key)
 
 if key == "c" then
     -- Get current mission by ID 1
-    local currentMission = missionsManager:getMission(1)
+    local currentMission = _G.missionsManager:getMission(1)
     if currentMission and not currentMission.completed then
         -- Get next incomplete subtask
         local nextSubtaskIndex = 1
@@ -197,7 +197,7 @@ if key == "c" then
         end
         
         -- Complete the next subtask using mission ID
-        missionsManager:updateProgress(currentMission.id, nextSubtaskIndex, true)
+        _G.missionsManager:updateProgress(currentMission.id, nextSubtaskIndex, true)
         
         -- Update mission display
         local formattedSubtasks = {}
@@ -209,10 +209,10 @@ if key == "c" then
         end
         
         -- Update the mission in the display list by finding it by ID
-        for i, displayMission in ipairs(missions.missions) do
+        for i, displayMission in ipairs(_G.missions.missions) do
             if displayMission.id == currentMission.id then
-                local wasNotCompleted = not missions.missions[i].completed
-                missions.missions[i] = {
+                local wasNotCompleted = not _G.missions.missions[i].completed
+                _G.missions.missions[i] = {
                     id = currentMission.id,
                     title = currentMission.text,
                     text = currentMission.text,
@@ -225,7 +225,7 @@ if key == "c" then
                 }
                 -- Trigger notification if mission just got completed
                 if currentMission.completed and wasNotCompleted then
-                    missions:completeMission(i)
+                    _G.missions:completeMission(i)
                 end
                 break
             end
@@ -267,7 +267,7 @@ function love.mousepressed(x, y, button)
             windowManager:mousepressed(virtualX, virtualY, button)
         end
         chat:mousepressed(virtualX, virtualY)
-        missions:mousepressed(virtualX, virtualY)
+        _G.missions:mousepressed(virtualX, virtualY)
         musicApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to MusicApp
         reelsApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to ReelsApp
     end

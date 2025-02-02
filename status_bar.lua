@@ -3,6 +3,7 @@ local TextEditor = require("apps.text_editor")
 local FileManager = require("apps.file_manager")
 local EmailClient = require("apps.email_client")
 local WebBrowser = require("apps.web_browser")
+local MissionsApp = require("apps.missions_app")
 
 local Icons = require("modules.icons")
 
@@ -28,7 +29,8 @@ function StatusBar:new()
             {name = "Files", icon = "files", class = FileManager},
             {name = "Email", icon = "email", class = EmailClient},
             {name = "Text Editor", icon = "text_editor", class = TextEditor},
-            {name = "Browser", icon = "browser", class = WebBrowser}
+            {name = "Browser", icon = "browser", class = WebBrowser},
+            {name = "Missions", icon = "missions", class = MissionsApp}
         }
     }
     obj.icons:load()

@@ -16,8 +16,9 @@ function Icons:load()
         files = self:createFilesIcon(),
         email = self:createEmailIcon(),
         text_editor = self:createTextEditorIcon(),
-        music = self:createMusicIcon(),  -- Add the music icon
-        browser = self:createBrowserIcon()  -- Add browser icon
+        music = self:createMusicIcon(),
+        browser = self:createBrowserIcon(),
+        missions = self:createMissionsIcon()  -- Add missions icon
     }
 end
 local default_font = love.graphics.getFont()
@@ -147,6 +148,30 @@ function Icons:createMusicIcon()
     love.graphics.setColor(0.7, 0.7, 0.7)
     love.graphics.rectangle("line", 4, 4, 56, 56)
 
+    love.graphics.setCanvas()
+    return canvas
+end
+
+function Icons:createMissionsIcon()
+    local canvas = love.graphics.newCanvas(64, 64)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear()
+    
+    -- Draw mission icon (target/crosshair style)
+    love.graphics.setColor(0.8, 0.3, 0.3)  -- Red color for missions
+    love.graphics.circle("fill", 32, 32, 28)
+    
+    -- Draw crosshair
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.circle("line", 32, 32, 20)
+    love.graphics.circle("fill", 32, 32, 4)
+    love.graphics.rectangle("fill", 12, 31, 40, 2)
+    love.graphics.rectangle("fill", 31, 12, 2, 40)
+    
+    -- Add highlight
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.circle("fill", 24, 24, 12)
+    
     love.graphics.setCanvas()
     return canvas
 end
