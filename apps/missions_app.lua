@@ -9,6 +9,17 @@ function MissionsApp.new()
 	self.selectedMission = nil
 	self.scrollPosition = 0
 	self.maxMissionsVisible = 8
+	
+	-- Common layout variables
+	self.padding = 30
+	self.missionHeight = 150
+	self.startY = self.padding + 60
+	self.selectButtonWidth = 120
+	self.selectButtonHeight = 35
+	self.selectButtonX = self.padding + 15
+	self.selectButtonY = 90  -- Y offset for the select button
+	self.selectButtonPadding = 5
+	
 	return self
 end
 
@@ -26,29 +37,27 @@ function MissionsApp:draw(x, y, width, height)
 	-- Calculate panel dimensions
 	local leftPanelWidth = width * 0.4
 	local rightPanelWidth = width * 0.6
-	local padding = 15
-
 	-- Draw left panel
 	love.graphics.setColor(1, 1, 1, 0.95)
-	love.graphics.rectangle("fill", x + padding, y + padding, leftPanelWidth - padding*2, height - padding*2, 10)
+	love.graphics.rectangle("fill", x + self.padding, y + self.padding, leftPanelWidth - self.padding*2, height - self.padding*2, 10)
 	
 	-- Draw header with shadow
 	love.graphics.setColor(0.2, 0.2, 0.2, 0.1)
-	love.graphics.print("Available Missions", x + padding + 22, y + padding + 22)
+	love.graphics.print("Available Missions", x + self.padding + 22, y + self.padding + 22)
 	love.graphics.setColor(0.2, 0.2, 0.2)
-	love.graphics.print("Available Missions", x + padding + 20, y + padding + 20)
+	love.graphics.print("Available Missions", x + self.padding + 20, y + self.padding + 20)
 
 	-- Draw missions list
-	local missionHeight = 100
-	local startY = y + padding + 60
+	local currentStartY = y + self.startY
+
 
 	for i = 1 + self.scrollPosition, math.min(#self.missions, self.scrollPosition + self.maxMissionsVisible) do
 		local mission = self.missions[i]
-		local missionY = startY + (i - 1 - self.scrollPosition) * missionHeight
+		local missionY = currentStartY + (i - 1 - self.scrollPosition) * self.missionHeight
 
 		-- Draw mission card with shadow
 		love.graphics.setColor(0, 0, 0, 0.05)
-		love.graphics.rectangle("fill", x + padding + 12, missionY + 2, leftPanelWidth - padding*4, missionHeight - 10, 8)
+		love.graphics.rectangle("fill", x + self.padding + 12, missionY + 2, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission background
 		if self.selectedMission == i then
@@ -56,57 +65,57 @@ function MissionsApp:draw(x, y, width, height)
 		else
 			love.graphics.setColor(1, 1, 1, 0.9)
 		end
-		love.graphics.rectangle("fill", x + padding + 10, missionY, leftPanelWidth - padding*4, missionHeight - 10, 8)
+		love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission info
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print(mission.text, x + padding + 20, missionY + 15)
+		love.graphics.print(mission.text, x + self.padding + 20, missionY + 15)
 		love.graphics.setColor(0.5, 0.5, 0.5)
-		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + padding + 20, missionY + 45)
+		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + self.padding + 20, missionY + 45)
 
 		-- Draw select button with glow effect
 		if self.selectedMission == i then
 			love.graphics.setColor(0.4, 0.6, 1, 0.2)
-			love.graphics.rectangle("fill", x + padding + 20, missionY + 65, 110, 25, 5)
+			love.graphics.rectangle("fill", x + self.padding + 20, missionY + self.selectButtonY + 5, self.selectButtonWidth + 10, self.selectButtonHeight, 5)
 		end
 		love.graphics.setColor(0.4, 0.6, 1)
-		love.graphics.rectangle("fill", x + padding + 15, missionY + 60, 100, 25, 5)
+		love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
 		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Select", x + padding + 35, missionY + 63)
+		love.graphics.print("Select", x + self.selectButtonX + 20, missionY + self.selectButtonY + 3)
 	end
 
 	-- Draw right panel if mission is selected
 	if self.selectedMission then
 		local mission = self.missions[self.selectedMission]
-		local rightX = x + leftPanelWidth + padding
+		local rightX = x + leftPanelWidth + self.padding
 
 		-- Draw right panel background with shadow
 		love.graphics.setColor(0, 0, 0, 0.05)
-		love.graphics.rectangle("fill", rightX + 4, y + padding + 4, rightPanelWidth - padding*2, height - padding*2, 10)
+		love.graphics.rectangle("fill", rightX + 4, y + self.padding + 4, rightPanelWidth - self.padding*2, height - self.padding*2, 10)
 		love.graphics.setColor(1, 1, 1, 0.95)
-		love.graphics.rectangle("fill", rightX, y + padding, rightPanelWidth - padding*2, height - padding*2, 10)
+		love.graphics.rectangle("fill", rightX, y + self.padding, rightPanelWidth - self.padding*2, height - self.padding*2, 10)
 
 		-- Draw mission details
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print("Mission Details", rightX + padding, y + padding + 20)
-		love.graphics.print(mission.text, rightX + padding, y + padding + 60)
+		love.graphics.print("Mission Details", rightX + self.padding, y + self.padding + 20)
+		love.graphics.print(mission.text, rightX + self.padding, y + self.padding + 60)
 		
 		-- Draw description
 		love.graphics.setColor(0.4, 0.4, 0.4)
-		love.graphics.printf(mission.description, rightX + padding, y + padding + 100, rightPanelWidth - padding*4)
+		love.graphics.printf(mission.description, rightX + self.padding, y + self.padding + 100, rightPanelWidth - self.padding*4)
 
 		-- Draw tasks section
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print("Tasks:", rightX + padding, y + padding + 180)
+		love.graphics.print("Tasks:", rightX + self.padding, y + self.padding + 180)
 		for i, subtask in ipairs(mission.subtasks) do
-			love.graphics.print("• " .. subtask, rightX + padding + 20, y + padding + 180 + i * 30)
+			love.graphics.print("• " .. subtask, rightX + self.padding + 20, y + self.padding + 180 + i * 30)
 		end
 
 		-- Draw reward with enhanced visuals
 		love.graphics.setColor(0.4, 0.6, 0.2)
-		love.graphics.rectangle("fill", rightX + padding, y + height - 80, rightPanelWidth - padding*4, 40, 8)
+		love.graphics.rectangle("fill", rightX + self.padding, y + height - 80, rightPanelWidth - self.padding*4, 40, 8)
 		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Reward: " .. mission.reward, rightX + padding + 15, y + height - 70)
+		love.graphics.print("Reward: " .. mission.reward, rightX + self.padding + 15, y + height - 70)
 	end
 
 	-- Reset font
@@ -115,15 +124,15 @@ end
 
 function MissionsApp:mousepressed(x, y, button)
 	if button == 1 then
-		local startY = 60
-		local missionHeight = 100
-		local relativeY = y - startY
-		local clickedIndex = math.floor(relativeY / missionHeight) + self.scrollPosition + 1
+		local relativeY = y - self.startY
+		local clickedIndex = math.floor(relativeY / self.missionHeight) + self.scrollPosition + 1
 
 		if clickedIndex > 0 and clickedIndex <= #self.missions then
 			-- Check if click was on the select button
-			local buttonY = startY + (clickedIndex - 1 - self.scrollPosition) * missionHeight + 65
-			if y >= buttonY and y <= buttonY + 25 and x >= 20 and x <= 120 then
+			local buttonY = self.startY + (clickedIndex - 1 - self.scrollPosition) * self.missionHeight + self.selectButtonY
+			if y >= buttonY and y <= buttonY + self.selectButtonHeight and 
+			   x >= self.selectButtonX and x <= self.selectButtonX + self.selectButtonWidth then
+
 				self:selectMission(clickedIndex)
 			else
 				self.selectedMission = clickedIndex
