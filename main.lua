@@ -184,50 +184,52 @@ function love.keypressed(key)
 
 
 if key == "c" then
-    -- Get current mission by ID 1
-    local currentMission = _G.missionsManager:getMission(1)
-    if currentMission and not currentMission.completed then
-        -- Get next incomplete subtask
-        local nextSubtaskIndex = 1
-        for i, subtask in ipairs(currentMission.subtasks) do
-            if not subtask.completed then
-                nextSubtaskIndex = i
-                break
-            end
-        end
-        
-        -- Complete the next subtask using mission ID
-        _G.missionsManager:updateProgress(currentMission.id, nextSubtaskIndex, true)
-        
-        -- Update mission display
-        local formattedSubtasks = {}
-        for _, subtask in ipairs(currentMission.subtasks) do
-            table.insert(formattedSubtasks, {
-                text = subtask.text,
-                completed = subtask.completed
-            })
-        end
-        
-        -- Update the mission in the display list by finding it by ID
-        for i, displayMission in ipairs(_G.missions.missions) do
-            if displayMission.id == currentMission.id then
-                local wasNotCompleted = not _G.missions.missions[i].completed
-                _G.missions.missions[i] = {
-                    id = currentMission.id,
-                    title = currentMission.text,
-                    text = currentMission.text,
-                    description = currentMission.description,
-                    subtasks = formattedSubtasks,
-                    completed = currentMission.completed,
-                    progress = currentMission.progress,
-                    subtaskProgress = currentMission.completedSubtasks / #currentMission.subtasks,
-                    hover = false
-                }
-                -- Trigger notification if mission just got completed
-                if currentMission.completed and wasNotCompleted then
-                    _G.missions:completeMission(i)
+    -- Find first incomplete mission
+    for missionId = 1, #_G.missionsManager:getMissions() do
+        local mission = _G.missionsManager:getMission(missionId)
+        if mission and not mission.completed then
+            -- Find first incomplete subtask
+            for subtaskIndex = 1, #mission.subtasks do
+                if not mission.subtasks[subtaskIndex].completed then
+                    -- Complete this subtask
+                    _G.missionsManager:updateProgress(missionId, subtaskIndex, true)
+                    
+                    -- Update mission display
+                    for i, displayMission in ipairs(_G.missions.missions) do
+                        if displayMission.id == missionId then
+                            -- Format subtasks for display
+                            local formattedSubtasks = {}
+                            for _, subtask in ipairs(mission.subtasks) do
+                                table.insert(formattedSubtasks, {
+                                    text = subtask.text,
+                                    completed = subtask.completed
+                                })
+                            end
+                            
+                            -- Update display mission
+                            local wasNotCompleted = not _G.missions.missions[i].completed
+                            _G.missions.missions[i] = {
+                                id = mission.id,
+                                title = mission.text,
+                                text = mission.text,
+                                description = mission.description,
+                                subtasks = formattedSubtasks,
+                                completed = mission.completed,
+                                progress = mission.progress,
+                                subtaskProgress = mission.completedSubtasks / #mission.subtasks,
+                                hover = false,
+                                reward = mission.reward
+                            }
+                            
+                            -- Trigger completion notification if needed
+                            if mission.completed and wasNotCompleted then
+                                _G.missions:completeMission(i)
+                            end
+                            break
+                        end
+                    end
+                    return -- Exit after completing one subtask
                 end
-                break
             end
         end
     end
