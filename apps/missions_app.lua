@@ -19,79 +19,94 @@ function MissionsApp:draw(x, y, width, height)
 	font:setFilter("nearest", "nearest")
 	love.graphics.setFont(font)
 
-	-- Draw background
-	love.graphics.setColor(0.95, 0.95, 0.95)
+	-- Draw background with gradient effect
+	love.graphics.setColor(0.97, 0.97, 0.98)
 	love.graphics.rectangle("fill", x, y, width, height)
-
+	
 	-- Calculate panel dimensions
 	local leftPanelWidth = width * 0.4
 	local rightPanelWidth = width * 0.6
-	local padding = 10
+	local padding = 15
 
-	-- Draw left panel (missions list)
+	-- Draw left panel
+	love.graphics.setColor(1, 1, 1, 0.95)
+	love.graphics.rectangle("fill", x + padding, y + padding, leftPanelWidth - padding*2, height - padding*2, 10)
+	
+	-- Draw header with shadow
+	love.graphics.setColor(0.2, 0.2, 0.2, 0.1)
+	love.graphics.print("Available Missions", x + padding + 22, y + padding + 22)
 	love.graphics.setColor(0.2, 0.2, 0.2)
-	love.graphics.print("Available Missions", x + padding, y + padding)
+	love.graphics.print("Available Missions", x + padding + 20, y + padding + 20)
 
+	-- Draw missions list
 	local missionHeight = 100
-	local startY = y + 50
+	local startY = y + padding + 60
 
 	for i = 1 + self.scrollPosition, math.min(#self.missions, self.scrollPosition + self.maxMissionsVisible) do
 		local mission = self.missions[i]
 		local missionY = startY + (i - 1 - self.scrollPosition) * missionHeight
 
+		-- Draw mission card with shadow
+		love.graphics.setColor(0, 0, 0, 0.05)
+		love.graphics.rectangle("fill", x + padding + 12, missionY + 2, leftPanelWidth - padding*4, missionHeight - 10, 8)
+
 		-- Draw mission background
 		if self.selectedMission == i then
-			love.graphics.setColor(0.9, 0.95, 1)
+			love.graphics.setColor(0.95, 0.97, 1)
 		else
-			love.graphics.setColor(1, 1, 1)
+			love.graphics.setColor(1, 1, 1, 0.9)
 		end
-		love.graphics.rectangle("fill", x + padding, missionY, leftPanelWidth - padding*2, missionHeight - padding)
+		love.graphics.rectangle("fill", x + padding + 10, missionY, leftPanelWidth - padding*4, missionHeight - 10, 8)
 
 		-- Draw mission info
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print(mission.text, x + padding*2, missionY + padding)
+		love.graphics.print(mission.text, x + padding + 20, missionY + 15)
 		love.graphics.setColor(0.5, 0.5, 0.5)
-		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + padding*2, missionY + padding + 30)
-		
-		-- Draw select button
+		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + padding + 20, missionY + 45)
+
+		-- Draw select button with glow effect
 		if self.selectedMission == i then
-			love.graphics.setColor(0.3, 0.6, 1)
-		else
-			love.graphics.setColor(0.4, 0.7, 1)
+			love.graphics.setColor(0.4, 0.6, 1, 0.2)
+			love.graphics.rectangle("fill", x + padding + 20, missionY + 65, 110, 25, 5)
 		end
-		love.graphics.rectangle("fill", x + padding*2, missionY + padding + 55, 100, 25)
+		love.graphics.setColor(0.4, 0.6, 1)
+		love.graphics.rectangle("fill", x + padding + 15, missionY + 60, 100, 25, 5)
 		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Select", x + padding*2 + 20, missionY + padding + 58)
+		love.graphics.print("Select", x + padding + 35, missionY + 63)
 	end
 
-	-- Draw right panel (mission details)
+	-- Draw right panel if mission is selected
 	if self.selectedMission then
 		local mission = self.missions[self.selectedMission]
 		local rightX = x + leftPanelWidth + padding
 
-		-- Background
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.rectangle("fill", rightX, y + padding, rightPanelWidth - padding*2, height - padding*2)
+		-- Draw right panel background with shadow
+		love.graphics.setColor(0, 0, 0, 0.05)
+		love.graphics.rectangle("fill", rightX + 4, y + padding + 4, rightPanelWidth - padding*2, height - padding*2, 10)
+		love.graphics.setColor(1, 1, 1, 0.95)
+		love.graphics.rectangle("fill", rightX, y + padding, rightPanelWidth - padding*2, height - padding*2, 10)
 
-		-- Mission details
+		-- Draw mission details
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print("Mission Details", rightX + padding, y + padding*2)
-		love.graphics.print(mission.text, rightX + padding, y + padding*2 + 40)
+		love.graphics.print("Mission Details", rightX + padding, y + padding + 20)
+		love.graphics.print(mission.text, rightX + padding, y + padding + 60)
 		
-		-- Description
+		-- Draw description
 		love.graphics.setColor(0.4, 0.4, 0.4)
-		love.graphics.printf(mission.description, rightX + padding, y + padding*2 + 80, rightPanelWidth - padding*4)
+		love.graphics.printf(mission.description, rightX + padding, y + padding + 100, rightPanelWidth - padding*4)
 
-		-- Subtasks
+		-- Draw tasks section
 		love.graphics.setColor(0.2, 0.2, 0.2)
-		love.graphics.print("Tasks:", rightX + padding, y + padding*2 + 160)
+		love.graphics.print("Tasks:", rightX + padding, y + padding + 180)
 		for i, subtask in ipairs(mission.subtasks) do
-			love.graphics.print("• " .. subtask, rightX + padding, y + padding*2 + 160 + i * 30)
+			love.graphics.print("• " .. subtask, rightX + padding + 20, y + padding + 180 + i * 30)
 		end
 
-		-- Reward
+		-- Draw reward with enhanced visuals
 		love.graphics.setColor(0.4, 0.6, 0.2)
-		love.graphics.print("Reward: " .. mission.reward, rightX + padding, y + height - 60)
+		love.graphics.rectangle("fill", rightX + padding, y + height - 80, rightPanelWidth - padding*4, 40, 8)
+		love.graphics.setColor(1, 1, 1)
+		love.graphics.print("Reward: " .. mission.reward, rightX + padding + 15, y + height - 70)
 	end
 
 	-- Reset font
@@ -118,6 +133,7 @@ function MissionsApp:mousepressed(x, y, button)
 end
 
 function MissionsApp:selectMission(index)
+	self.selectedMission = index
 	local mission = self.missions[index]
 	
 	-- Format subtasks for missions display
@@ -127,6 +143,11 @@ function MissionsApp:selectMission(index)
 			text = subtaskText,
 			completed = false
 		})
+	end
+	
+	-- Clear previous missions in display before adding new one
+	if _G.missions then
+		_G.missions.missions = {}
 	end
 	
 	-- Sync with missions manager
@@ -143,7 +164,9 @@ function MissionsApp:selectMission(index)
 			subtasks = formattedSubtasks,
 			completed = false,
 			progress = 0,
-			subtaskProgress = 0
+			subtaskProgress = 0,
+			selected = true,
+			reward = mission.reward
 		})
 	end
 end

@@ -162,7 +162,15 @@ function Missions:draw()
 
     -- Draw mission panel
     if self.panel.x < self.gameWidth then
-        -- Panel background with rounded corners
+        -- Panel background with enhanced shadow effect
+        love.graphics.setColor(0, 0, 0, 0.1)
+        love.graphics.rectangle('fill', 
+            self.panel.x + 4, 
+            self.panel.y + 4, 
+            self.panel.width, 
+            self.panel.height,
+            self.config.panel_radius)
+            
         love.graphics.setColor(unpack(self.config.panel_color))
         love.graphics.rectangle('fill', 
             self.panel.x, 
@@ -171,14 +179,18 @@ function Missions:draw()
             self.panel.height,
             self.config.panel_radius)
             
-        -- Panel border
-        love.graphics.setColor(unpack(self.config.panel_border_color))
+        -- Panel border with glow effect
+        love.graphics.setColor(self.config.panel_border_color[1], 
+            self.config.panel_border_color[2], 
+            self.config.panel_border_color[3], 0.8)
+        love.graphics.setLineWidth(2)
         love.graphics.rectangle('line', 
             self.panel.x, 
             self.panel.y, 
             self.panel.width, 
             self.panel.height,
             self.config.panel_radius)
+        love.graphics.setLineWidth(1)
         
         -- Header
         love.graphics.setFont(header_font)
@@ -213,19 +225,34 @@ function Missions:draw()
                           mouse_x >= self.panel.x + 10 and 
                           mouse_x <= self.panel.x + self.panel.width - 10
             
-            -- Mission background (with hover effect)
+            -- Enhanced mission background
             if mission.hover then
-                love.graphics.setColor(unpack(self.config.hover_color))
+                love.graphics.setColor(0.95, 0.97, 1, 0.95)
             else
-                love.graphics.setColor(1, 1, 1, 0.5)
+                love.graphics.setColor(1, 1, 1, 0.8)
             end
             
+            -- Add subtle shadow
+            love.graphics.setColor(0, 0, 0, 0.05)
+            love.graphics.rectangle('fill',
+                self.panel.x + 12,
+                mission_y + 2,
+                self.panel.width - 24,
+                current_mission_height,
+                10)
+
+            -- Draw main mission background
+            if mission.hover then
+                love.graphics.setColor(0.95, 0.97, 1, 0.95)
+            else
+                love.graphics.setColor(1, 1, 1, 0.8)
+            end
             love.graphics.rectangle('fill',
                 self.panel.x + 10,
                 mission_y,
                 self.panel.width - 20,
                 current_mission_height,
-                8)
+                10)
             
             -- Mission text first
             if mission.completed then
@@ -406,6 +433,14 @@ end
 
 
 function Missions:addMission(mission)
+    -- Remove any existing mission with the same ID
+    for i = #self.missions, 1, -1 do
+        if self.missions[i].id == mission.id then
+            table.remove(self.missions, i)
+            break
+        end
+    end
+
     -- Convert subtasks to proper format with completed state
     local formattedSubtasks = {}
     for _, subtask in ipairs(mission.subtasks) do
@@ -419,16 +454,18 @@ function Missions:addMission(mission)
         end
     end
 
+    -- Add the new mission
     table.insert(self.missions, {
         id = mission.id,
-        title = mission.text,  -- Set title to match text
+        title = mission.text,
         text = mission.text,
         description = mission.description,
         subtasks = formattedSubtasks,
         completed = mission.completed,
         progress = mission.progress or 0,
         subtaskProgress = mission.subtaskProgress or 0,
-        hover = false  -- Initialize hover state
+        hover = false,
+        selected = true  -- Mark as selected since it's newly added
     })
 end
 
