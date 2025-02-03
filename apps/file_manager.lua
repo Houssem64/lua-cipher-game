@@ -361,7 +361,7 @@ function FileManager:draw(x, y, width, height)
         
         love.graphics.setColor(1, 1, 1, 0.95)
         local dialogWidth = 300
-        local dialogHeight = 120
+        local dialogHeight = 150  -- Increased height
         local dialogX = x + (width - dialogWidth) / 2
         local dialogY = y + (height - dialogHeight) / 2
         love.graphics.rectangle("fill", dialogX, dialogY, dialogWidth, dialogHeight)
@@ -372,12 +372,12 @@ function FileManager:draw(x, y, width, height)
         
         -- Draw message
         love.graphics.setColor(0.2, 0.2, 0.2)
-        love.graphics.printf(self.confirmDialog.message, dialogX + 20, dialogY + 20, dialogWidth - 40, "center")
+        love.graphics.printf(self.confirmDialog.message, dialogX + 20, dialogY + 10, dialogWidth - 40, "center")
         
         -- Draw buttons
         local buttonWidth = 80
         local buttonHeight = 30
-        local buttonY = dialogY + dialogHeight - buttonHeight - 20
+        local buttonY = dialogY + dialogHeight - buttonHeight - 20  -- Further increased bottom margin
         
         -- Yes button
         local yesX = dialogX + dialogWidth/2 - buttonWidth - 10
@@ -427,14 +427,14 @@ end
 function FileManager:mousepressed(x, y, button)
     if button == 1 and self.confirmDialog.active then
         local dialogWidth = 300
-        local dialogHeight = 120
+        local dialogHeight = 150
         local dialogX = (self.width - dialogWidth) / 2
         local dialogY = (self.height - dialogHeight) / 2
         
         -- Button dimensions
         local buttonWidth = 80
         local buttonHeight = 30
-        local buttonY = dialogY + dialogHeight - buttonHeight - 20
+        local buttonY = dialogY + dialogHeight - buttonHeight - 20  -- Match the exact position from draw function
         local yesX = dialogX + dialogWidth/2 - buttonWidth - 10
         local noX = dialogX + dialogWidth/2 + 10
         
