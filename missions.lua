@@ -617,13 +617,11 @@ function Missions:completeMissionById(missionId)
         self.notification.alpha = 1
         self.notification.text = "Mission Complete!"
         
-        -- Force redraw of mission panel and ensure it's visible
-        self.panel.visible = true
-        
         -- Update saved state
         if _G.missionsManager then
             _G.missionsManager:saveMissionState()
         end
+
     end
 end
 

@@ -375,11 +375,9 @@ function MissionsApp:selectMission(index)
 				reward = mission.reward
 			})
 		end
-		
-		-- Show panel
-		_G.missions.panel.visible = true
 	end
 end
+
 
 
 function MissionsApp:wheelmoved(x, y)
@@ -463,12 +461,10 @@ function MissionsApp:resetProgress()
 				reset = true  -- Mark as reset to prevent loading saved state
 			})
 		end
-		
-		-- Force panel visibility update
-		_G.missions.panel.visible = true
 	end
 	
 	-- Force redraw
+
 	self.selectedMission = nil
 end
 
