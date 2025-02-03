@@ -463,45 +463,28 @@ function MissionsApp:resetProgress()
 	
 	-- Reset missions display
 	if _G.missions then
-		-- Clear existing missions
 		_G.missions.missions = {}
-		-- Clear saved state in missions
 		_G.missions.savedState = {
 			completed = {},
 			subtasks = {}
 		}
-		
-		-- Re-add all missions with reset state
-		for _, mission in ipairs(self.missions) do
-			-- Format subtasks as objects with text and completed properties
-			local formattedSubtasks = {}
-			for _, subtask in ipairs(mission.subtasks) do
-				-- Handle subtask whether it's a string or an object
-				local subtaskText = type(subtask) == "string" and subtask or subtask.text
-				table.insert(formattedSubtasks, {
-					text = subtaskText,
-					completed = false
-				})
-			end
-			
-			_G.missions:addMission({
-				id = mission.id,
-				text = mission.text,
-				description = mission.description,
-				subtasks = formattedSubtasks,
-				completed = false,
-				progress = 0,
-				subtaskProgress = 0,
-				selected = mission.id == self.selectedMission,
-				reward = mission.reward,
-				reset = true  -- Mark as reset to prevent loading saved state
-			})
-		end
+		-- Keep panel visible to show "No missions selected"
+		_G.missions.panel.visible = true
 	end
 	
-	-- Force redraw
-
+	-- Clear selection
 	self.selectedMission = nil
+end
+
+
+function MissionsApp:resetMissions()
+	-- Reload missions from StoryMissions
+	self.missions = StoryMissions.getAllMissions()
+	-- Reset selection and view state
+	self.selectedMission = nil
+	self.viewedMission = nil
+	-- Reset scroll position
+	self.scrollPosition = 0
 end
 
 function MissionsApp:getFormattedSubtasks(missionId)

@@ -229,6 +229,12 @@ function MissionsManager:resetAllMissions()
         end
     end
     
+    -- Reset missions in active window if exists
+    local missionWindow = self:getActiveMissionWindow()
+    if missionWindow then
+        missionWindow:resetMissions()
+    end
+    
     -- Save the reset state
     self:saveMissionState()
 end
@@ -283,25 +289,20 @@ function MissionsManager:getActiveMissionWindow()
     -- First check active window
     if _G.windowManager and _G.windowManager.activeWindow and 
        _G.windowManager.activeWindow.title == "Missions" then
-        local app = _G.windowManager.activeWindow.app
-        if app and app.selectedMission then
-            return app
-        end
+        return _G.windowManager.activeWindow.app
     end
     
     -- Then check all windows
     if _G.windowManager then
         for _, window in ipairs(_G.windowManager.windows) do
             if window.app and window.title == "Missions" then
-                local app = window.app
-                if app and app.selectedMission then
-                    return app
-                end
+                return window.app
             end
         end
     end
     return nil
 end
+
 
 function MissionsManager:handleWindowClose(window)
     if window.title == "Missions" then

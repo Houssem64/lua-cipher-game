@@ -442,6 +442,23 @@ function Missions:mousepressed(x, y)
 end
 
 
+function Missions:resetMissions()
+    -- Clear all missions
+    self.missions = {}
+    -- Reset notification state
+    self.notification = {
+        active = false,
+        progress = 0,
+        x = 0,
+        y = 0,
+        target_x = 0,
+        target_y = 0,
+        scale = 0,
+        alpha = 0,
+        text = ""
+    }
+end
+
 function Missions:addMission(mission)
     -- Remove any existing mission with the same ID
     for i = #self.missions, 1, -1 do
