@@ -1,4 +1,5 @@
 local StoryMissions = require("story_missions")
+local SaveSystem = require("modules.save_system")
 
 local MissionsApp = {}
 MissionsApp.__index = MissionsApp
@@ -9,7 +10,6 @@ function MissionsApp.new()
 	self.selectedMission = nil
 	self.scrollPosition = 0
 	self.maxMissionsVisible = 8
-	self.completedMissions = {}
 	self.resetButtonHovered = false
 	
 	-- Common layout variables
@@ -19,8 +19,43 @@ function MissionsApp.new()
 	self.selectButtonWidth = 120
 	self.selectButtonHeight = 35
 	self.selectButtonX = self.padding + 15
-	self.selectButtonY = 90  -- Y offset for the select button
+	self.selectButtonY = 90
 	self.selectButtonPadding = 5
+	
+	-- Load completion sound
+	local success, result = pcall(function()
+		return love.audio.newSource("task_complete.wav", "static")
+	end)
+	if success then
+		self.completion_sound = result
+	end
+	
+	-- Load saved mission progress
+	local savedProgress = SaveSystem:load("mission_progress") or {}
+	self.completedMissions = {}
+	self.completedSubtasks = {}
+	
+	-- Convert string indices back to numbers for completed missions
+	if savedProgress.completed then
+		for strIndex, completed in pairs(savedProgress.completed) do
+			if completed then
+				self.completedMissions[tonumber(strIndex)] = true
+			end
+		end
+	end
+	
+	-- Convert string indices back to numbers for subtasks
+	if savedProgress.subtasks then
+		for strMissionIndex, subtasks in pairs(savedProgress.subtasks) do
+			local missionIndex = tonumber(strMissionIndex)
+			self.completedSubtasks[missionIndex] = {}
+			for strSubtaskIndex, completed in pairs(subtasks) do
+				if completed then
+					self.completedSubtasks[missionIndex][tonumber(strSubtaskIndex)] = true
+				end
+			end
+		end
+	end
 	
 	return self
 end
@@ -84,13 +119,15 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.setColor(0, 0, 0, 0.05)
 		love.graphics.rectangle("fill", x + self.padding + 12, missionY + 2, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
-		-- Draw mission background
-		if self.selectedMission == i then
-			love.graphics.setColor(0.95, 0.97, 1)
-		else
-			love.graphics.setColor(1, 1, 1, 0.9)
-		end
-		love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
+		-- Draw mission background with completion status
+        if self.selectedMission == i then
+            love.graphics.setColor(0.95, 0.97, 1)
+        elseif self.completedMissions[i] then
+            love.graphics.setColor(0.9, 1, 0.9, 0.9)  -- Green tint for completed
+        else
+            love.graphics.setColor(1, 1, 1, 0.9)
+        end
+        love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission info
 		love.graphics.setColor(0.2, 0.2, 0.2)
@@ -270,40 +307,31 @@ function MissionsApp:selectMission(index)
 	self.selectedMission = index
 	local mission = self.missions[index]
 	
-	-- Format subtasks for missions display
-	local formattedSubtasks = {}
-	for _, subtaskText in ipairs(mission.subtasks) do
-		table.insert(formattedSubtasks, {
-			text = subtaskText,
-			completed = false
-		})
-	end
+	-- Format subtasks with current completion state
+	local formattedSubtasks = self:getFormattedSubtasks(mission.id)
 	
 	-- Clear previous missions in display before adding new one
 	if _G.missions then
 		_G.missions.missions = {}
-	end
-	
-	-- Sync with missions manager
-	if _G.missionsManager then
-		_G.missionsManager:addMission(mission)
-	end
-	
-	-- Sync with missions display
-	if _G.missions then
+		
+		-- Add updated mission
 		_G.missions:addMission({
 			id = mission.id,
 			text = mission.text,
 			description = mission.description,
 			subtasks = formattedSubtasks,
-			completed = false,
-			progress = 0,
-			subtaskProgress = 0,
+			completed = self.completedMissions[index] or false,
+			progress = self:getMissionProgress(index),
+			subtaskProgress = self:getMissionProgress(index),
 			selected = true,
 			reward = mission.reward
 		})
+		
+		-- Show panel
+		_G.missions.panel.visible = true
 	end
 end
+
 
 function MissionsApp:wheelmoved(x, y)
 	self.scrollPosition = math.max(0, math.min(
@@ -335,21 +363,100 @@ function MissionsApp:mousemoved(x, y, baseX, baseY)
 end
 
 function MissionsApp:resetProgress()
-	-- Clear completed missions
+	-- Clear local state
 	self.completedMissions = {}
+	self.completedSubtasks = {}
 	
-	-- Reset missions in global missions manager
+	-- Save progress
+	self:saveMissionProgress()
+	
+	-- Reset missions manager
 	if _G.missionsManager then
 		_G.missionsManager:resetAllMissions()
 	end
 	
-	-- Reset display in missions panel
+	-- Reset missions display
 	if _G.missions then
+		-- Clear existing missions
 		_G.missions.missions = {}
-		if self.selectedMission then
-			self:selectMission(self.selectedMission)
+		
+		-- Re-add all missions with reset state
+		for _, mission in ipairs(self.missions) do
+			_G.missions:addMission({
+				id = mission.id,
+				text = mission.text,
+				description = mission.description,
+				subtasks = {},  -- Reset subtasks
+				completed = false,
+				progress = 0,
+				subtaskProgress = 0,
+				selected = mission.id == self.selectedMission,
+				reward = mission.reward
+			})
+		end
+		
+		-- Force panel visibility update
+		_G.missions.panel.visible = true
+	end
+	
+	-- Force redraw
+	self.selectedMission = nil
+end
+
+function MissionsApp:getFormattedSubtasks(missionId)
+	local mission = nil
+	for _, m in ipairs(self.missions) do
+		if m.id == missionId then
+			mission = m
+			break
 		end
 	end
+	
+	if not mission then return {} end
+	
+	local formattedSubtasks = {}
+	for i, subtaskText in ipairs(mission.subtasks) do
+		table.insert(formattedSubtasks, {
+			text = subtaskText,
+			completed = self.completedSubtasks[missionId] and self.completedSubtasks[missionId][i] or false
+		})
+	end
+	return formattedSubtasks
+end
+
+function MissionsApp:saveMissionProgress()
+	local progress = {
+		completed = {},
+		subtasks = {}
+	}
+	
+	-- Save completed missions
+	for index, completed in pairs(self.completedMissions) do
+		progress.completed[tostring(index)] = completed
+	end
+	
+	-- Save completed subtasks
+	for missionIndex, subtasks in pairs(self.completedSubtasks) do
+		progress.subtasks[tostring(missionIndex)] = {}
+		for subtaskIndex, completed in pairs(subtasks) do
+			progress.subtasks[tostring(missionIndex)][tostring(subtaskIndex)] = completed
+		end
+	end
+	
+	SaveSystem:save("mission_progress", progress)
+end
+
+function MissionsApp:getMissionProgress(index)
+	local mission = self.missions[index]
+	local completedCount = 0
+	if self.completedSubtasks[index] then
+		for i = 1, #mission.subtasks do
+			if self.completedSubtasks[index][i] then
+				completedCount = completedCount + 1
+			end
+		end
+	end
+	return completedCount / #mission.subtasks
 end
 
 function MissionsApp:textinput(text)
