@@ -438,27 +438,13 @@ function Missions:addMission(mission)
     -- Remove any existing mission with the same ID
     for i = #self.missions, 1, -1 do
         if self.missions[i].id == mission.id then
-            -- Preserve completion state when updating
-            mission.completed = mission.completed or self.missions[i].completed
-            mission.progress = mission.progress or self.missions[i].progress
-            mission.subtaskProgress = mission.subtaskProgress or self.missions[i].subtaskProgress
-            
-            -- Preserve subtask completion states
-            if mission.subtasks and self.missions[i].subtasks then
-                for j, subtask in ipairs(mission.subtasks) do
-                    if self.missions[i].subtasks[j] then
-                        subtask.completed = subtask.completed or self.missions[i].subtasks[j].completed
-                    end
-                end
-            end
-            
             table.remove(self.missions, i)
             break
         end
     end
 
-    -- Apply saved state if exists
-    if self.savedState then
+    -- Only apply saved state if the mission isn't explicitly marked as reset
+    if self.savedState and not mission.reset then
         -- Apply mission completion
         mission.completed = mission.completed or 
                           (self.savedState.completed and self.savedState.completed[tostring(mission.id)]) or false
@@ -493,9 +479,11 @@ function Missions:addMission(mission)
         progress = mission.progress or 0,
         subtaskProgress = mission.subtaskProgress or 0,
         hover = false,
-        selected = true,  -- Mark as selected since it's newly added
-        reward = mission.reward
+        selected = mission.selected or false,
+        reward = mission.reward,
+        reset = mission.reset
     })
+
 end
 
 -- Get mission by ID

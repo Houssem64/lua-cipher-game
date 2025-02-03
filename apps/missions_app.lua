@@ -400,8 +400,11 @@ function MissionsApp:resetProgress()
 	self.completedMissions = {}
 	self.completedSubtasks = {}
 	
-	-- Save progress
-	self:saveMissionProgress()
+	-- Clear saved progress by saving empty state
+	SaveSystem:save({
+		completed = {},
+		subtasks = {}
+	}, "mission_progress")
 	
 	-- Reset missions manager
 	if _G.missionsManager then
@@ -412,6 +415,11 @@ function MissionsApp:resetProgress()
 	if _G.missions then
 		-- Clear existing missions
 		_G.missions.missions = {}
+		-- Clear saved state in missions
+		_G.missions.savedState = {
+			completed = {},
+			subtasks = {}
+		}
 		
 		-- Re-add all missions with reset state
 		for _, mission in ipairs(self.missions) do
@@ -435,7 +443,8 @@ function MissionsApp:resetProgress()
 				progress = 0,
 				subtaskProgress = 0,
 				selected = mission.id == self.selectedMission,
-				reward = mission.reward
+				reward = mission.reward,
+				reset = true  -- Mark as reset to prevent loading saved state
 			})
 		end
 		
