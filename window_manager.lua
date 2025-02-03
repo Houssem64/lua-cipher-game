@@ -296,11 +296,12 @@ function WindowManager:mousepressed(x, y, button)
             end
         end
         
-        -- If clicked outside and missions app exists, deselect current mission
+        -- If clicked outside and missions app exists, deselect current mission and clear viewed mission
         if not clickedWindow then
             for _, window in ipairs(self.windows) do
                 if window.app and window.title == "Missions" then
                     window.app:selectMission(nil)
+                    window.app.viewedMission = nil
                     break
                 end
             end
@@ -324,6 +325,10 @@ function WindowManager:mousepressed(x, y, button)
 
             if window:isMouseInTitleBar(x, y) then
                 if window:isMouseInCloseButton(x, y) then
+                    -- Clear viewed mission if closing missions window
+                    if window.app and window.title == "Missions" then
+                        window.app.viewedMission = nil
+                    end
                     table.remove(self.windows, i)
                     return
                 elseif window:isMouseInMinimizeButton(x, y) then

@@ -8,6 +8,7 @@ function MissionsApp.new()
 	local self = setmetatable({}, MissionsApp)
 	self.missions = StoryMissions.getAllMissions()
 	self.selectedMission = nil
+	self.viewedMission = nil  -- Add viewed mission tracking
 	self.scrollPosition = 0
 	self.maxMissionsVisible = 8
 	self.resetButtonHovered = false
@@ -110,7 +111,6 @@ function MissionsApp:draw(x, y, width, height)
 	-- Draw missions list
 	local currentStartY = y + self.startY
 
-
 	for i = 1 + self.scrollPosition, math.min(#self.missions, self.scrollPosition + self.maxMissionsVisible) do
 		local mission = self.missions[i]
 		local missionY = currentStartY + (i - 1 - self.scrollPosition) * self.missionHeight
@@ -120,14 +120,16 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.rectangle("fill", x + self.padding + 12, missionY + 2, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission background with completion status
-        if self.selectedMission == i then
-            love.graphics.setColor(0.95, 0.97, 1)
-        elseif self.completedMissions[i] then
-            love.graphics.setColor(0.9, 1, 0.9, 0.9)  -- Green tint for completed
-        else
-            love.graphics.setColor(1, 1, 1, 0.9)
-        end
-        love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
+		if self.selectedMission == i then
+			love.graphics.setColor(0.95, 0.97, 1)
+		elseif self.viewedMission == i then
+			love.graphics.setColor(0.9, 0.9, 1, 0.9)  -- Light blue tint for viewed
+		elseif self.completedMissions[i] then
+			love.graphics.setColor(0.9, 1, 0.9, 0.9)  -- Green tint for completed
+		else
+			love.graphics.setColor(1, 1, 1, 0.9)
+		end
+		love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission info
 		love.graphics.setColor(0.2, 0.2, 0.2)
@@ -159,9 +161,9 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.print("Select", x + self.selectButtonX + 20, missionY + self.selectButtonY + 3)
 	end
 
-	-- Draw right panel if mission is selected
-	if self.selectedMission then
-		local mission = self.missions[self.selectedMission]
+	-- Draw right panel if mission is selected or viewed
+	if self.selectedMission or self.viewedMission then
+		local mission = self.missions[self.selectedMission or self.viewedMission]
 		local rightX = x + leftPanelWidth + self.padding
 
 		-- Draw right panel background with shadow
@@ -197,6 +199,7 @@ function MissionsApp:draw(x, y, width, height)
 
 	-- Reset font
 	love.graphics.setFont(default_font)
+
 end
 
 function MissionsApp:mousepressed(x, y, button, baseX, baseY)
@@ -226,7 +229,7 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 		end
 
 		if inMissionsArea then
-			-- Calculate mission selection
+			-- Calculate mission index
 			local clickedY = relativeY - missionStartY
 			local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
 
@@ -242,13 +245,16 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 						self:selectMission(clickedIndex)
 					end
 				else
-					self.selectedMission = clickedIndex
-					self:selectMission(clickedIndex)
+					-- Just view the mission without selecting it
+					self.viewedMission = clickedIndex
 				end
+			else
+				-- Clear viewed mission if clicked in missions area but not on a mission
+				self.viewedMission = nil
 			end
 		else
-			-- If clicked outside missions area, deselect current mission
-			self:selectMission(nil)
+			-- Clear viewed mission if clicked outside missions area
+			self.viewedMission = nil
 		end
 
 		-- Check for subtask checkbox clicks in right panel
@@ -352,6 +358,7 @@ end
 
 function MissionsApp:selectMission(index)
 	self.selectedMission = index
+	self.viewedMission = nil  -- Clear viewed mission when selecting
 	
 	-- Clear previous missions in display
 	if _G.missions then
