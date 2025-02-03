@@ -184,53 +184,13 @@ end
 
 function Terminal:updateMissionProgress(missionId, subtaskIndex)
     if _G.missionsManager then
+        -- Let the missions manager handle all the completion logic, including sounds and notifications
         _G.missionsManager:updateProgress(missionId, subtaskIndex, true)
-        if _G.missions then
-            local mission = _G.missions:getMissionById(missionId)
-            if mission and mission.subtasks[subtaskIndex] then
-                -- Update subtask state
-                mission.subtasks[subtaskIndex].completed = true
-                
-                -- Calculate progress
-                local completedCount = 0
-                for _, subtask in ipairs(mission.subtasks) do
-                    if subtask.completed then
-                        completedCount = completedCount + 1
-                    end
-                end
-                
-                -- Update progress
-                mission.progress = completedCount / #mission.subtasks
-                mission.subtaskProgress = mission.progress
-                
-                -- Ensure panel stays visible
-                _G.missions.panel.visible = true
-                
-                -- Play completion sound
-                if _G.missions.completion_sound then
-                    print("Playing completion sound from terminal")
-                    local sound = _G.missions.completion_sound:clone()
-                    if sound then
-                        sound:setPitch(1.2)
-                        sound:setVolume(0.5)
-                        sound:play()
-                        print("Sound played successfully")
-                    else
-                        print("Failed to clone sound")
-                    end
-                else
-                    print("No completion sound found in missions")
-                end
-                
-                -- Check if all subtasks are complete
-                if completedCount == #mission.subtasks then
-                    mission.completed = true
-                    _G.missions:completeMissionById(missionId)
-                end
-            end
-        end
     end
 end
+
+
+
 
 function Terminal:handleCommand(command)
     local parts = {}
@@ -255,39 +215,39 @@ function Terminal:handleCommand(command)
                 print("Number of missions:", #_G.missions.missions)
                 
                 -- Check if mission is selected or if it's the only mission
-                if mission.selected or #_G.missions.missions == 1 then
+                if (mission.selected or #_G.missions.missions == 1) and not mission.completed then
                     print("Processing command for tutorial mission:", fullCommand)
                     -- Tutorial mission checks
-                    if fullCommand == "pwd" then
+                    if fullCommand == "pwd" and not mission.subtasks[1].completed then
                         self:updateMissionProgress(1, 1)
                         print("Updated pwd task")
-                    elseif fullCommand == "neofetch" then
+                    elseif fullCommand == "neofetch" and not mission.subtasks[2].completed then
                         self:updateMissionProgress(1, 2)
                         print("Updated neofetch task")
-                    elseif fullCommand == "whoami" then
+                    elseif fullCommand == "whoami" and not mission.subtasks[3].completed then
                         self:updateMissionProgress(1, 3)
                         print("Updated whoami task")
-                    elseif fullCommand == "mkdir tutorial" then
+                    elseif fullCommand == "mkdir tutorial" and not mission.subtasks[4].completed then
                         self:updateMissionProgress(1, 4)
                         print("Updated mkdir task")
-                    elseif fullCommand == "cd tutorial" then
+                    elseif fullCommand == "cd tutorial" and not mission.subtasks[5].completed then
                         self:updateMissionProgress(1, 5)
                         print("Updated cd task")
-                    elseif fullCommand == "touch test.txt" then
+                    elseif fullCommand == "touch test.txt" and not mission.subtasks[6].completed then
                         self:updateMissionProgress(1, 6)
                         print("Updated touch task")
-                    elseif fullCommand == "ls" then
+                    elseif fullCommand == "ls" and not mission.subtasks[7].completed then
                         self:updateMissionProgress(1, 7)
                         print("Updated ls task")
-                    elseif fullCommand == "sudo whoami" then
+                    elseif fullCommand == "sudo whoami" and not mission.subtasks[8].completed then
                         self:updateMissionProgress(1, 8)
                         print("Updated sudo task")
-                    elseif fullCommand == "help" then
+                    elseif fullCommand == "help" and not mission.subtasks[9].completed then
                         self:updateMissionProgress(1, 9)
                         print("Updated help task")
                     end
                 else
-                    print("Mission 1 is not selected")
+                    print("Mission 1 is not selected or already completed")
                 end
             else
                 print("Mission 1 not found")

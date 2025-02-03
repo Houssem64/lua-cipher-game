@@ -107,34 +107,56 @@ function Missions:update(dt)
 
     -- Update notification animation
     if self.notification.active then
-        print("Notification state:", string.format(
-            "progress=%.2f, x=%.2f, y=%.2f, scale=%.2f, alpha=%.2f",
+        print("Notification active:", string.format(
+            "progress=%.2f, x=%.2f, y=%.2f, scale=%.2f, alpha=%.2f, text='%s'",
             self.notification.progress,
             self.notification.x,
             self.notification.y,
             self.notification.scale,
-            self.notification.alpha
+            self.notification.alpha,
+            self.notification.text
         ))
         
-        self.notification.progress = self.notification.progress + dt * 1.5 -- Slower animation
+        -- Slow down the animation
+        self.notification.progress = math.min(1, self.notification.progress + dt * 0.75)
         
         -- Animate position with easing
-        local t = math.min(1, self.notification.progress)
+        local t = self.notification.progress
         t = t * t * (3 - 2 * t) -- Smooth step interpolation
-        self.notification.x = self.button.x + self.button.radius + (self.notification.target_x - (self.button.x + self.button.radius)) * t
-        self.notification.y = self.button.y + self.button.radius + (self.notification.target_y - (self.button.y + self.button.radius)) * t
         
-        -- Animate scale and alpha with smoother curves
-        self.notification.scale = math.sin(t * math.pi) * 1.5
-        self.notification.alpha = math.cos(t * math.pi / 2)
+        -- Calculate positions
+        local startX = self.button.x + self.button.radius
+        local startY = self.button.y + self.button.radius
+        local targetX = self.notification.target_x
+        local targetY = self.notification.target_y
+        
+        self.notification.x = startX + (targetX - startX) * t
+        self.notification.y = startY + (targetY - startY) * t
+        
+        -- Animate scale and alpha with improved timing
+        if t < 0.3 then
+            -- Scale up phase
+            self.notification.scale = (t / 0.3) * 1.5
+            self.notification.alpha = 1
+        elseif t > 0.7 then
+            -- Scale down and fade out phase
+            local fadeT = (t - 0.7) / 0.3
+            self.notification.scale = (1 - fadeT) * 1.5
+            self.notification.alpha = 1 - fadeT
+        else
+            -- Hold phase
+            self.notification.scale = 1.5
+            self.notification.alpha = 1
+        end
         
         -- End animation
-        if self.notification.progress >= 1 then
-            print("Notification animation complete")
-            self.notification.active = false
+        if t >= 1 then
+            print("Notification animation complete, resetting state")
+            self:resetNotification()
         end
     end
 end
+
 
 function Missions:draw()
     local default_font = love.graphics.getFont()
@@ -446,21 +468,52 @@ function Missions:mousepressed(x, y)
     return false
 end
 
-function Missions:resetMissions()
-    -- Clear all missions
-    self.missions = {}
-    -- Reset notification state
+function Missions:resetNotification()
     self.notification = {
         active = false,
         progress = 0,
-        x = 0,
-        y = 0,
-        target_x = 0,
-        target_y = 0,
+        x = self.button.x + self.button.radius,
+        y = self.button.y + self.button.radius,
+        target_x = self.gameWidth / 2,
+        target_y = self.gameHeight / 3,
         scale = 0,
         alpha = 0,
         text = ""
     }
+    print("Notification state reset")
+end
+
+function Missions:startNotification()
+    -- Only start a new notification if one isn't already active
+    if self.notification.active then
+        print("Notification already active, waiting for completion")
+        return
+    end
+    
+    -- Force reset notification state before starting a new one
+    self:resetNotification()
+    
+    -- Set up new notification
+    self.notification = {
+        active = true,
+        progress = 0,
+        x = self.button.x + self.button.radius,
+        y = self.button.y + self.button.radius,
+        target_x = self.gameWidth / 2,
+        target_y = self.gameHeight / 3,
+        scale = 0,
+        alpha = 1,
+        text = "Mission Complete!"
+    }
+    
+    print("Starting new notification animation with fresh state")
+end
+
+function Missions:resetMissions()
+    -- Clear all missions
+    self.missions = {}
+    -- Reset notification state
+    self:resetNotification()
     -- Keep panel visible
     self.panel.visible = true
     print("Missions:resetMissions - Panel visible:", self.panel.visible)
@@ -562,9 +615,23 @@ end
 
 function Missions:completeMission(index)
     local mission = type(index) == "number" and self.missions[index] or nil
-    if mission then
+    if mission and not mission.completed then
         print("Completing mission: " .. mission.text)  -- Debug print
+        
+        -- Complete all subtasks if they exist
+        if mission.subtasks then
+            for _, subtask in ipairs(mission.subtasks) do
+                subtask.completed = true
+            end
+        end
+        
+        -- Reset notification state before starting new one
+        self:resetNotification()
+        
+        -- Update mission state
         mission.completed = true
+        mission.progress = 1
+        mission.subtaskProgress = 1
         
         -- Play completion sound
         if self.completion_sound then
@@ -576,105 +643,111 @@ function Missions:completeMission(index)
         end
         
         -- Start notification animation
-        print("Starting notification animation")  -- Debug print
-        self.notification.active = true
-        self.notification.progress = 0
-        self.notification.x = self.button.x + self.button.radius
-        self.notification.y = self.button.y + self.button.radius
-        self.notification.target_x = self.gameWidth / 2
-        self.notification.target_y = self.gameHeight / 3
-        self.notification.scale = 0
-        self.notification.alpha = 1
-        self.notification.text = "Mission Complete!"
+        self:startNotification()
+        
+        -- Update saved state
+        if _G.missionsManager then
+            _G.missionsManager:saveMissionState()
+        end
     end
 end
 
 function Missions:completeSubtask(missionId, subtaskIndex)
     local mission = self:getMissionById(missionId)
     if mission and mission.subtasks and mission.subtasks[subtaskIndex] then
-        -- Play task completion sound
-        if self.completion_sound then
-            print("Playing subtask completion sound")  -- Debug print
-            local sound = self.completion_sound:clone()
-            if sound then
-                sound:setPitch(1.2)
-                sound:setVolume(0.3)  -- Lower volume
-                sound:play()
-                print("Successfully played completion sound")
-            else
-                print("Failed to clone completion sound")
+        -- Only proceed if the subtask isn't already completed
+        if not mission.subtasks[subtaskIndex].completed then
+            -- Update mission progress
+            mission.subtasks[subtaskIndex].completed = true
+            
+            -- Check if all subtasks are complete
+            local allComplete = true
+            local completedCount = 0
+            for _, subtask in ipairs(mission.subtasks) do
+                if subtask.completed then
+                    completedCount = completedCount + 1
+                else
+                    allComplete = false
+                end
             end
-        else
-            print("No completion sound loaded")
-        end
-        
-        -- Update mission progress
-        mission.subtasks[subtaskIndex].completed = true
-        
-        -- Check if all subtasks are complete
-        local allComplete = true
-        local completedCount = 0
-        for _, subtask in ipairs(mission.subtasks) do
-            if subtask.completed then
-                completedCount = completedCount + 1
-            else
-                allComplete = false
+            
+            -- Update progress
+            mission.progress = completedCount / #mission.subtasks
+            mission.subtaskProgress = mission.progress
+            
+            -- Play subtask completion sound
+            if self.completion_sound and not mission.completed then
+                local sound = self.completion_sound:clone()
+                if sound then
+                    sound:setPitch(1.2)
+                    sound:setVolume(0.3)
+                    sound:play()
+                end
             end
-        end
-        
-        -- Update progress
-        mission.progress = completedCount / #mission.subtasks
-        mission.subtaskProgress = mission.progress
-        
-        -- Complete mission if all subtasks are done
-        if allComplete then
-            self:completeMissionById(missionId)
-        end
-        
-        -- Update saved state
-        if _G.missionsManager then
-            _G.missionsManager:saveMissionState()
+            
+            -- Complete mission if all subtasks are done and mission isn't already completed
+            if allComplete and not mission.completed then
+                -- Reset notification state before starting new one
+                self:resetNotification()
+                
+                mission.completed = true
+                mission.progress = 1
+                mission.subtaskProgress = 1
+                
+                -- Play completion sound
+                if self.completion_sound then
+                    self.completion_sound:stop()
+                    self.completion_sound:play()
+                end
+                
+                -- Start notification animation
+                self:startNotification()
+            end
+            
+            -- Update saved state
+            if _G.missionsManager then
+                _G.missionsManager:saveMissionState()
+            end
         end
     end
 end
 
 
+
+
 function Missions:completeMissionById(missionId)
     local mission = self:getMissionById(missionId)
     if mission and not mission.completed then
-        -- Complete all subtasks first
-        for _, subtask in ipairs(mission.subtasks) do
-            subtask.completed = true
+        -- Complete all subtasks first if they exist
+        if mission.subtasks then
+            for _, subtask in ipairs(mission.subtasks) do
+                subtask.completed = true
+            end
         end
+        
+        -- Reset notification state before starting new one
+        self:resetNotification()
         
         -- Update mission state
         mission.completed = true
         mission.progress = 1
         mission.subtaskProgress = 1
         
-        -- Play completion sound
+        -- Play completion sound only if mission wasn't completed before
         if self.completion_sound then
             self.completion_sound:stop()
             self.completion_sound:play()
         end
         
         -- Start notification animation
-        self.notification.active = true
-        self.notification.progress = 0
-        self.notification.x = self.button.x + self.button.radius
-        self.notification.y = self.button.y + self.button.radius
-        self.notification.target_x = self.gameWidth / 2
-        self.notification.target_y = self.gameHeight / 3
-        self.notification.scale = 0
-        self.notification.alpha = 1
-        self.notification.text = "Mission Complete!"
+        self:startNotification()
         
         -- Update saved state
         if _G.missionsManager then
             _G.missionsManager:saveMissionState()
         end
-
     end
 end
+
 
 return Missions

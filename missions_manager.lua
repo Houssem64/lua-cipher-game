@@ -128,6 +128,25 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
         if _G.missions then
             _G.missions.panel.visible = true
             
+            -- Play subtask completion sound if not already completed
+            if wasNotCompleted and _G.missions.completion_sound then
+                local sound = _G.missions.completion_sound:clone()
+                if sound then
+                    sound:setPitch(1.2)
+                    sound:setVolume(0.3)
+                    sound:play()
+                end
+            end
+            
+            -- If mission was just completed, play completion sound and show notification
+            if mission.completed and wasNotCompleted then
+                if _G.missions.completion_sound then
+                    _G.missions.completion_sound:stop()
+                    _G.missions.completion_sound:play()
+                end
+                _G.missions:startNotification()
+            end
+            
             -- Clear missions and add only the current mission
             _G.missions.missions = {}
             
@@ -147,15 +166,8 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
                 completed = mission.completed,
                 progress = mission.progress,
                 subtaskProgress = mission.completedSubtasks / #mission.subtasks,
-                selected = true  -- Keep the mission selected
+                selected = true
             })
-            
-            -- Debug print
-            print("MissionsManager:updateProgress - Updated mission:", id)
-            print("Subtask:", subtaskIndex, "completed:", complete)
-            print("Mission progress:", mission.progress)
-            print("Completed subtasks:", mission.completedSubtasks, "of", #mission.subtasks)
-            print("Panel visible:", _G.missions.panel.visible)
             
             -- Ensure the mission is selected in the missions app
             local missionWindow = self:getActiveMissionWindow()
@@ -167,7 +179,6 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
         -- Save state after update
         self:saveMissionState()
         
-        -- Return if a task was newly completed
         return wasNotCompleted and complete
     end
     return false
@@ -176,7 +187,7 @@ end
 
 function MissionsManager:completeMission(id)
     for _, mission in ipairs(self.missions) do
-        if mission.id == id then
+        if mission.id == id and not mission.completed then
             mission.completed = true
             mission.progress = 1
             -- Complete all subtasks
@@ -184,6 +195,15 @@ function MissionsManager:completeMission(id)
                 subtask.completed = true
             end
             mission.completedSubtasks = #mission.subtasks
+            
+            -- Play completion sound and show notification
+            if _G.missions then
+                if _G.missions.completion_sound then
+                    _G.missions.completion_sound:stop()
+                    _G.missions.completion_sound:play()
+                end
+                _G.missions:startNotification()
+            end
             
             -- Save state after completion
             self:saveMissionState()

@@ -8,14 +8,14 @@ local StoryMissions = {
 			reward = "Terminal Master Badge",
 			subtasks = {
 				"Use 'pwd' to check your current working directory location",
-				"Try 'neofetch' to view detailed system information and ASCII art",
-				"Use 'whoami' to check your current user",
+				"Try 'neofetch' to view detailed system information and ASCII art"
+--[[ 				"Use 'whoami' to check your current user",
 				"Create a new directory named 'tutorial' using 'mkdir tutorial'",
 				"Navigate into the directory with 'cd tutorial'",
 				"Create a test file using 'touch test.txt'",
 				"List directory contents with 'ls' to verify your file",
 				"Try 'sudo whoami' to see elevated privileges (password: kali)",
-				"Use 'help' to explore all available commands"
+				"Use 'help' to explore all available commands" ]]
 			}
 		},
 		{
