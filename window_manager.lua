@@ -216,6 +216,14 @@ function Window:mousepressed(x, y, button)
     end
 end
 
+function Window:mousemoved(x, y, dx, dy)
+    if self.app and type(self.app.mousemoved) == "function" then
+        local contentX = x - self.x
+        local contentY = y - (self.y + self.titleBarHeight)
+        self.app:mousemoved(contentX, contentY, self.x, self.y + self.titleBarHeight)
+    end
+end
+
 --WINODOW MANAGER
 --WINODOW MANAGER
 --WINODOW MANAGER
@@ -286,7 +294,7 @@ function WindowManager:mousepressed(x, y, button)
                                contentY >= 0 and contentY <= window.height - window.titleBarHeight
 
             if isInContent and window.app and type(window.app.mousepressed) == "function" then
-                window.app:mousepressed(contentX, contentY, button)
+                window.app:mousepressed(contentX, contentY, button, window.x, window.y + window.titleBarHeight)
                 self.activeWindow = window
                 return
             end
@@ -339,6 +347,16 @@ function WindowManager:mousemoved(x, y, dx, dy)
             local newHeight = y - window.y + window.dragOffsetY
             window.width = math.max(200, newWidth)  -- Minimum width
             window.height = math.max(100, newHeight) -- Minimum height
+        else
+            -- Pass mousemoved to app if within content area
+            local contentX = x - window.x
+            local contentY = y - (window.y + window.titleBarHeight)
+            local isInContent = contentX >= 0 and contentX <= window.width and
+                               contentY >= 0 and contentY <= window.height - window.titleBarHeight
+            
+            if isInContent and window.app and type(window.app.mousemoved) == "function" then
+                window.app:mousemoved(contentX, contentY, window.x, window.y + window.titleBarHeight)
+            end
         end
     end
 end

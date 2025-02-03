@@ -194,46 +194,41 @@ if key == "c" then
                     -- Complete this subtask
                     _G.missionsManager:updateProgress(missionId, subtaskIndex, true)
                     
-                    -- Update mission display
+                    -- Update missions display
                     for i, displayMission in ipairs(_G.missions.missions) do
                         if displayMission.id == missionId then
-                            -- Format subtasks for display
-                            local formattedSubtasks = {}
-                            for _, subtask in ipairs(mission.subtasks) do
-                                table.insert(formattedSubtasks, {
-                                    text = subtask.text,
-                                    completed = subtask.completed
-                                })
+                            -- Update subtask completion
+                            displayMission.subtasks[subtaskIndex].completed = true
+                            
+                            -- Update progress
+                            local completedCount = 0
+                            for _, subtask in ipairs(displayMission.subtasks) do
+                                if subtask.completed then
+                                    completedCount = completedCount + 1
+                                end
                             end
                             
-                            -- Update display mission
-                            local wasNotCompleted = not _G.missions.missions[i].completed
-                            _G.missions.missions[i] = {
-                                id = mission.id,
-                                title = mission.text,
-                                text = mission.text,
-                                description = mission.description,
-                                subtasks = formattedSubtasks,
-                                completed = mission.completed,
-                                progress = mission.progress,
-                                subtaskProgress = mission.completedSubtasks / #mission.subtasks,
-                                hover = false,
-                                reward = mission.reward
-                            }
+                            displayMission.progress = completedCount / #displayMission.subtasks
+                            displayMission.subtaskProgress = displayMission.progress
                             
-                            -- Trigger completion notification if needed
-                            if mission.completed and wasNotCompleted then
-                                _G.missions:completeMission(i)
+                            -- Check if mission is now complete
+                            if completedCount == #displayMission.subtasks then
+                                displayMission.completed = true
+                                _G.missions:completeMissionById(missionId)
                             end
                             break
                         end
                     end
+                    
+                    -- Save progress
+                    _G.missionsManager:saveMissionState()
                     return -- Exit after completing one subtask
                 end
             end
         end
     end
 end
+
 
 
     musicApp:keypressed(key)  -- Pass key events to MusicApp

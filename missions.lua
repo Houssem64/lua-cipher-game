@@ -32,8 +32,6 @@ function Missions.new(x, y, config)
     self.gameWidth = 1920
     self.gameHeight = 500
 
-
-
     -- Y offset for dynamic positioning
     self.y_offset = 300 or 0  -- Default to 0 if not provided
     
@@ -59,9 +57,13 @@ function Missions.new(x, y, config)
     -- Mission state
     self.missions = {}  -- Stores the list of missions
     
+    -- Load saved mission progress
+    local SaveSystem = require("modules/save_system")
+    self.savedState = SaveSystem:load("mission_progress") or {}
+    
     -- Load completion sound
     local success, result = pcall(function()
-        return love.audio.newSource("menuselect.wav", "static")
+        return love.audio.newSource("task_complete.wav", "static")
     end)
     if success then
         self.completion_sound = result
@@ -436,22 +438,48 @@ function Missions:addMission(mission)
     -- Remove any existing mission with the same ID
     for i = #self.missions, 1, -1 do
         if self.missions[i].id == mission.id then
+            -- Preserve completion state when updating
+            mission.completed = mission.completed or self.missions[i].completed
+            mission.progress = mission.progress or self.missions[i].progress
+            mission.subtaskProgress = mission.subtaskProgress or self.missions[i].subtaskProgress
+            
+            -- Preserve subtask completion states
+            if mission.subtasks and self.missions[i].subtasks then
+                for j, subtask in ipairs(mission.subtasks) do
+                    if self.missions[i].subtasks[j] then
+                        subtask.completed = subtask.completed or self.missions[i].subtasks[j].completed
+                    end
+                end
+            end
+            
             table.remove(self.missions, i)
             break
         end
     end
 
-    -- Convert subtasks to proper format with completed state
-    local formattedSubtasks = {}
-    for _, subtask in ipairs(mission.subtasks) do
-        if type(subtask) == "table" then
-            table.insert(formattedSubtasks, subtask)
-        else
-            table.insert(formattedSubtasks, {
-                text = subtask,
-                completed = false
-            })
+    -- Apply saved state if exists
+    if self.savedState then
+        -- Apply mission completion
+        mission.completed = mission.completed or 
+                          (self.savedState.completed and self.savedState.completed[tostring(mission.id)]) or false
+        
+        -- Apply subtask completion
+        if self.savedState.subtasks and self.savedState.subtasks[tostring(mission.id)] then
+            for i, subtask in ipairs(mission.subtasks) do
+                subtask.completed = subtask.completed or 
+                                  self.savedState.subtasks[tostring(mission.id)][tostring(i)] or false
+            end
         end
+        
+        -- Calculate progress
+        local completedCount = 0
+        for _, subtask in ipairs(mission.subtasks) do
+            if subtask.completed then
+                completedCount = completedCount + 1
+            end
+        end
+        mission.progress = mission.progress or (completedCount / #mission.subtasks)
+        mission.subtaskProgress = mission.subtaskProgress or mission.progress
     end
 
     -- Add the new mission
@@ -460,12 +488,13 @@ function Missions:addMission(mission)
         title = mission.text,
         text = mission.text,
         description = mission.description,
-        subtasks = formattedSubtasks,
-        completed = mission.completed,
+        subtasks = mission.subtasks,
+        completed = mission.completed or false,
         progress = mission.progress or 0,
         subtaskProgress = mission.subtaskProgress or 0,
         hover = false,
-        selected = true  -- Mark as selected since it's newly added
+        selected = true,  -- Mark as selected since it's newly added
+        reward = mission.reward
     })
 end
 
@@ -527,46 +556,50 @@ function Missions:completeSubtask(missionId, subtaskIndex)
             if sound then
                 sound:setPitch(1.2)
                 sound:setVolume(0.5)
-                print("Playing task completion sound")
                 sound:play()
-            else
-                print("Failed to clone completion sound")
             end
         end
-
         
         -- Update mission progress
         mission.subtasks[subtaskIndex].completed = true
         
         -- Check if all subtasks are complete
         local allComplete = true
+        local completedCount = 0
         for _, subtask in ipairs(mission.subtasks) do
-            if not subtask.completed then
+            if subtask.completed then
+                completedCount = completedCount + 1
+            else
                 allComplete = false
-                break
             end
         end
+        
+        -- Update progress
+        mission.progress = completedCount / #mission.subtasks
+        mission.subtaskProgress = mission.progress
         
         -- Complete mission if all subtasks are done
         if allComplete then
             self:completeMissionById(missionId)
         end
         
-        -- Update mission progress
-        local completedCount = 0
-        for _, subtask in ipairs(mission.subtasks) do
-            if subtask.completed then
-                completedCount = completedCount + 1
-            end
+        -- Update saved state
+        if _G.missionsManager then
+            _G.missionsManager:saveMissionState()
         end
-        mission.progress = completedCount / #mission.subtasks
-        mission.subtaskProgress = mission.progress
     end
 end
+
 
 function Missions:completeMissionById(missionId)
     local mission = self:getMissionById(missionId)
     if mission and not mission.completed then
+        -- Complete all subtasks first
+        for _, subtask in ipairs(mission.subtasks) do
+            subtask.completed = true
+        end
+        
+        -- Update mission state
         mission.completed = true
         mission.progress = 1
         mission.subtaskProgress = 1
@@ -587,6 +620,14 @@ function Missions:completeMissionById(missionId)
         self.notification.scale = 0
         self.notification.alpha = 1
         self.notification.text = "Mission Complete!"
+        
+        -- Force redraw of mission panel and ensure it's visible
+        self.panel.visible = true
+        
+        -- Update saved state
+        if _G.missionsManager then
+            _G.missionsManager:saveMissionState()
+        end
     end
 end
 
