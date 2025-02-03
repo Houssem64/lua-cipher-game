@@ -224,24 +224,15 @@ function Window:mousemoved(x, y, dx, dy)
     end
 end
 
---WINODOW MANAGER
---WINODOW MANAGER
---WINODOW MANAGER
---WINODOW MANAGER
-
-
-
-
-
-
-
 -- WindowManager class
+local MissionsManager = require("missions_manager")
 local WindowManager = {}
 
 function WindowManager:new()
     local obj = {
         windows = {},
-        activeWindow = nil
+        activeWindow = nil,
+        missionsManager = MissionsManager:new()  -- Create instance of MissionsManager
     }
     setmetatable(obj, self)
     self.__index = self
@@ -252,10 +243,15 @@ function WindowManager:createWindow(title, x, y, width, height, app)
     local window = Window:new(title, width, height)
     if type(app) == "table" then
         window.app = app
-            
     end
     table.insert(self.windows, window)
     self.activeWindow = window
+    
+    -- Restore mission state if it's a missions window
+    if self.missionsManager then
+        self.missionsManager:restoreWindowState(window)
+    end
+    
     return window
 end
 
@@ -295,21 +291,11 @@ function WindowManager:mousepressed(x, y, button)
                 break
             end
         end
-        
-        -- If clicked outside and missions app exists, deselect current mission and clear viewed mission
-        if not clickedWindow then
-            for _, window in ipairs(self.windows) do
-                if window.app and window.title == "Missions" then
-                    window.app:selectMission(nil)
-                    window.app.viewedMission = nil
-                    break
-                end
-            end
-        end
 
         -- Regular window interaction handling
         for i = #self.windows, 1, -1 do
             local window = self.windows[i]
+
             
             -- Check if click is within window content area
             local contentX = x - window.x
@@ -325,9 +311,9 @@ function WindowManager:mousepressed(x, y, button)
 
             if window:isMouseInTitleBar(x, y) then
                 if window:isMouseInCloseButton(x, y) then
-                    -- Clear viewed mission if closing missions window
-                    if window.app and window.title == "Missions" then
-                        window.app.viewedMission = nil
+                    -- Handle mission state before closing
+                    if self.missionsManager then
+                        self.missionsManager:handleWindowClose(window)
                     end
                     table.remove(self.windows, i)
                     return
@@ -399,15 +385,6 @@ function WindowManager:keypressed(key)
     if self.activeWindow then
         self.activeWindow:keypressed(key)
     end
-end
-
-function WindowManager:getSelectedMissionApp()
-    for _, window in ipairs(self.windows) do
-        if window.app and window.title == "Missions" then
-            return window.app
-        end
-    end
-    return nil
 end
 
 return WindowManager

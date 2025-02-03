@@ -124,7 +124,9 @@ missionsManager:updateProgress(3, 1, true) -- Complete first subtask
     reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
     desktop = Desktop:new()
 
-    windowManager = WindowManager:new()
+    -- Initialize window manager globally
+    _G.windowManager = WindowManager:new()
+    windowManager = _G.windowManager  -- Keep local reference
     statusBar = StatusBar:new(networkManager)
     statusBar.windowManager = windowManager
 end
@@ -183,32 +185,30 @@ function love.keypressed(key)
     windowManager:keypressed(key)
     chat:keypressed(key)
 
-
-if key == "c" then
-    -- Get the currently selected mission from missions app
-    local selectedMission = windowManager:getSelectedMissionApp()
-    if selectedMission and selectedMission.selectedMission then
-        local mission = selectedMission.missions[selectedMission.selectedMission]
-        if mission and not selectedMission.completedMissions[selectedMission.selectedMission] then
-            -- Find first incomplete subtask
-            for subtaskIndex = 1, #mission.subtasks do
-                if not (selectedMission.completedSubtasks[selectedMission.selectedMission] and 
-                       selectedMission.completedSubtasks[selectedMission.selectedMission][subtaskIndex]) then
-                    -- Complete this subtask using the app's method
-                    selectedMission:toggleSubtaskComplete(selectedMission.selectedMission, subtaskIndex)
-                    return -- Exit after completing one subtask
+    if key == "c" then
+        -- Get the active mission window from missions manager
+        if _G.missionsManager then
+            local missionApp = _G.missionsManager:getActiveMissionWindow()
+            if missionApp and missionApp.selectedMission then
+                -- Complete the first incomplete subtask
+                local mission = missionApp.missions[missionApp.selectedMission]
+                if mission then
+                    for i = 1, #mission.subtasks do
+                        if not (missionApp.completedSubtasks[missionApp.selectedMission] and 
+                               missionApp.completedSubtasks[missionApp.selectedMission][i]) then
+                            missionApp:toggleSubtaskComplete(missionApp.selectedMission, i)
+                            break
+                        end
+                    end
                 end
             end
         end
     end
-end
-
-
-
 
 
     musicApp:keypressed(key)  -- Pass key events to MusicApp
     reelsApp:keypressed(key)  -- Pass key events to ReelsApp
+
 
 end
 

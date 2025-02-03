@@ -249,6 +249,7 @@ function MissionsManager:toggleSubtaskComplete(missionId, subtaskIndex)
         
         mission.completedSubtasks = completedCount
         mission.progress = completedCount / #mission.subtasks
+        mission.subtaskProgress = mission.progress -- Add subtask progress tracking
         mission.completed = completedCount == #mission.subtasks
         
         -- Save state after update
@@ -276,6 +277,52 @@ function MissionsManager:resetMission(missionId)
         return true
     end
     return false
+end
+
+function MissionsManager:getActiveMissionWindow()
+    -- First check active window
+    if _G.windowManager and _G.windowManager.activeWindow and 
+       _G.windowManager.activeWindow.title == "Missions" then
+        local app = _G.windowManager.activeWindow.app
+        if app and app.selectedMission then
+            return app
+        end
+    end
+    
+    -- Then check all windows
+    if _G.windowManager then
+        for _, window in ipairs(_G.windowManager.windows) do
+            if window.app and window.title == "Missions" then
+                local app = window.app
+                if app and app.selectedMission then
+                    return app
+                end
+            end
+        end
+    end
+    return nil
+end
+
+function MissionsManager:handleWindowClose(window)
+    if window.title == "Missions" then
+        -- Preserve mission state when window is closed
+        local missionApp = window.app
+        if missionApp and missionApp.selectedMission then
+            -- Store both the index and ID
+            self.lastSelectedMissionIndex = missionApp.selectedMission
+            self.lastSelectedMissionId = missionApp.missions[missionApp.selectedMission].id
+        end
+    end
+end
+
+function MissionsManager:restoreWindowState(window)
+    if window.title == "Missions" and self.lastSelectedMissionIndex then
+        -- Restore mission selection when window is reopened
+        local missionApp = window.app
+        if missionApp then
+            missionApp:selectMission(self.lastSelectedMissionIndex)
+        end
+    end
 end
 
 return MissionsManager

@@ -312,15 +312,21 @@ function MissionsApp:toggleSubtaskComplete(missionIndex, subtaskIndex)
 		
 		-- Check if all subtasks are complete
 		local allComplete = true
+		local completedCount = 0
 		for i = 1, #mission.subtasks do
-			if not self.completedSubtasks[missionIndex][i] then
+			if self.completedSubtasks[missionIndex][i] then
+				completedCount = completedCount + 1
+			else
 				allComplete = false
-				break
 			end
 		end
 		
+		-- Update progress
+		mission.progress = completedCount / #mission.subtasks
+		mission.subtaskProgress = mission.progress
+		
 		-- If all subtasks are complete, mark mission as complete
-		if allComplete then
+		if allComplete and not self.completedMissions[missionIndex] then
 			self.completedMissions[missionIndex] = true
 			
 			-- Play completion sound
@@ -356,7 +362,19 @@ function MissionsApp:toggleMissionComplete(missionIndex)
 	end
 end
 
-function MissionsApp:selectMission(index)
+function MissionsApp:getMissionIndexById(id)
+	for i, mission in ipairs(self.missions) do
+		if mission.id == id then
+			return i
+		end
+	end
+	return nil
+end
+
+function MissionsApp:selectMission(indexOrId)
+	local index = type(indexOrId) == "number" and indexOrId or self:getMissionIndexById(indexOrId)
+	if not index then return end
+
 	self.selectedMission = index
 	self.viewedMission = nil  -- Clear viewed mission when selecting
 	
@@ -364,26 +382,37 @@ function MissionsApp:selectMission(index)
 	if _G.missions then
 		_G.missions.missions = {}
 		
-		if index then
-			local mission = self.missions[index]
-			-- Format subtasks with current completion state
-			local formattedSubtasks = self:getFormattedSubtasks(mission.id)
-			
-			-- Add updated mission
-			_G.missions:addMission({
-				id = mission.id,
-				text = mission.text,
-				description = mission.description,
-				subtasks = formattedSubtasks,
-				completed = self.completedMissions[index] or false,
-				progress = self:getMissionProgress(index),
-				subtaskProgress = self:getMissionProgress(index),
-				selected = true,
-				reward = mission.reward
+		local mission = self.missions[index]
+		-- Format subtasks with current completion state
+		local formattedSubtasks = {}
+		for i, subtask in ipairs(mission.subtasks) do
+			table.insert(formattedSubtasks, {
+				text = type(subtask) == "string" and subtask or subtask.text,
+				completed = self.completedSubtasks[index] and self.completedSubtasks[index][i] or false
 			})
 		end
+		
+		-- Add updated mission
+		_G.missions:addMission({
+			id = mission.id,
+			text = mission.text,
+			description = mission.description,
+			subtasks = formattedSubtasks,
+			completed = self.completedMissions[index] or false,
+			progress = self:getMissionProgress(index),
+			subtaskProgress = self:getMissionProgress(index),
+			selected = true,
+			reward = mission.reward
+		})
+	end
+
+	-- Update mission state in missions manager
+	if _G.missionsManager then
+		_G.missionsManager.lastSelectedMissionIndex = index
+		_G.missionsManager.lastSelectedMissionId = self.missions[index].id
 	end
 end
+
 
 
 
