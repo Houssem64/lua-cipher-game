@@ -116,4 +116,39 @@ function FileSystem:renameFile(oldName, newName)
     return false
 end
 
+function FileSystem:getParentPath(path)
+    return path:match("(.+)/[^/]+$") or "/"
+end
+
+function FileSystem:copyFile(srcPath, destPath)
+    local srcDir = self:getDirectory(self:getParentPath(srcPath))
+    local destDir = self:getDirectory(self:getParentPath(destPath))
+    local srcName = srcPath:match("[^/]+$")
+    local destName = destPath:match("[^/]+$")
+    
+    if srcDir and destDir and srcDir[srcName] then
+        -- Copy the content/structure
+        destDir[destName] = srcDir[srcName]
+        -- Save the updated filesystem state
+        SaveSystem:save(self.root, "filesystem_data")
+        return true
+    end
+    return false
+end
+
+function FileSystem:moveFile(srcPath, destPath)
+    if self:copyFile(srcPath, destPath) then
+        -- Remove the source file after successful copy
+        local srcDir = self:getDirectory(self:getParentPath(srcPath))
+        local srcName = srcPath:match("[^/]+$")
+        if srcDir and srcDir[srcName] then
+            srcDir[srcName] = nil
+            -- Save the updated filesystem state
+            SaveSystem:save(self.root, "filesystem_data")
+            return true
+        end
+    end
+    return false
+end
+
 return FileSystem

@@ -2,11 +2,89 @@ local FileSystem = require("filesystem")
 
 local FileManager = {}
 
+function FileManager:handleClipboardOperation(action, file)
+    if not file or file.name == ".." then return end
+    
+    self.clipboard = {
+        action = action,
+        file = {
+            name = file.name,
+            path = self.currentPath,
+            type = file.type
+        }
+    }
+    
+    -- Visual feedback
+    self.statusMessage = {
+        text = action == "cut" and "Cut: " .. file.name or "Copied: " .. file.name,
+        timer = 2,  -- Show for 2 seconds
+        color = {0.2, 0.8, 0.2}
+    }
+end
+
+function FileManager:handlePaste()
+    if not self.clipboard.file then return end
+    
+    local srcPath = self.clipboard.file.path .. "/" .. self.clipboard.file.name
+    local destPath = self.currentPath .. "/" .. self.clipboard.file.name
+    
+    -- Check if destination already exists
+    local destDir = FileSystem:getDirectory(self.currentPath)
+    if destDir[self.clipboard.file.name] then
+        -- Show error message
+        self.statusMessage = {
+            text = "File already exists: " .. self.clipboard.file.name,
+            timer = 2,
+            color = {0.8, 0.2, 0.2}
+        }
+        return
+    end
+    
+    local success = false
+    if self.clipboard.action == "cut" then
+        success = FileSystem:moveFile(srcPath, destPath)
+        if success then
+            self.clipboard = { action = nil, file = nil }
+        end
+    else -- copy
+        success = FileSystem:copyFile(srcPath, destPath)
+    end
+    
+    if success then
+        self.statusMessage = {
+            text = "Operation completed successfully",
+            timer = 2,
+            color = {0.2, 0.8, 0.2}
+        }
+    else
+        self.statusMessage = {
+            text = "Operation failed",
+            timer = 2,
+            color = {0.8, 0.2, 0.2}
+        }
+    end
+    
+    self:refreshFiles()
+end
+
+function FileManager:update(dt)
+    if self.statusMessage and self.statusMessage.timer > 0 then
+        self.statusMessage.timer = self.statusMessage.timer - dt
+        if self.statusMessage.timer <= 0 then
+            self.statusMessage = nil
+        end
+    end
+end
+
 function FileManager:new()
     local obj = {
         currentPath = "/home/kali",
         files = {},
         selectedFile = nil,
+        clipboard = {
+            action = nil, -- "cut" or "copy"
+            file = nil
+        },
         contextMenu = {
             active = false,
             x = 0,
@@ -126,6 +204,12 @@ function FileManager:draw(x, y, width, height)
     love.graphics.setColor(0.2, 0.2, 0.2)
     love.graphics.print("Path: " .. self.currentPath, x + 10, y + 10)
     
+    -- Draw status message if active
+    if self.statusMessage and self.statusMessage.timer > 0 then
+        love.graphics.setColor(unpack(self.statusMessage.color))
+        love.graphics.print(self.statusMessage.text, x + 10, y + height - 45)
+    end
+
     -- Draw keyboard shortcuts help
     love.graphics.setColor(0.5, 0.5, 0.5)
     local shortcuts = "Shortcuts: ↑↓ Navigate | Enter Open | Backspace/← Back | Ctrl+N New File | Ctrl+F New Folder | Del Delete"
@@ -136,16 +220,6 @@ function FileManager:draw(x, y, width, height)
     local mouseX, mouseY = love.mouse.getPosition()
     
     for _, file in ipairs(self.files) do
-        -- Draw drag selection
-        if self.dragStart and self.dragEnd then
-            local startY = math.min(self.dragStart, self.dragEnd)
-            local endY = math.max(self.dragStart, self.dragEnd)
-            if y + yOffset >= startY and y + yOffset <= endY then
-                love.graphics.setColor(0.8, 0.8, 1, 0.2)
-                love.graphics.rectangle("fill", x + 5, y + yOffset - 2, width - 10, 24)
-            end
-        end
-
         -- Draw selection highlight
         if self.selectedFile == file.name then
             love.graphics.setColor(0.8, 0.8, 1, 0.3)
@@ -169,46 +243,74 @@ function FileManager:draw(x, y, width, height)
             love.graphics.setColor(0.2, 0.2, 0.2)
         end
         
+        -- Draw file name and details
+        local nameWidth = love.graphics.getFont():getWidth(file.name)
         love.graphics.print(file.name, x + 40, y + yOffset)
         
         -- Draw file size or item count for folders
         if file.type == "folder" and file.name ~= ".." then
             local count = #FileSystem:listFiles(self.currentPath .. "/" .. file.name)
             love.graphics.setColor(0.6, 0.6, 0.6)
-            love.graphics.print(count .. " items", x + width - 80, y + yOffset)
-        end
-        
-        -- Draw tooltip on hover
-        if mouseY >= y + yOffset - 2 and mouseY <= y + yOffset + 22 and
-           mouseX >= x + 5 and mouseX <= x + width - 5 then
-            love.graphics.setColor(0.1, 0.1, 0.1, 0.8)
-            local tooltipText = file.type == "folder" and "Double-click or press Enter to open folder" or
-                              "Right-click for options"
-            local tooltipWidth = love.graphics.getFont():getWidth(tooltipText) + 10
-            love.graphics.rectangle("fill", mouseX + 10, mouseY - 25, tooltipWidth, 20, 5, 5)
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.print(tooltipText, mouseX + 15, mouseY - 23)
+            love.graphics.print(count .. " items", x + 40 + nameWidth + 20, y + yOffset)
         end
         
         yOffset = yOffset + 25
     end
-
     
     -- Draw context menu if active
     if self.contextMenu.active then
         love.graphics.setColor(1, 1, 1, 0.95)
-        local menuWidth = 150
-        local menuHeight = #self.contextMenu.options * 25
+        local menuWidth = 200
+        local menuHeight = 0
+        -- Calculate total height including separators
+        for _, option in ipairs(self.contextMenu.options) do
+            if option.separator then
+                menuHeight = menuHeight + 5
+            else
+                menuHeight = menuHeight + 25
+            end
+        end
+        
+        -- Draw menu background
         love.graphics.rectangle("fill", self.contextMenu.x, self.contextMenu.y, menuWidth, menuHeight)
         
+        -- Draw menu border
         love.graphics.setColor(0.8, 0.8, 0.8)
         love.graphics.rectangle("line", self.contextMenu.x, self.contextMenu.y, menuWidth, menuHeight)
         
-        love.graphics.setColor(0.2, 0.2, 0.2)
+        -- Draw menu items
+        local currentY = self.contextMenu.y
         for i, option in ipairs(self.contextMenu.options) do
-            love.graphics.print(option.text, self.contextMenu.x + 5, self.contextMenu.y + (i-1) * 25 + 5)
+            if option.separator then
+                -- Draw separator line
+                love.graphics.setColor(0.8, 0.8, 0.8)
+                love.graphics.line(
+                    self.contextMenu.x + 5, currentY + 2,
+                    self.contextMenu.x + menuWidth - 5, currentY + 2
+                )
+                currentY = currentY + 5
+            else
+                -- Draw hover highlight
+                if mouseY >= currentY and mouseY < currentY + 25 and
+                   mouseX >= self.contextMenu.x and mouseX <= self.contextMenu.x + menuWidth then
+                    love.graphics.setColor(0.9, 0.9, 1)
+                    love.graphics.rectangle("fill", self.contextMenu.x, currentY, menuWidth, 25)
+                end
+                
+                -- Draw icon and text
+                love.graphics.setColor(0.2, 0.2, 0.2)
+                if option.icon then
+                    love.graphics.print(option.icon, self.contextMenu.x + 10, currentY + 5)
+                    love.graphics.print(option.text, self.contextMenu.x + 35, currentY + 5)
+                else
+                    love.graphics.print(option.text, self.contextMenu.x + 10, currentY + 5)
+                end
+                
+                currentY = currentY + 25
+            end
         end
     end
+
     
     -- Draw input dialog if active
     if self.inputDialog.active then
@@ -279,6 +381,7 @@ function FileManager:mousepressed(x, y, button)
         local yOffset = 40
         local clickedFile = nil
         
+        -- First check if clicked on a file
         for _, file in ipairs(self.files) do
             if y >= yOffset and y <= yOffset + 25 then
                 clickedFile = file
@@ -288,11 +391,14 @@ function FileManager:mousepressed(x, y, button)
             yOffset = yOffset + 25
         end
         
+        -- Show appropriate context menu
         if clickedFile then
             self:showContextMenu(x, y, clickedFile)
         else
-            -- Show create options when right-clicking empty space
-            self:showContextMenu(x, y, nil)
+            -- Only show empty space menu if clicked in the file list area
+            if y >= 40 and y <= height - 30 then
+                self:showContextMenu(x, y, nil)
+            end
         end
     end
 end
@@ -307,7 +413,40 @@ function FileManager:showContextMenu(x, y, file)
     if file then
         if file.name ~= ".." then
             table.insert(self.contextMenu.options, {
+                text = "Open",
+                icon = "▶️",
+                action = function()
+                    if file.type == "folder" then
+                        self:changeDirectory(file.name)
+                    else
+                        print("Opening file: " .. file.name)
+                    end
+                end
+            })
+            table.insert(self.contextMenu.options, {
+                separator = true
+            })
+            table.insert(self.contextMenu.options, {
+                text = "Cut",
+                icon = "✂️",
+                action = function()
+                    self:handleClipboardOperation("cut", file)
+                end
+            })
+            table.insert(self.contextMenu.options, {
+                text = "Copy",
+                icon = "📋",
+                action = function()
+                    self:handleClipboardOperation("copy", file)
+                end
+
+            })
+            table.insert(self.contextMenu.options, {
+                separator = true
+            })
+            table.insert(self.contextMenu.options, {
                 text = "Rename",
+                icon = "✏️",
                 action = function()
                     self:showInputDialog("Rename " .. file.name, file.name, function(newName)
                         if newName and newName ~= "" and newName ~= file.name then
@@ -321,6 +460,7 @@ function FileManager:showContextMenu(x, y, file)
             })
             table.insert(self.contextMenu.options, {
                 text = "Delete",
+                icon = "🗑️",
                 action = function()
                     FileSystem:removeFile(file.name)
                     self:refreshFiles()
@@ -329,7 +469,20 @@ function FileManager:showContextMenu(x, y, file)
         end
     else
         table.insert(self.contextMenu.options, {
+            text = "New File",
+            icon = "📄",
+            action = function()
+                self:showInputDialog("New File Name", "New File.txt", function(name)
+                    if name and name ~= "" then
+                        FileSystem:createFile(name)
+                        self:refreshFiles()
+                    end
+                end)
+            end
+        })
+        table.insert(self.contextMenu.options, {
             text = "New Folder",
+            icon = "📁",
             action = function()
                 self:showInputDialog("New Folder Name", "New Folder", function(name)
                     if name and name ~= "" then
@@ -340,14 +493,26 @@ function FileManager:showContextMenu(x, y, file)
             end
         })
         table.insert(self.contextMenu.options, {
-            text = "New File",
+            separator = true
+        })
+        if self.clipboard.file then
+            table.insert(self.contextMenu.options, {
+                text = "Paste",
+                icon = "📋",
+                action = function()
+                    self:handlePaste()
+                end
+
+            })
+            table.insert(self.contextMenu.options, {
+                separator = true
+            })
+        end
+        table.insert(self.contextMenu.options, {
+            text = "Refresh",
+            icon = "🔄",
             action = function()
-                self:showInputDialog("New File Name", "New File.txt", function(name)
-                    if name and name ~= "" then
-                        FileSystem:createFile(name)
-                        self:refreshFiles()
-                    end
-                end)
+                self:refreshFiles()
             end
         })
     end
@@ -467,20 +632,38 @@ function FileManager:mousereleased(x, y, button)
     if button == 1 then
         self.dragStart = nil
         self.dragEnd = nil
-    end
-    if self.contextMenu.active then
-        local menuWidth = 150
-        local menuHeight = #self.contextMenu.options * 25
         
-        if x >= self.contextMenu.x and x <= self.contextMenu.x + menuWidth and
-           y >= self.contextMenu.y and y <= self.contextMenu.y + menuHeight then
-            local option = math.floor((y - self.contextMenu.y) / 25) + 1
-            if self.contextMenu.options[option] then
-                self.contextMenu.options[option].action()
+        -- Handle drag and drop
+        if self.dragStart and self.dragEnd and math.abs(self.dragEnd - self.dragStart) > 5 then
+            -- TODO: Implement drag and drop functionality
+            print("Drag and drop detected")
+        end
+    end
+    
+    if self.contextMenu.active then
+        local menuWidth = 200
+        local currentY = self.contextMenu.y
+        local mouseInMenu = x >= self.contextMenu.x and x <= self.contextMenu.x + menuWidth
+        
+        for _, option in ipairs(self.contextMenu.options) do
+            if not option.separator then
+                if mouseInMenu and y >= currentY and y < currentY + 25 then
+                    if option.action then
+                        option.action()
+                    end
+                    self.contextMenu.active = false
+                    return
+                end
+                currentY = currentY + 25
+            else
+                currentY = currentY + 5
             end
         end
         
-        self.contextMenu.active = false
+        -- Close menu if clicked outside
+        if not mouseInMenu or y < self.contextMenu.y or y > currentY then
+            self.contextMenu.active = false
+        end
     end
 end
 
