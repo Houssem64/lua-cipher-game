@@ -183,7 +183,9 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.setColor(0.2, 0.2, 0.2)
 		love.graphics.print("Tasks:", rightX + self.padding, y + self.padding + 180)
 		for i, subtask in ipairs(mission.subtasks) do
-			love.graphics.print("• " .. subtask, rightX + self.padding + 20, y + self.padding + 180 + i * 30)
+			-- Handle subtask whether it's a string or an object
+			local subtaskText = type(subtask) == "string" and subtask or subtask.text
+			love.graphics.print("• " .. subtaskText, rightX + self.padding + 20, y + self.padding + 180 + i * 30)
 		end
 
 		-- Draw reward with enhanced visuals
@@ -270,6 +272,14 @@ end
 function MissionsApp:toggleSubtaskComplete(missionIndex, subtaskIndex)
 	local mission = self.missions[missionIndex]
 	if mission and mission.subtasks[subtaskIndex] then
+		-- Initialize subtasks array if it doesn't exist
+		if not self.completedSubtasks[missionIndex] then
+			self.completedSubtasks[missionIndex] = {}
+		end
+		
+		-- Toggle completion state
+		self.completedSubtasks[missionIndex][subtaskIndex] = not self.completedSubtasks[missionIndex][subtaskIndex]
+		
 		-- Toggle completion in missions manager
 		if _G.missionsManager then
 			_G.missionsManager:toggleSubtaskComplete(mission.id, subtaskIndex)
@@ -279,6 +289,29 @@ function MissionsApp:toggleSubtaskComplete(missionIndex, subtaskIndex)
 		if _G.missions then
 			_G.missions:completeSubtask(mission.id, subtaskIndex)
 		end
+		
+		-- Check if all subtasks are complete
+		local allComplete = true
+		for i = 1, #mission.subtasks do
+			if not self.completedSubtasks[missionIndex][i] then
+				allComplete = false
+				break
+			end
+		end
+		
+		-- If all subtasks are complete, mark mission as complete
+		if allComplete then
+			self.completedMissions[missionIndex] = true
+			
+			-- Play completion sound
+			if self.completion_sound then
+				self.completion_sound:stop()
+				self.completion_sound:play()
+			end
+		end
+		
+		-- Save progress
+		self:saveMissionProgress()
 	end
 end
 
@@ -382,11 +415,22 @@ function MissionsApp:resetProgress()
 		
 		-- Re-add all missions with reset state
 		for _, mission in ipairs(self.missions) do
+			-- Format subtasks as objects with text and completed properties
+			local formattedSubtasks = {}
+			for _, subtask in ipairs(mission.subtasks) do
+				-- Handle subtask whether it's a string or an object
+				local subtaskText = type(subtask) == "string" and subtask or subtask.text
+				table.insert(formattedSubtasks, {
+					text = subtaskText,
+					completed = false
+				})
+			end
+			
 			_G.missions:addMission({
 				id = mission.id,
 				text = mission.text,
 				description = mission.description,
-				subtasks = {},  -- Reset subtasks
+				subtasks = formattedSubtasks,
 				completed = false,
 				progress = 0,
 				subtaskProgress = 0,
@@ -415,7 +459,9 @@ function MissionsApp:getFormattedSubtasks(missionId)
 	if not mission then return {} end
 	
 	local formattedSubtasks = {}
-	for i, subtaskText in ipairs(mission.subtasks) do
+	for i, subtask in ipairs(mission.subtasks) do
+		-- Handle subtask whether it's a string or an object
+		local subtaskText = type(subtask) == "string" and subtask or subtask.text
 		table.insert(formattedSubtasks, {
 			text = subtaskText,
 			completed = self.completedSubtasks[missionId] and self.completedSubtasks[missionId][i] or false

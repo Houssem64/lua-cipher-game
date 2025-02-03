@@ -373,4 +373,13 @@ function WindowManager:keypressed(key)
     end
 end
 
+function WindowManager:getSelectedMissionApp()
+    for _, window in ipairs(self.windows) do
+        if window.app and window.title == "Missions" then
+            return window.app
+        end
+    end
+    return nil
+end
+
 return WindowManager

@@ -1,6 +1,7 @@
 -- Base resolution constants
 local BASE_WIDTH = 1920
 local BASE_HEIGHT = 1080
+local STATUSBAR_HEIGHT = 40
 
 local Desktop = require("desktop")
 local StatusBar = require("status_bar")
@@ -184,50 +185,25 @@ function love.keypressed(key)
 
 
 if key == "c" then
-    -- Find first incomplete mission
-    for missionId = 1, #_G.missionsManager:getMissions() do
-        local mission = _G.missionsManager:getMission(missionId)
-        if mission and not mission.completed then
+    -- Get the currently selected mission from missions app
+    local selectedMission = windowManager:getSelectedMissionApp()
+    if selectedMission and selectedMission.selectedMission then
+        local mission = selectedMission.missions[selectedMission.selectedMission]
+        if mission and not selectedMission.completedMissions[selectedMission.selectedMission] then
             -- Find first incomplete subtask
             for subtaskIndex = 1, #mission.subtasks do
-                if not mission.subtasks[subtaskIndex].completed then
-                    -- Complete this subtask
-                    _G.missionsManager:updateProgress(missionId, subtaskIndex, true)
-                    
-                    -- Update missions display
-                    for i, displayMission in ipairs(_G.missions.missions) do
-                        if displayMission.id == missionId then
-                            -- Update subtask completion
-                            displayMission.subtasks[subtaskIndex].completed = true
-                            
-                            -- Update progress
-                            local completedCount = 0
-                            for _, subtask in ipairs(displayMission.subtasks) do
-                                if subtask.completed then
-                                    completedCount = completedCount + 1
-                                end
-                            end
-                            
-                            displayMission.progress = completedCount / #displayMission.subtasks
-                            displayMission.subtaskProgress = displayMission.progress
-                            
-                            -- Check if mission is now complete
-                            if completedCount == #displayMission.subtasks then
-                                displayMission.completed = true
-                                _G.missions:completeMissionById(missionId)
-                            end
-                            break
-                        end
-                    end
-                    
-                    -- Save progress
-                    _G.missionsManager:saveMissionState()
+                if not (selectedMission.completedSubtasks[selectedMission.selectedMission] and 
+                       selectedMission.completedSubtasks[selectedMission.selectedMission][subtaskIndex]) then
+                    -- Complete this subtask using the app's method
+                    selectedMission:toggleSubtaskComplete(selectedMission.selectedMission, subtaskIndex)
                     return -- Exit after completing one subtask
                 end
             end
         end
     end
 end
+
+
 
 
 
