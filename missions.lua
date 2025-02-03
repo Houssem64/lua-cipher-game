@@ -63,15 +63,19 @@ function Missions.new(x, y, config)
     
     -- Load completion sound
     local success, result = pcall(function()
-        return love.audio.newSource("task_complete.wav", "static")
+        local sound = love.audio.newSource("task_complete.wav", "static")
+        print("Loading completion sound:", sound)  -- Debug print
+        return sound
     end)
     if success then
         self.completion_sound = result
+        print("Successfully loaded completion sound:", self.completion_sound)
         print("Successfully loaded completion sound")
     else
         print("Failed to load completion sound:", result)
         self.completion_sound = nil
     end
+
 
 
 
@@ -436,11 +440,11 @@ function Missions:mousepressed(x, y)
     local dy = y - (self.button.y + self.button.radius)
     if dx * dx + dy * dy <= self.button.radius * self.button.radius then
         self.panel.visible = not self.panel.visible
+        print("Missions:mousepressed - Panel visibility toggled:", self.panel.visible)
         return true
     end
     return false
 end
-
 
 function Missions:resetMissions()
     -- Clear all missions
@@ -457,6 +461,9 @@ function Missions:resetMissions()
         alpha = 0,
         text = ""
     }
+    -- Keep panel visible
+    self.panel.visible = true
+    print("Missions:resetMissions - Panel visible:", self.panel.visible)
 end
 
 function Missions:addMission(mission)
@@ -494,7 +501,7 @@ function Missions:addMission(mission)
     end
 
     -- Add the new mission
-    table.insert(self.missions, {
+    local newMission = {
         id = mission.id,
         title = mission.text,
         text = mission.text,
@@ -504,10 +511,32 @@ function Missions:addMission(mission)
         progress = mission.progress or 0,
         subtaskProgress = mission.subtaskProgress or 0,
         hover = false,
-        selected = mission.selected or false,
+        selected = mission.selected,  -- Keep the selected state
         reward = mission.reward,
         reset = mission.reset
-    })
+    }
+    
+    -- Debug print
+    print("Missions:addMission - Adding mission:", newMission.id, "selected:", newMission.selected)
+    
+    -- If this mission is selected, unselect all others
+    if newMission.selected then
+        print("Missions:addMission - Unselecting other missions")
+        for _, m in ipairs(self.missions) do
+            if m.selected then
+                print("Missions:addMission - Unselecting mission:", m.id)
+                m.selected = false
+            end
+        end
+    end
+    
+    table.insert(self.missions, newMission)
+    
+    -- Ensure panel is visible when adding missions
+    self.panel.visible = true
+    print("Missions:addMission - Panel visible:", self.panel.visible)
+    
+    return newMission
 
 end
 
@@ -565,12 +594,18 @@ function Missions:completeSubtask(missionId, subtaskIndex)
     if mission and mission.subtasks and mission.subtasks[subtaskIndex] then
         -- Play task completion sound
         if self.completion_sound then
+            print("Playing subtask completion sound")  -- Debug print
             local sound = self.completion_sound:clone()
             if sound then
                 sound:setPitch(1.2)
-                sound:setVolume(0.5)
+                sound:setVolume(0.3)  -- Lower volume
                 sound:play()
+                print("Successfully played completion sound")
+            else
+                print("Failed to clone completion sound")
             end
+        else
+            print("No completion sound loaded")
         end
         
         -- Update mission progress

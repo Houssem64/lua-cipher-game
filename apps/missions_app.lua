@@ -381,6 +381,7 @@ function MissionsApp:selectMission(indexOrId)
 	-- Clear previous missions in display
 	if _G.missions then
 		_G.missions.missions = {}
+		_G.missions.panel.visible = true  -- Keep panel visible
 		
 		local mission = self.missions[index]
 		-- Format subtasks with current completion state
@@ -392,8 +393,8 @@ function MissionsApp:selectMission(indexOrId)
 			})
 		end
 		
-		-- Add updated mission
-		_G.missions:addMission({
+		-- Add updated mission with selected state
+		local newMission = {
 			id = mission.id,
 			text = mission.text,
 			description = mission.description,
@@ -401,9 +402,13 @@ function MissionsApp:selectMission(indexOrId)
 			completed = self.completedMissions[index] or false,
 			progress = self:getMissionProgress(index),
 			subtaskProgress = self:getMissionProgress(index),
-			selected = true,
+			selected = true,  -- Ensure this is set
 			reward = mission.reward
-		})
+		}
+		_G.missions:addMission(newMission)
+		
+		-- Debug print
+		print("Added mission to _G.missions:", newMission.id, "selected:", newMission.selected)
 	end
 
 	-- Update mission state in missions manager

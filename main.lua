@@ -16,6 +16,7 @@ local MainMenu = require("main_menu")
 local MusicApp = require("apps.music_app")
 local moonshine = require 'moonshine'
 local ReelsApp = require("apps.reelsapp")
+local MissionsApp = require("apps.missions_app")
 local desktop
 
 local statusBar
@@ -87,7 +88,10 @@ for _, missionData in ipairs(StoryMissions.getAllMissions()) do
     _G.missionsManager:addMission(missionData)
 end
 
--- Sync missions with display
+-- Initialize missions app with tutorial selected
+local missionsApp = MissionsApp.new()
+
+--[[ -- Sync missions with display and select tutorial
 for _, mission in ipairs(_G.missionsManager:getMissions()) do
     local formattedSubtasks = {}
     for _, subtask in ipairs(mission.subtasks) do
@@ -97,6 +101,7 @@ for _, mission in ipairs(_G.missionsManager:getMissions()) do
         })
     end
     
+    -- Add mission to display with proper selection state
     _G.missions:addMission({
         id = mission.id,
         text = mission.text,
@@ -104,12 +109,19 @@ for _, mission in ipairs(_G.missionsManager:getMissions()) do
         subtasks = formattedSubtasks,
         completed = mission.completed,
         progress = mission.progress,
-        subtaskProgress = mission.completedSubtasks and (mission.completedSubtasks / #mission.subtasks) or 0
+        subtaskProgress = mission.completedSubtasks and (mission.completedSubtasks / #mission.subtasks) or 0,
+        selected = (mission.id == 1)  -- Select tutorial mission
     })
+end ]]
+
+
+
+-- Debug print mission state
+print("Missions initialized:")
+print("Panel visible:", _G.missions.panel.visible)
+if _G.missions:getMissionById(1) then
+    print("Tutorial mission selected:", _G.missions:getMissionById(1).selected)
 end
-
-
-
 
 
 --[[ -- Set progress after syncing

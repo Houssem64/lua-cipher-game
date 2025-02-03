@@ -29,7 +29,9 @@ function Terminal:new()
         scrollPosition = 0,
         maxLines = 20,
         currentCommand = nil,
-        ftpConnection = nil
+        ftpConnection = nil,
+        -- Track used commands for tutorial
+        usedCommands = {}
     }
     setmetatable(obj, self)
     self.__index = self
@@ -180,6 +182,56 @@ end
 
 
 
+function Terminal:updateMissionProgress(missionId, subtaskIndex)
+    if _G.missionsManager then
+        _G.missionsManager:updateProgress(missionId, subtaskIndex, true)
+        if _G.missions then
+            local mission = _G.missions:getMissionById(missionId)
+            if mission and mission.subtasks[subtaskIndex] then
+                -- Update subtask state
+                mission.subtasks[subtaskIndex].completed = true
+                
+                -- Calculate progress
+                local completedCount = 0
+                for _, subtask in ipairs(mission.subtasks) do
+                    if subtask.completed then
+                        completedCount = completedCount + 1
+                    end
+                end
+                
+                -- Update progress
+                mission.progress = completedCount / #mission.subtasks
+                mission.subtaskProgress = mission.progress
+                
+                -- Ensure panel stays visible
+                _G.missions.panel.visible = true
+                
+                -- Play completion sound
+                if _G.missions.completion_sound then
+                    print("Playing completion sound from terminal")
+                    local sound = _G.missions.completion_sound:clone()
+                    if sound then
+                        sound:setPitch(1.2)
+                        sound:setVolume(0.5)
+                        sound:play()
+                        print("Sound played successfully")
+                    else
+                        print("Failed to clone sound")
+                    end
+                else
+                    print("No completion sound found in missions")
+                end
+                
+                -- Check if all subtasks are complete
+                if completedCount == #mission.subtasks then
+                    mission.completed = true
+                    _G.missions:completeMissionById(missionId)
+                end
+            end
+        end
+    end
+end
+
 function Terminal:handleCommand(command)
     local parts = {}
     for part in command:gmatch("%S+") do
@@ -187,6 +239,66 @@ function Terminal:handleCommand(command)
     end
 
     if #parts == 0 then return end
+
+    -- Track command usage for tutorial
+    local fullCommand = table.concat(parts, " ")
+    self.usedCommands[fullCommand] = true
+    
+    -- Check for tutorial mission completion
+    if _G.missionsManager then
+        -- Check if mission 1 exists and is selected
+        if _G.missions then
+            local mission = _G.missions:getMissionById(1)
+            if mission then
+                print("Found mission 1:", mission.text)
+                print("Mission selected state:", mission.selected)
+                print("Number of missions:", #_G.missions.missions)
+                
+                -- Check if mission is selected or if it's the only mission
+                if mission.selected or #_G.missions.missions == 1 then
+                    print("Processing command for tutorial mission:", fullCommand)
+                    -- Tutorial mission checks
+                    if fullCommand == "pwd" then
+                        self:updateMissionProgress(1, 1)
+                        print("Updated pwd task")
+                    elseif fullCommand == "neofetch" then
+                        self:updateMissionProgress(1, 2)
+                        print("Updated neofetch task")
+                    elseif fullCommand == "whoami" then
+                        self:updateMissionProgress(1, 3)
+                        print("Updated whoami task")
+                    elseif fullCommand == "mkdir tutorial" then
+                        self:updateMissionProgress(1, 4)
+                        print("Updated mkdir task")
+                    elseif fullCommand == "cd tutorial" then
+                        self:updateMissionProgress(1, 5)
+                        print("Updated cd task")
+                    elseif fullCommand == "touch test.txt" then
+                        self:updateMissionProgress(1, 6)
+                        print("Updated touch task")
+                    elseif fullCommand == "ls" then
+                        self:updateMissionProgress(1, 7)
+                        print("Updated ls task")
+                    elseif fullCommand == "sudo whoami" then
+                        self:updateMissionProgress(1, 8)
+                        print("Updated sudo task")
+                    elseif fullCommand == "help" then
+                        self:updateMissionProgress(1, 9)
+                        print("Updated help task")
+                    end
+                else
+                    print("Mission 1 is not selected")
+                end
+            else
+                print("Mission 1 not found")
+            end
+        else
+            print("_G.missions not found")
+        end
+    end
+
+
+
     if self.state == States.FTP then
         self:handleFTPCommand(command)
         return

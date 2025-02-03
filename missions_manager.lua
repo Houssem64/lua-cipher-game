@@ -50,7 +50,8 @@ function MissionsManager:addMission(mission)
         reward = mission.reward,
         requirements = mission.requirements or {},
         subtasks = {},
-        completedSubtasks = 0
+        completedSubtasks = 0,
+        selected = (mission.id == 1)  -- Select tutorial mission by default
     }
     
     -- Initialize subtasks as objects with text and completed state
@@ -123,6 +124,46 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
             mission.completed = true
         end
         
+        -- Update missions display
+        if _G.missions then
+            _G.missions.panel.visible = true
+            
+            -- Clear missions and add only the current mission
+            _G.missions.missions = {}
+            
+            local formattedSubtasks = {}
+            for i, subtask in ipairs(mission.subtasks) do
+                table.insert(formattedSubtasks, {
+                    text = subtask.text,
+                    completed = subtask.completed
+                })
+            end
+            
+            _G.missions:addMission({
+                id = mission.id,
+                text = mission.text,
+                description = mission.description,
+                subtasks = formattedSubtasks,
+                completed = mission.completed,
+                progress = mission.progress,
+                subtaskProgress = mission.completedSubtasks / #mission.subtasks,
+                selected = true  -- Keep the mission selected
+            })
+            
+            -- Debug print
+            print("MissionsManager:updateProgress - Updated mission:", id)
+            print("Subtask:", subtaskIndex, "completed:", complete)
+            print("Mission progress:", mission.progress)
+            print("Completed subtasks:", mission.completedSubtasks, "of", #mission.subtasks)
+            print("Panel visible:", _G.missions.panel.visible)
+            
+            -- Ensure the mission is selected in the missions app
+            local missionWindow = self:getActiveMissionWindow()
+            if missionWindow then
+                missionWindow.selectedMission = index
+            end
+        end
+        
         -- Save state after update
         self:saveMissionState()
         
@@ -131,6 +172,7 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
     end
     return false
 end
+
 
 function MissionsManager:completeMission(id)
     for _, mission in ipairs(self.missions) do
@@ -222,6 +264,7 @@ function MissionsManager:resetAllMissions()
         mission.completed = false
         mission.progress = 0
         mission.completedSubtasks = 0
+        mission.selected = (mission.id == 1)  -- Select tutorial mission
         
         -- Reset all subtasks
         for _, subtask in ipairs(mission.subtasks) do
@@ -233,6 +276,37 @@ function MissionsManager:resetAllMissions()
     local missionWindow = self:getActiveMissionWindow()
     if missionWindow then
         missionWindow:resetMissions()
+        -- Re-select tutorial mission
+        missionWindow:selectMission(1)
+        print("MissionsManager:resetAllMissions - Reset complete, tutorial mission selected")
+    end
+    
+    -- Update missions display
+    if _G.missions then
+        _G.missions.missions = {}
+        _G.missions.panel.visible = true
+        
+        -- Re-add all missions with proper states
+        for _, m in ipairs(self.missions) do
+            local formattedSubtasks = {}
+            for _, subtask in ipairs(m.subtasks) do
+                table.insert(formattedSubtasks, {
+                    text = subtask.text,
+                    completed = subtask.completed
+                })
+            end
+            
+            _G.missions:addMission({
+                id = m.id,
+                text = m.text,
+                description = m.description,
+                subtasks = formattedSubtasks,
+                completed = m.completed,
+                progress = m.progress,
+                subtaskProgress = m.completedSubtasks / #m.subtasks,
+                selected = (m.id == 1)  -- Select tutorial mission
+            })
+        end
     end
     
     -- Save the reset state
@@ -289,17 +363,29 @@ function MissionsManager:getActiveMissionWindow()
     -- First check active window
     if _G.windowManager and _G.windowManager.activeWindow and 
        _G.windowManager.activeWindow.title == "Missions" then
-        return _G.windowManager.activeWindow.app
+        local app = _G.windowManager.activeWindow.app
+        if app then
+            print("MissionsManager:getActiveMissionWindow - Found active window")
+            print("Selected mission:", app.selectedMission)
+            return app
+        end
     end
     
     -- Then check all windows
     if _G.windowManager then
         for _, window in ipairs(_G.windowManager.windows) do
             if window.app and window.title == "Missions" then
-                return window.app
+                local app = window.app
+                if app then
+                    print("MissionsManager:getActiveMissionWindow - Found window in list")
+                    print("Selected mission:", app.selectedMission)
+                    return app
+                end
             end
         end
     end
+    
+    print("MissionsManager:getActiveMissionWindow - No mission window found")
     return nil
 end
 
