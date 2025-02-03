@@ -205,7 +205,14 @@ function Missions:draw()
         love.graphics.setFont(mission_font)
         local mission_y = self.panel.y + 80
         
-        for i, mission in ipairs(self.missions) do
+        if #self.missions == 0 then
+            love.graphics.setColor(0.5, 0.5, 0.5)
+            love.graphics.print("No missions selected",
+                self.panel.x + 20,
+                self.panel.y + 80)
+        else
+            for i, mission in ipairs(self.missions) do
+
             local current_mission_height = self.config.mission_height
             
             -- Add height for description if present
@@ -369,6 +376,7 @@ function Missions:draw()
             
             -- Move to next mission position
             mission_y = mission_y + current_mission_height + 10
+        end
         end
     end
     

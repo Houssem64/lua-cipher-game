@@ -207,6 +207,11 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 	local relativeY = y
 	local height = love.graphics.getHeight()
 	
+	-- Check if click is in missions area
+	local missionStartY = self.startY
+	local missionEndY = missionStartY + (math.min(#self.missions, self.maxMissionsVisible) * self.missionHeight)
+	local inMissionsArea = relativeY >= missionStartY and relativeY <= missionEndY
+	
 	if button == 1 then
 		-- Check reset button click
 		local resetButtonWidth = 100
@@ -220,50 +225,59 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 			return
 		end
 
-		-- Calculate mission selection
-		local missionStartY = self.startY
-		local clickedY = relativeY - missionStartY
-		local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
+		if inMissionsArea then
+			-- Calculate mission selection
+			local clickedY = relativeY - missionStartY
+			local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
 
-		if clickedIndex > 0 and clickedIndex <= #self.missions then
-			-- Check if click was on the select button
-			local buttonY = missionStartY + (clickedIndex - 1 - self.scrollPosition) * self.missionHeight + self.selectButtonY
-			if relativeY >= buttonY and relativeY <= buttonY + self.selectButtonHeight and 
-			   relativeX >= self.selectButtonX and relativeX <= self.selectButtonX + self.selectButtonWidth then
-				self:selectMission(clickedIndex)
-			else
-				self.selectedMission = clickedIndex
+			if clickedIndex > 0 and clickedIndex <= #self.missions then
+				-- Check if click was on the select button
+				local buttonY = missionStartY + (clickedIndex - 1 - self.scrollPosition) * self.missionHeight + self.selectButtonY
+				if relativeY >= buttonY and relativeY <= buttonY + self.selectButtonHeight and 
+				   relativeX >= self.selectButtonX and relativeX <= self.selectButtonX + self.selectButtonWidth then
+					-- Toggle selection
+					if self.selectedMission == clickedIndex then
+						self:selectMission(nil)  -- Deselect if already selected
+					else
+						self:selectMission(clickedIndex)
+					end
+				else
+					self.selectedMission = clickedIndex
+					self:selectMission(clickedIndex)
+				end
+			end
+		else
+			-- If clicked outside missions area, deselect current mission
+			self:selectMission(nil)
+		end
+
+		-- Check for subtask checkbox clicks in right panel
+		if self.selectedMission then
+			local mission = self.missions[self.selectedMission]
+			local leftPanelWidth = love.graphics.getWidth() * 0.4
+			local rightPanelStart = leftPanelWidth + self.padding
+			
+			if relativeX > rightPanelStart then
+				local checkboxX = relativeX - rightPanelStart
 				
-				-- Check for subtask checkbox clicks in right panel
-				if self.selectedMission then
-					local mission = self.missions[self.selectedMission]
-					local leftPanelWidth = love.graphics.getWidth() * 0.4
-					local rightPanelStart = leftPanelWidth + self.padding
-					
-					-- Only check for checkbox clicks if we're in the right panel area
-					if relativeX > rightPanelStart then
-						local checkboxX = relativeX - rightPanelStart
-						
-						-- Check each subtask's checkbox
-						for i = 1, #mission.subtasks do
-							local checkboxY = self.padding + 180 + i * 30
-							-- Check if click is within checkbox area (increased clickable area)
-							if relativeY >= checkboxY - 10 and relativeY <= checkboxY + 25 and
-							   checkboxX >= self.padding + 15 and checkboxX <= self.padding + 50 then
-								self:toggleSubtaskComplete(self.selectedMission, i)
-								break
-							end
-						end
+				for i = 1, #mission.subtasks do
+					local checkboxY = self.padding + 180 + i * 30
+					if relativeY >= checkboxY - 10 and relativeY <= checkboxY + 25 and
+					   checkboxX >= self.padding + 15 and checkboxX <= self.padding + 50 then
+						self:toggleSubtaskComplete(self.selectedMission, i)
+						break
 					end
 				end
 			end
 		end
 	elseif button == 2 then  -- Right click to toggle completion
-		local clickedY = relativeY - self.startY
-		local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
-		
-		if clickedIndex > 0 and clickedIndex <= #self.missions then
-			self:toggleMissionComplete(clickedIndex)
+		if inMissionsArea then
+			local clickedY = relativeY - self.startY
+			local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
+			
+			if clickedIndex > 0 and clickedIndex <= #self.missions then
+				self:toggleMissionComplete(clickedIndex)
+			end
 		end
 	end
 end
@@ -338,27 +352,29 @@ end
 
 function MissionsApp:selectMission(index)
 	self.selectedMission = index
-	local mission = self.missions[index]
 	
-	-- Format subtasks with current completion state
-	local formattedSubtasks = self:getFormattedSubtasks(mission.id)
-	
-	-- Clear previous missions in display before adding new one
+	-- Clear previous missions in display
 	if _G.missions then
 		_G.missions.missions = {}
 		
-		-- Add updated mission
-		_G.missions:addMission({
-			id = mission.id,
-			text = mission.text,
-			description = mission.description,
-			subtasks = formattedSubtasks,
-			completed = self.completedMissions[index] or false,
-			progress = self:getMissionProgress(index),
-			subtaskProgress = self:getMissionProgress(index),
-			selected = true,
-			reward = mission.reward
-		})
+		if index then
+			local mission = self.missions[index]
+			-- Format subtasks with current completion state
+			local formattedSubtasks = self:getFormattedSubtasks(mission.id)
+			
+			-- Add updated mission
+			_G.missions:addMission({
+				id = mission.id,
+				text = mission.text,
+				description = mission.description,
+				subtasks = formattedSubtasks,
+				completed = self.completedMissions[index] or false,
+				progress = self:getMissionProgress(index),
+				subtaskProgress = self:getMissionProgress(index),
+				selected = true,
+				reward = mission.reward
+			})
+		end
 		
 		-- Show panel
 		_G.missions.panel.visible = true

@@ -284,6 +284,29 @@ end
 
 function WindowManager:mousepressed(x, y, button)
     if button == 1 then
+        -- Check if click is outside any window
+        local clickedWindow = false
+        for i = #self.windows, 1, -1 do
+            local window = self.windows[i]
+            local isInWindow = x >= window.x and x <= window.x + window.width and
+                              y >= window.y and y <= window.y + window.height
+            if isInWindow then
+                clickedWindow = true
+                break
+            end
+        end
+        
+        -- If clicked outside and missions app exists, deselect current mission
+        if not clickedWindow then
+            for _, window in ipairs(self.windows) do
+                if window.app and window.title == "Missions" then
+                    window.app:selectMission(nil)
+                    break
+                end
+            end
+        end
+
+        -- Regular window interaction handling
         for i = #self.windows, 1, -1 do
             local window = self.windows[i]
             
