@@ -99,4 +99,21 @@ function FileSystem:loadState()
     end
 end
 
+function FileSystem:renameFile(oldName, newName)
+    local parentPath = self.current_path
+    local parent = self:getDirectory(parentPath)
+    if parent and parent[oldName] then
+        -- Store the content/structure
+        local content = parent[oldName]
+        -- Remove old entry
+        parent[oldName] = nil
+        -- Create new entry with same content
+        parent[newName] = content
+        -- Save the updated filesystem state
+        SaveSystem:save(self.root, "filesystem_data")
+        return true
+    end
+    return false
+end
+
 return FileSystem
