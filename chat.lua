@@ -224,7 +224,7 @@ end
 
 function Chat:draw()
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf", 18)
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 18)
     font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
 

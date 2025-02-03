@@ -69,7 +69,7 @@ function StatusBar:draw()
     
     -- Draw time using virtual coordinates
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("joty.otf",18)  -- Size for 1080p
+    local font = love.graphics.newFont("fonts/FiraCode.ttf",18)  -- Size for 1080p
     font:setFilter("nearest", "nearest")  -- Set filter to nearest
     love.graphics.setFont(font)
     

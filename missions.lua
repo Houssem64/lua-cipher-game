@@ -160,9 +160,9 @@ end
 
 function Missions:draw()
     local default_font = love.graphics.getFont()
-    local header_font = love.graphics.newFont("joty.otf", self.config.header_size)
-    local mission_font = love.graphics.newFont("joty.otf", self.config.mission_size)
-    local text_size = love.graphics.newFont("joty.otf", self.config.M_size)
+    local header_font = love.graphics.newFont("fonts/FiraCode.ttf", self.config.header_size)
+    local mission_font = love.graphics.newFont("fonts/FiraCode.ttf", self.config.mission_size)
+    local text_size = love.graphics.newFont("fonts/FiraCode.ttf", self.config.M_size)
     header_font:setFilter("nearest", "nearest")
     mission_font:setFilter("nearest", "nearest")
 
@@ -450,6 +450,7 @@ function Missions:draw()
             self.notification.x - textWidth/2,
             self.notification.y + 40 * self.notification.scale,
             0, self.notification.scale, self.notification.scale)
+        love.graphics.setFont(default_font)
     end
 
 end

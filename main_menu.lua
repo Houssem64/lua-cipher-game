@@ -53,7 +53,7 @@ end
 
 function MainMenu:draw()
     local previousFont = love.graphics.getFont()
-    local font =  love.graphics.newFont("joty.otf",48)
+    local font =  love.graphics.newFont("fonts/FiraCode.ttf",48)
     font:setFilter("nearest", "nearest", 1)
     love.graphics.setFont(font)
     if not self.isActive then return end
@@ -170,7 +170,7 @@ function MainMenu:mousemoved(x, y)
     if not self.isActive then return end
     
     -- Check if the mouse is hovering over a menu option
-    local menuFont = love.graphics.newFont("joty.otf",48)
+    local menuFont = love.graphics.newFont("fonts/FiraCode.ttf",48)
     self.hoveredOption = nil
     for i, option in ipairs(self.options) do
         local optionWidth = menuFont:getWidth(option)

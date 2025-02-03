@@ -98,10 +98,17 @@ function FileManager:new()
             title = "",
             callback = nil
         },
+        confirmDialog = {
+            active = false,
+            message = "",
+            callback = nil
+        },
         lastClickTime = 0,
         lastClickFile = nil,
         dragStart = nil,
-        dragEnd = nil
+        dragEnd = nil,
+        width = 0,  -- Add width property
+        height = 0  -- Add height property
     }
     setmetatable(obj, self)
     self.__index = self
@@ -114,7 +121,12 @@ function FileManager:showInputDialog(title, defaultText, callback)
         active = true,
         text = defaultText or "",
         title = title,
-        callback = callback
+        callback = function(name)
+            if callback and name and name ~= "" then
+                -- Use current directory for file operations
+                callback(name)
+            end
+        end
     }
 end
 
@@ -196,9 +208,19 @@ function FileManager:getFileIcon(file)
 end
 
 function FileManager:draw(x, y, width, height)
+    self.width = width  -- Store current dimensions
+    self.height = height
     -- Draw background
     love.graphics.setColor(0.9, 0.9, 0.9)
     love.graphics.rectangle("fill", x, y, width, height)
+    
+    -- Calculate column widths
+    local listWidth = width * 0.7  -- 70% for file list
+    local detailsWidth = width - listWidth  -- 30% for details
+    
+    -- Draw separator line
+    love.graphics.setColor(0.8, 0.8, 0.8)
+    love.graphics.line(x + listWidth, y, x + listWidth, y + height)
     
     -- Draw current path
     love.graphics.setColor(0.2, 0.2, 0.2)
@@ -223,14 +245,14 @@ function FileManager:draw(x, y, width, height)
         -- Draw selection highlight
         if self.selectedFile == file.name then
             love.graphics.setColor(0.8, 0.8, 1, 0.3)
-            love.graphics.rectangle("fill", x + 5, y + yOffset - 2, width - 10, 24)
+            love.graphics.rectangle("fill", x + 5, y + yOffset - 2, listWidth - 10, 24)
         end
         
         -- Draw hover highlight
         if mouseY >= y + yOffset - 2 and mouseY <= y + yOffset + 22 and
-           mouseX >= x + 5 and mouseX <= x + width - 5 then
+           mouseX >= x + 5 and mouseX <= x + listWidth - 5 then
             love.graphics.setColor(0.9, 0.9, 1, 0.2)
-            love.graphics.rectangle("fill", x + 5, y + yOffset - 2, width - 10, 24)
+            love.graphics.rectangle("fill", x + 5, y + yOffset - 2, listWidth - 10, 24)
         end
         
         -- Draw icon and name
@@ -243,18 +265,37 @@ function FileManager:draw(x, y, width, height)
             love.graphics.setColor(0.2, 0.2, 0.2)
         end
         
-        -- Draw file name and details
-        local nameWidth = love.graphics.getFont():getWidth(file.name)
         love.graphics.print(file.name, x + 40, y + yOffset)
-        
-        -- Draw file size or item count for folders
-        if file.type == "folder" and file.name ~= ".." then
-            local count = #FileSystem:listFiles(self.currentPath .. "/" .. file.name)
-            love.graphics.setColor(0.6, 0.6, 0.6)
-            love.graphics.print(count .. " items", x + 40 + nameWidth + 20, y + yOffset)
+        yOffset = yOffset + 25
+    end
+    
+    -- Draw details panel for selected file
+    if self.selectedFile then
+        local selectedFile = nil
+        for _, file in ipairs(self.files) do
+            if file.name == self.selectedFile then
+                selectedFile = file
+                break
+            end
         end
         
-        yOffset = yOffset + 25
+        if selectedFile then
+            love.graphics.setColor(0.2, 0.2, 0.2)
+            local detailsX = x + listWidth + 10
+            local detailsY = y + 40
+            
+            -- Draw details header
+            love.graphics.print("Details", detailsX, y + 10)
+            
+            -- Draw file/folder details
+            love.graphics.print("Name: " .. selectedFile.name, detailsX, detailsY)
+            love.graphics.print("Type: " .. selectedFile.type, detailsX, detailsY + 25)
+            
+            if selectedFile.type == "folder" and selectedFile.name ~= ".." then
+                local count = #FileSystem:listFiles(self.currentPath .. "/" .. selectedFile.name)
+                love.graphics.print("Items: " .. count, detailsX, detailsY + 50)
+            end
+        end
     end
     
     -- Draw context menu if active
@@ -312,6 +353,47 @@ function FileManager:draw(x, y, width, height)
     end
 
     
+    -- Draw confirm dialog if active
+    if self.confirmDialog.active then
+        -- Draw dialog background with semi-transparent overlay
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle("fill", x, y, width, height)
+        
+        love.graphics.setColor(1, 1, 1, 0.95)
+        local dialogWidth = 300
+        local dialogHeight = 120
+        local dialogX = x + (width - dialogWidth) / 2
+        local dialogY = y + (height - dialogHeight) / 2
+        love.graphics.rectangle("fill", dialogX, dialogY, dialogWidth, dialogHeight)
+        
+        -- Draw border
+        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.rectangle("line", dialogX, dialogY, dialogWidth, dialogHeight)
+        
+        -- Draw message
+        love.graphics.setColor(0.2, 0.2, 0.2)
+        love.graphics.printf(self.confirmDialog.message, dialogX + 20, dialogY + 20, dialogWidth - 40, "center")
+        
+        -- Draw buttons
+        local buttonWidth = 80
+        local buttonHeight = 30
+        local buttonY = dialogY + dialogHeight - buttonHeight - 20
+        
+        -- Yes button
+        local yesX = dialogX + dialogWidth/2 - buttonWidth - 10
+        love.graphics.setColor(0.4, 0.8, 0.4)
+        love.graphics.rectangle("fill", yesX, buttonY, buttonWidth, buttonHeight, 5)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf("Yes", yesX, buttonY + 5, buttonWidth, "center")
+        
+        -- No button
+        local noX = dialogX + dialogWidth/2 + 10
+        love.graphics.setColor(0.8, 0.4, 0.4)
+        love.graphics.rectangle("fill", noX, buttonY, buttonWidth, buttonHeight, 5)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.printf("No", noX, buttonY + 5, buttonWidth, "center")
+    end
+
     -- Draw input dialog if active
     if self.inputDialog.active then
         -- Draw dialog background
@@ -343,6 +425,46 @@ function FileManager:draw(x, y, width, height)
 end
 
 function FileManager:mousepressed(x, y, button)
+    if button == 1 and self.confirmDialog.active then
+        local dialogWidth = 300
+        local dialogHeight = 120
+        local dialogX = (self.width - dialogWidth) / 2
+        local dialogY = (self.height - dialogHeight) / 2
+        
+        -- Button dimensions
+        local buttonWidth = 80
+        local buttonHeight = 30
+        local buttonY = dialogY + dialogHeight - buttonHeight - 20
+        local yesX = dialogX + dialogWidth/2 - buttonWidth - 10
+        local noX = dialogX + dialogWidth/2 + 10
+        
+        -- Check if clicked on Yes button
+        if x >= yesX and x <= yesX + buttonWidth and
+           y >= buttonY and y <= buttonY + buttonHeight then
+            local callback = self.confirmDialog.callback
+            self.confirmDialog.active = false
+            if callback then
+                callback(true)
+            end
+            return
+        end
+        
+        -- Check if clicked on No button
+        if x >= noX and x <= noX + buttonWidth and
+           y >= buttonY and y <= buttonY + buttonHeight then
+            local callback = self.confirmDialog.callback
+            self.confirmDialog.active = false
+            if callback then
+                callback(false)
+            end
+            return
+        end
+        
+        return
+    end
+
+    local listWidth = self.width * 0.7  -- Use stored width
+    
     if button == 1 then
         self.dragStart = y
         self.dragEnd = y
@@ -352,52 +474,55 @@ function FileManager:mousepressed(x, y, button)
             return
         end
         
-        local yOffset = 40
-        for _, file in ipairs(self.files) do
-            if y >= yOffset and y <= yOffset + 25 then
-                -- Handle double click
-                local currentTime = love.timer.getTime()
-                if self.lastClickFile == file.name and 
-                   currentTime - self.lastClickTime < 0.5 then
-                    -- Double click detected
-                    if file.type == "folder" then
-                        self:changeDirectory(file.name)
+        -- Only handle file selection if click is in the file list area
+        if x <= listWidth then
+            local yOffset = 40
+            for _, file in ipairs(self.files) do
+                if y >= yOffset and y <= yOffset + 25 then
+                    -- Handle double click
+                    local currentTime = love.timer.getTime()
+                    if self.lastClickFile == file.name and 
+                       currentTime - self.lastClickTime < 0.5 then
+                        -- Double click detected
+                        if file.type == "folder" then
+                            self:changeDirectory(file.name)
+                        else
+                            print("Opening file: " .. file.name)
+                        end
                     else
-                        -- TODO: Open file in appropriate application
-                        print("Opening file: " .. file.name)
+                        -- Single click - just select
+                        self.selectedFile = file.name
                     end
-                else
-                    -- Single click - just select
-                    self.selectedFile = file.name
+                    
+                    self.lastClickTime = currentTime
+                    self.lastClickFile = file.name
+                    break
                 end
-                
-                self.lastClickTime = currentTime
-                self.lastClickFile = file.name
-                break
+                yOffset = yOffset + 25
             end
-            yOffset = yOffset + 25
         end
     elseif button == 2 then -- Right click
-        local yOffset = 40
-        local clickedFile = nil
-        
-        -- First check if clicked on a file
-        for _, file in ipairs(self.files) do
-            if y >= yOffset and y <= yOffset + 25 then
-                clickedFile = file
-                self.selectedFile = file.name
-                break
+        -- Only show context menu if right-click is in the file list area
+        if x <= listWidth then
+            local yOffset = 40
+            local clickedFile = nil
+            
+            for _, file in ipairs(self.files) do
+                if y >= yOffset and y <= yOffset + 25 then
+                    clickedFile = file
+                    self.selectedFile = file.name
+                    break
+                end
+                yOffset = yOffset + 25
             end
-            yOffset = yOffset + 25
-        end
-        
-        -- Show appropriate context menu
-        if clickedFile then
-            self:showContextMenu(x, y, clickedFile)
-        else
-            -- Only show empty space menu if clicked in the file list area
-            if y >= 40 and y <= height - 30 then
-                self:showContextMenu(x, y, nil)
+            
+            if clickedFile then
+                self:showContextMenu(x, y, clickedFile)
+            else
+                -- Only show empty space menu if clicked in the file list area
+                if y >= 40 and y <= self.height - 30 then
+                    self:showContextMenu(x, y, nil)
+                end
             end
         end
     end
@@ -462,9 +587,9 @@ function FileManager:showContextMenu(x, y, file)
                 text = "Delete",
                 icon = "🗑️",
                 action = function()
-                    FileSystem:removeFile(file.name)
-                    self:refreshFiles()
+                    self:deleteFile(file)
                 end
+
             })
         end
     else
@@ -474,8 +599,28 @@ function FileManager:showContextMenu(x, y, file)
             action = function()
                 self:showInputDialog("New File Name", "New File.txt", function(name)
                     if name and name ~= "" then
-                        FileSystem:createFile(name)
-                        self:refreshFiles()
+                        -- Save current path and change to target directory
+                        local currentDir = FileSystem.current_path
+                        FileSystem.current_path = self.currentPath
+                        
+                        -- Create file
+                        if FileSystem:createFile(name) then
+                            self:refreshFiles()
+                            self.statusMessage = {
+                                text = "File created: " .. name,
+                                timer = 2,
+                                color = {0.2, 0.8, 0.2}
+                            }
+                        else
+                            self.statusMessage = {
+                                text = "Failed to create file: " .. name,
+                                timer = 2,
+                                color = {0.8, 0.2, 0.2}
+                            }
+                        end
+                        
+                        -- Restore original path
+                        FileSystem.current_path = currentDir
                     end
                 end)
             end
@@ -486,8 +631,28 @@ function FileManager:showContextMenu(x, y, file)
             action = function()
                 self:showInputDialog("New Folder Name", "New Folder", function(name)
                     if name and name ~= "" then
-                        FileSystem:createDirectory(name)
-                        self:refreshFiles()
+                        -- Save current path and change to target directory
+                        local currentDir = FileSystem.current_path
+                        FileSystem.current_path = self.currentPath
+                        
+                        -- Create directory
+                        if FileSystem:createDirectory(name) then
+                            self:refreshFiles()
+                            self.statusMessage = {
+                                text = "Folder created: " .. name,
+                                timer = 2,
+                                color = {0.2, 0.8, 0.2}
+                            }
+                        else
+                            self.statusMessage = {
+                                text = "Failed to create folder: " .. name,
+                                timer = 2,
+                                color = {0.8, 0.2, 0.2}
+                            }
+                        end
+                        
+                        -- Restore original path
+                        FileSystem.current_path = currentDir
                     end
                 end)
             end
@@ -544,21 +709,69 @@ function FileManager:keypressed(key)
             if key == "n" then
                 self:showInputDialog("New File Name", "New File.txt", function(name)
                     if name and name ~= "" then
-                        FileSystem:createFile(name)
-                        self:refreshFiles()
+                        -- Save current path and change to target directory
+                        local currentDir = FileSystem.current_path
+                        FileSystem.current_path = self.currentPath
+                        
+                        -- Create file
+                        if FileSystem:createFile(name) then
+                            self:refreshFiles()
+                            self.statusMessage = {
+                                text = "File created: " .. name,
+                                timer = 2,
+                                color = {0.2, 0.8, 0.2}
+                            }
+                        else
+                            self.statusMessage = {
+                                text = "Failed to create file: " .. name,
+                                timer = 2,
+                                color = {0.8, 0.2, 0.2}
+                            }
+                        end
+                        
+                        -- Restore original path
+                        FileSystem.current_path = currentDir
                     end
                 end)
             elseif key == "f" then
                 self:showInputDialog("New Folder Name", "New Folder", function(name)
                     if name and name ~= "" then
-                        FileSystem:createDirectory(name)
-                        self:refreshFiles()
+                        -- Save current path and change to target directory
+                        local currentDir = FileSystem.current_path
+                        FileSystem.current_path = self.currentPath
+                        
+                        -- Create directory
+                        if FileSystem:createDirectory(name) then
+                            self:refreshFiles()
+                            self.statusMessage = {
+                                text = "Folder created: " .. name,
+                                timer = 2,
+                                color = {0.2, 0.8, 0.2}
+                            }
+                        else
+                            self.statusMessage = {
+                                text = "Failed to create folder: " .. name,
+                                timer = 2,
+                                color = {0.8, 0.2, 0.2}
+                            }
+                        end
+                        
+                        -- Restore original path
+                        FileSystem.current_path = currentDir
                     end
                 end)
             end
         elseif key == "delete" and self.selectedFile and self.selectedFile ~= ".." then
-            FileSystem:removeFile(self.selectedFile)
-            self:refreshFiles()
+            local selectedFile = nil
+            for _, file in ipairs(self.files) do
+                if file.name == self.selectedFile then
+                    selectedFile = file
+                    break
+                end
+            end
+            if selectedFile then
+                self:deleteFile(selectedFile)
+            end
         elseif key == "up" or key == "down" then
             -- File navigation
             if #self.files > 0 then
@@ -604,6 +817,47 @@ function FileManager:keypressed(key)
             end
         end
     end
+end
+
+function FileManager:showConfirmDialog(message, callback)
+    self.confirmDialog = {
+        active = true,
+        message = message,
+        callback = callback
+    }
+end
+
+function FileManager:deleteFile(file)
+    self:showConfirmDialog("Are you sure you want to delete '" .. file.name .. "'?", function(confirmed)
+        if confirmed then
+            -- Save current path and change to target directory
+            local currentDir = FileSystem.current_path
+            FileSystem.current_path = self.currentPath
+            
+            -- Delete file
+            if FileSystem:removeFile(file.name) then
+                self:refreshFiles()
+                self.statusMessage = {
+                    text = "Deleted: " .. file.name,
+                    timer = 2,
+                    color = {0.2, 0.8, 0.2}
+                }
+                -- Clear selection if deleted file was selected
+                if self.selectedFile == file.name then
+                    self.selectedFile = nil
+                end
+            else
+                self.statusMessage = {
+                    text = "Failed to delete: " .. file.name,
+                    timer = 2,
+                    color = {0.8, 0.2, 0.2}
+                }
+            end
+            
+            -- Restore original path
+            FileSystem.current_path = currentDir
+        end
+    end)
 end
 
 function FileManager:changeDirectory(dir)
