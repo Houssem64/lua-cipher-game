@@ -1,5 +1,90 @@
 local WebBrowser = {}
 
+-- Hover state tracking
+local hover = {
+	button = nil,
+	link = nil
+}
+
+-- Icon drawing functions
+local function drawLockIcon(x, y, size)
+	love.graphics.rectangle("line", x, y, size, size * 1.2)
+	love.graphics.rectangle("fill", x + size * 0.2, y + size * 0.4, size * 0.6, size * 0.8)
+	love.graphics.circle("fill", x + size * 0.5, y + size * 0.4, size * 0.2)
+end
+
+local function drawSearchIcon(x, y, size)
+	love.graphics.circle("line", x + size * 0.4, y + size * 0.4, size * 0.3)
+	love.graphics.setLineWidth(2)
+	love.graphics.line(x + size * 0.6, y + size * 0.6, x + size * 0.8, y + size * 0.8)
+	love.graphics.setLineWidth(1)
+end
+
+local function drawLinkIcon(x, y, size)
+	love.graphics.setLineWidth(2)
+	love.graphics.arc("line", x + size * 0.3, y + size * 0.5, size * 0.2, 0, math.pi)
+	love.graphics.arc("line", x + size * 0.7, y + size * 0.5, size * 0.2, math.pi, math.pi * 2)
+	love.graphics.setLineWidth(1)
+end
+
+local function drawSearchBox(x, y, w, h, text, placeholder, isActive)
+    -- Draw background
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", x, y, w, h, h/2, h/2)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.rectangle("line", x, y, w, h, h/2, h/2)
+    
+    -- Draw search icon
+    love.graphics.setColor(0.6, 0.6, 0.6)
+    drawSearchIcon(x + 10, y + h/4, h/2)
+    
+    -- Draw text
+    love.graphics.setColor(0, 0, 0)
+    love.graphics.print(text ~= "" and text or placeholder, x + h, y + h/4)
+end
+
+local function drawMessageInput(x, y, w, h, text, placeholder, isActive)
+    -- Draw background
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", x, y, w, h, 8, 8)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.rectangle("line", x, y, w, h, 8, 8)
+    
+    -- Draw text
+    love.graphics.setColor(text ~= "" and {0, 0, 0} or {0.7, 0.7, 0.7})
+    love.graphics.print(text ~= "" and text or placeholder, x + 15, y + h/4)
+end
+
+local function drawVerifiedIcon(x, y, size)
+	love.graphics.setLineWidth(2)
+	love.graphics.circle("line", x + size * 0.5, y + size * 0.5, size * 0.4)
+	love.graphics.line(x + size * 0.3, y + size * 0.5, x + size * 0.45, y + size * 0.65)
+	love.graphics.line(x + size * 0.45, y + size * 0.65, x + size * 0.7, y + size * 0.35)
+	love.graphics.setLineWidth(1)
+end
+
+local function drawFolderIcon(x, y, size)
+	love.graphics.rectangle("line", x, y + size * 0.2, size, size * 0.6)
+	love.graphics.line(x, y + size * 0.2, x + size * 0.3, y)
+	love.graphics.line(x + size * 0.3, y, x + size * 0.7, y)
+	love.graphics.line(x + size * 0.7, y, x + size, y + size * 0.2)
+end
+
+local function drawButton(x, y, w, h, text, isActive)
+    local isHovered = hover.button and 
+        x <= hover.button.x and hover.button.x <= x + w and
+        y <= hover.button.y and hover.button.y <= y + h
+    
+    love.graphics.setColor(isActive and 
+        (isHovered and {0.4, 0.6, 1.0} or {0.3, 0.5, 0.9}) or 
+        (isHovered and {0.85, 0.85, 0.85} or {0.8, 0.8, 0.8}))
+    love.graphics.rectangle("fill", x, y, w, h, 5, 5)
+    love.graphics.setColor(isActive and {1, 1, 1} or {0.3, 0.3, 0.3})
+    local textWidth = love.graphics.getFont():getWidth(text)
+    local textHeight = love.graphics.getFont():getHeight()
+    love.graphics.print(text, x + (w - textWidth)/2, y + (h - textHeight)/2)
+end
+
 -- Helper functions to generate content
 local function generateSearchResults(query)
 	if not query or query == "" then
@@ -268,7 +353,7 @@ Recent Posts
 
 %s (@%s) - %s
 %s
-❤ %d   💬 %s
+Likes: %d   Comments: %s
 ]], post.user, post.user:lower(), post.timestamp, post.content, post.likes, post.comments)
 					end
 					return content
@@ -302,12 +387,12 @@ SecureChat - End-to-End Encrypted Messaging
 Active Channels:
 ]]
 					for _, chat in ipairs(chats) do
-						content = content .. string.format("\n🟢 %s (%d online) - 🔒 Encrypted\n", chat.channel, chat.online)
+						content = content .. string.format("\n[Active] %s (%d online) - [Encrypted]\n", chat.channel, chat.online)
 						if self.activeChat == chat.channel then
 							content = content .. "\nMessages:\n"
 							for _, msg in ipairs(chat.messages) do
-								local encryptedStatus = msg.encrypted and "🔒" or ""
-								content = content .. string.format("[%s] %s %s: %s\n", 
+								local encryptedStatus = msg.encrypted and "[Encrypted] " or ""
+								content = content .. string.format("[%s] %s%s: %s\n", 
 									msg.time, encryptedStatus, msg.user, msg.text)
 							end
 							content = content .. "\n[Encrypted Message Input]"
@@ -374,6 +459,11 @@ Hacking Tools
 	return obj
 end
 
+function WebBrowser:mousemoved(x, y)
+	hover.button = {x = x, y = y}
+	hover.link = {x = x, y = y}
+end
+
 function WebBrowser:draw(x, y, width, height)
 	-- Store dimensions
 	self.x = x
@@ -392,9 +482,11 @@ function WebBrowser:draw(x, y, width, height)
 	local padding = font_height * 0.5
 	local nav_height = font_height * 3
 	
-	-- Draw browser background
-	love.graphics.setColor(1, 1, 1, 0.9)
-	love.graphics.rectangle("fill", x, y, width, height)
+	-- Draw gradient background
+    love.graphics.setColor(0.98, 0.98, 1.0, 0.95)
+    love.graphics.rectangle("fill", x, y, width, height/2)
+    love.graphics.setColor(0.95, 0.95, 1.0, 0.95)
+    love.graphics.rectangle("fill", x, y + height/2, width, height/2)
 	
 	-- Draw navigation bar
 	love.graphics.setColor(0.95, 0.95, 0.95)
@@ -403,16 +495,16 @@ function WebBrowser:draw(x, y, width, height)
 	-- Draw back/forward buttons
 	local button_size = nav_height * 0.6
 	local button_padding = (nav_height - button_size) / 2
-	love.graphics.setColor(0.8, 0.8, 0.8)
-	love.graphics.rectangle("fill", x + button_padding, y + button_padding, button_size, button_size)
-	love.graphics.rectangle("fill", x + button_padding * 3 + button_size, y + button_padding, button_size, button_size)
-	love.graphics.setColor(0.3, 0.3, 0.3)
-	love.graphics.print("←", x + button_padding + button_size/3, y + button_padding + button_size/4)
-	love.graphics.print("→", x + button_padding * 3 + button_size + button_size/3, y + button_padding + button_size/4)
+	love.graphics.setColor(0.95, 0.95, 0.95)
+	drawButton(x + button_padding, y + button_padding, button_size, button_size, "←", self.historyIndex > 1)
+	drawButton(x + button_padding * 3 + button_size, y + button_padding, button_size, button_size, "→", self.historyIndex < #self.history)
+
 	
-	-- Draw URL bar
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.rectangle("fill", x + nav_height * 1.8, y + button_padding, width - nav_height * 2, button_size)
+	-- Draw URL bar with rounded corners
+	love.graphics.setColor(0.95, 0.95, 0.95)
+	love.graphics.rectangle("fill", x + nav_height * 1.8, y + button_padding, width - nav_height * 2, button_size, 5, 5)
+	love.graphics.setColor(0.9, 0.9, 0.9)
+	love.graphics.rectangle("line", x + nav_height * 1.8, y + button_padding, width - nav_height * 2, button_size, 5, 5)
 	love.graphics.setColor(0, 0, 0)
 	love.graphics.print(self.isEditing and self.urlInput or self.currentURL,
 		x + nav_height * 1.9, y + button_padding + button_size/4)
@@ -428,30 +520,15 @@ function WebBrowser:draw(x, y, width, height)
 		if page.isSearch then
 			local search_box_height = font_height * 2
 			local search_box_y = y + nav_height + padding * 3 + font_height
-			
-			-- Draw search box background
-			love.graphics.setColor(0.95, 0.95, 0.95)
-			love.graphics.rectangle("fill", x + padding, search_box_y, width - padding * 2, search_box_height)
-			love.graphics.setColor(0.8, 0.8, 0.8)
-			love.graphics.rectangle("line", x + padding, search_box_y, width - padding * 2, search_box_height)
-			
-			-- Draw search icon
-			love.graphics.setColor(0.5, 0.5, 0.5)
-			love.graphics.circle("line", x + 45, y + 140, 8)
-			love.graphics.line(x + 51, y + 146, x + 55, y + 150)
-			
-			-- Draw search text
-			love.graphics.setColor(0, 0, 0)
-			love.graphics.print(self.isSearching and self.searchText or "Search securely...",
-				x + 60, y + 130)
+			drawSearchBox(x + padding, search_box_y, width - padding * 2, search_box_height, 
+				self.isSearching and self.searchText or "", "Search securely...", self.isSearching)
+
 				
 			-- Draw search button
 			if self.searchText and self.searchText ~= "" then
-				love.graphics.setColor(0.2, 0.4, 0.8)
-				love.graphics.rectangle("fill", x + width - 100, y + 125, 70, 30)
-				love.graphics.setColor(1, 1, 1)
-				love.graphics.print("Search", x + width - 90, y + 132)
+				drawButton(x + width - 100, y + 125, 70, 30, "Search", true)
 			end
+
 		end
 		
 		-- Draw content
@@ -546,30 +623,31 @@ function WebBrowser:draw(x, y, width, height)
 			end
 
 			-- Draw advanced search button
-			love.graphics.setColor(0.2, 0.4, 0.8)
-			love.graphics.rectangle("fill", x + width - 150, y + height - 60, 130, 40)
-			love.graphics.setColor(1, 1, 1)
-			love.graphics.print("Advanced Search", x + width - 140, y + height - 50)
+			drawButton(x + width - 150, y + height - 60, 130, 40, "Advanced Search", true)
+
 		end
 		
 		-- Draw enhanced search results
 		if self.currentURL == "search_results" then
 			local resultY = y + 200
 			for _, result in ipairs(self.pages.search_results.results) do
-				-- Draw result box
-				love.graphics.setColor(0.95, 0.95, 0.95)
-				love.graphics.rectangle("fill", x + 20, resultY, width - 40, 120)
+				-- Draw result box with rounded corners
+				love.graphics.setColor(0.98, 0.98, 0.98)
+				love.graphics.rectangle("fill", x + 20, resultY, width - 40, 120, 8, 8)
 				love.graphics.setColor(0.9, 0.9, 0.9)
-				love.graphics.rectangle("line", x + 20, resultY, width - 40, 120)
+				love.graphics.rectangle("line", x + 20, resultY, width - 40, 120, 8, 8)
 				
-				-- Draw title
+				-- Draw title with link icon
 				love.graphics.setColor(0.2, 0.4, 0.8)
-				love.graphics.print(result.title, x + 30, resultY + 10)
+				drawLinkIcon(x + 30, resultY + 10, 16)
+				love.graphics.print(result.title, x + 50, resultY + 10)
 				
-				-- Draw URL and category
+				-- Draw URL and category with icons
 				love.graphics.setColor(0.3, 0.6, 0.3)
-				love.graphics.print("🔗 " .. result.url, x + 30, resultY + 30)
-				love.graphics.print("📁 " .. result.category, x + width - 200, resultY + 30)
+				drawLinkIcon(x + 30, resultY + 30, 16)
+				love.graphics.print(result.url, x + 50, resultY + 30)
+				drawFolderIcon(x + width - 220, resultY + 30, 16)
+				love.graphics.print(result.category, x + width - 200, resultY + 30)
 				
 				-- Draw metadata
 				love.graphics.setColor(0.5, 0.5, 0.5)
@@ -583,26 +661,28 @@ function WebBrowser:draw(x, y, width, height)
 					timeStr = math.floor(timeAgo/86400) .. " days ago"
 				end
 				
-				-- Draw badges
+				-- Draw badges with icons
 				local badgeX = x + 30
 				if result.verified then
 					love.graphics.setColor(0.2, 0.7, 0.3)
-					love.graphics.rectangle("fill", badgeX, resultY + 50, 80, 20)
+					love.graphics.rectangle("fill", badgeX, resultY + 50, 80, 20, 5, 5)
 					love.graphics.setColor(1, 1, 1)
-					love.graphics.print("✓ Verified", badgeX + 5, resultY + 52)
+					drawVerifiedIcon(badgeX + 5, resultY + 52, 16)
+					love.graphics.print("Verified", badgeX + 25, resultY + 52)
 					badgeX = badgeX + 90
 				end
 				if result.highSecurity then
 					love.graphics.setColor(0.7, 0.2, 0.2)
-					love.graphics.rectangle("fill", badgeX, resultY + 50, 100, 20)
+					love.graphics.rectangle("fill", badgeX, resultY + 50, 100, 20, 5, 5)
 					love.graphics.setColor(1, 1, 1)
-					love.graphics.print("🔒 High Security", badgeX + 5, resultY + 52)
+					drawLockIcon(badgeX + 5, resultY + 52, 16)
+					love.graphics.print("High Security", badgeX + 25, resultY + 52)
 				end
 				
 				-- Draw metrics
 				love.graphics.setColor(0.5, 0.5, 0.5)
-				love.graphics.print("🕒 " .. timeStr, x + width - 200, resultY + 50)
-				love.graphics.print("👥 Popularity: " .. result.popularity .. "%", x + width - 200, resultY + 70)
+				love.graphics.print("Posted: " .. timeStr, x + width - 200, resultY + 50)
+				love.graphics.print("Popularity: " .. result.popularity .. "%", x + width - 200, resultY + 70)
 				
 				-- Draw description
 				love.graphics.setColor(0.3, 0.3, 0.3)
@@ -619,26 +699,16 @@ function WebBrowser:draw(x, y, width, height)
 			
 			-- Draw chat list
 			for _, chat in ipairs(chats) do
-				-- Chat channel button
-				if self.activeChat == chat.channel then
-					love.graphics.setColor(0.3, 0.6, 0.9)
-				else
-					love.graphics.setColor(0.4, 0.4, 0.4)
-				end
-				love.graphics.rectangle("fill", x + 20, chatY, width - 40, 40)
-				love.graphics.setColor(1, 1, 1)
-				love.graphics.print(chat.channel, x + 30, chatY + 10)
+				drawButton(x + 20, chatY, width - 40, 40, chat.channel, self.activeChat == chat.channel)
 				chatY = chatY + 50
 			end
+
 			
 			-- Draw message input if a chat is active
 			if self.activeChat then
-				love.graphics.setColor(1, 1, 1)
-				love.graphics.rectangle("fill", x + 20, y + height - 60, width - 40, 40)
-				love.graphics.setColor(0, 0, 0)
-				love.graphics.rectangle("line", x + 20, y + height - 60, width - 40, 40)
-				love.graphics.print(self.isTyping and self.messageText or "Type a message...", 
-					x + 30, y + height - 50)
+				drawMessageInput(x + 20, y + height - 60, width - 40, 40,
+					self.isTyping and self.messageText or "", "Type a secure message...", self.isTyping)
+
 			end
 		end
 		
@@ -669,7 +739,14 @@ function WebBrowser:draw(x, y, width, height)
 		-- Draw links
 		local linkY = y + 400
 		for text, url in pairs(page.links) do
-			love.graphics.setColor(0.2, 0.4, 0.8)
+			local isHovered = hover.link and 
+				x + 20 <= hover.link.x and hover.link.x <= x + 200 and
+				linkY <= hover.link.y and hover.link.y <= linkY + 25
+			
+			love.graphics.setColor(isHovered and {0.3, 0.5, 1.0} or {0.2, 0.4, 0.8})
+			if isHovered then
+				love.graphics.line(x + 20, linkY + 20, x + 20 + love.graphics.getFont():getWidth(text), linkY + 20)
+			end
 			love.graphics.print(text, x + 20, linkY)
 			linkY = linkY + 30
 		end
@@ -1024,7 +1101,7 @@ Found %d results in 0.12 seconds
 		content = content .. string.format([[
 
 [%s]
-🔗 %s
+URL: %s
 Relevance: %d%%
 ───────────────────────────
 %s
