@@ -1,6 +1,6 @@
 local Window = {}
 
-function Window:new(title, width, height)
+function Window:new(title, width, height, manager)
     local desktopWidth = 1920
     local desktopHeight = 1080
     
@@ -15,15 +15,16 @@ function Window:new(title, width, height)
         y = y,
         width = width,
         height = height,
-        originalWidth = math.max(500, width),  -- Store original size for un-maximizing
+        manager = manager,  -- Store reference to manager
+        originalWidth = math.max(500, width),
         originalHeight = math.max(500, height),
-        originalX = (desktopWidth - math.max(500, width)) / 2,  -- Center position for un-maximizing
+        originalX = (desktopWidth - math.max(500, width)) / 2,
         originalY = (desktopHeight - math.max(500, height)) / 2 + STATUSBAR_HEIGHT,
         titleBarHeight = 35,
         isDragging = false,
         isResizing = false,
         isMinimized = false,
-        isMaximized = true,  -- Set to true by default
+        isMaximized = true,
         dragOffsetX = 0,
         dragOffsetY = 0,
         backgroundColor = {0.3, 0.3, 0.3},
@@ -105,18 +106,38 @@ function Window:isMouseInMaximizeButton(x, y)
 end
 
 function Window:draw()
-    -- Draw window background
+    -- Draw window background with slightly different color if active
     local default_font = love.graphics.getFont()
-    local font = love.graphics.newFont("fonts/FiraCode.ttf", 21)  -- Adjusted font size for 1080p
-    font:setFilter("nearest", "nearest")  -- Set filter to nearest for crisp text
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 21)
+    font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
 
-    love.graphics.setColor(self.backgroundColor)
+    -- Draw base window background
+    love.graphics.setColor(0.3, 0.3, 0.3)
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
 
     -- Draw title bar
-    love.graphics.setColor(self.titleBarColor)
+    love.graphics.setColor(0.4, 0.4, 0.4)
     love.graphics.rectangle("fill", self.x, self.y, self.width, self.titleBarHeight)
+
+    -- Draw active window highlights
+    if self == self.manager.activeWindow then
+        -- Highlight border
+        love.graphics.setColor(0.5, 0.5, 0.8, 0.5)
+        love.graphics.rectangle("line", self.x - 1, self.y - 1, self.width + 2, self.height + 2)
+        
+        -- Slightly lighter background
+        love.graphics.setColor(0.35, 0.35, 0.35, 0.3)
+        love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+        
+        -- Lighter title bar
+        love.graphics.setColor(0.45, 0.45, 0.45, 0.3)
+        love.graphics.rectangle("fill", self.x, self.y, self.width, self.titleBarHeight)
+    else
+        -- Darken inactive windows
+        love.graphics.setColor(0, 0, 0, 0.1)
+        love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+    end
 
     -- Draw title text
     love.graphics.setColor(1, 1, 1)
@@ -211,6 +232,11 @@ function Window:update(dt)
 end
 
 function Window:mousepressed(x, y, button)
+    -- Only process input if window is active
+    if self ~= self.manager.activeWindow then
+        return
+    end
+    
     if self.app and type(self.app.mousepressed) == "function" then
         self.app:mousepressed(x, y, button, self.x, self.y)
     end
@@ -240,7 +266,12 @@ function WindowManager:new()
 end
 
 function WindowManager:createWindow(title, x, y, width, height, app)
-    local window = Window:new(title, width, height)
+    -- Deactivate current window if any
+    if self.activeWindow then
+        self.activeWindow = nil
+    end
+    
+    local window = Window:new(title, width, height, self)
     if type(app) == "table" then
         window.app = app
     end
@@ -256,91 +287,116 @@ function WindowManager:createWindow(title, x, y, width, height, app)
 end
 
 function WindowManager:bringToFront(window)
+    -- First find and remove the window from its current position
+    local found = false
     for i, w in ipairs(self.windows) do
         if w == window then
             table.remove(self.windows, i)
-            table.insert(self.windows, window)
-            self.activeWindow = window
+            found = true
             break
+        end
+    end
+
+    -- Only proceed if we found the window
+    if found then
+        -- Add window to the end of the list (top of z-order)
+        table.insert(self.windows, window)
+        -- Set as active window
+        if self.activeWindow ~= window then
+            self.activeWindow = window
         end
     end
 end
 
 function WindowManager:update(dt)
+    -- Update all windows but only send input to active window
     for _, window in ipairs(self.windows) do
-        window:update(dt)
+        -- Always update window state
+        if window.app and type(window.app.update) == "function" then
+            window.app:update(dt)
+        end
     end
 end
 
 function WindowManager:draw()
-    for _, window in ipairs(self.windows) do
+    -- Draw windows from back to front
+    for i = 1, #self.windows do
+        local window = self.windows[i]
+        -- Draw window
         window:draw()
+        -- Draw focus indicator for active window
+        if window == self.activeWindow then
+            love.graphics.setColor(0.5, 0.5, 0.8, 0.3)
+            love.graphics.rectangle("line", window.x - 2, window.y - 2, window.width + 4, window.height + 4)
+        end
     end
 end
 
 function WindowManager:mousepressed(x, y, button)
     if button == 1 then
-        -- Check if click is outside any window
-        local clickedWindow = false
+        -- Check windows from top to bottom
         for i = #self.windows, 1, -1 do
             local window = self.windows[i]
-            local isInWindow = x >= window.x and x <= window.x + window.width and
-                              y >= window.y and y <= window.y + window.height
-            if isInWindow then
-                clickedWindow = true
-                break
-            end
-        end
-
-        -- Regular window interaction handling
-        for i = #self.windows, 1, -1 do
-            local window = self.windows[i]
-
             
-            -- Check if click is within window content area
-            local contentX = x - window.x
-            local contentY = y - (window.y + window.titleBarHeight)
-            local isInContent = contentX >= 0 and contentX <= window.width and
-                               contentY >= 0 and contentY <= window.height - window.titleBarHeight
+            -- Check if click is within window bounds
+            if x >= window.x and x <= window.x + window.width and
+               y >= window.y and y <= window.y + window.height then
+                
+                -- Activate window if not already active
+                if self.activeWindow ~= window then
+                    self.activeWindow = window
+                    self:bringToFront(window)
+                end
 
-            if isInContent and window.app and type(window.app.mousepressed) == "function" then
-                window.app:mousepressed(contentX, contentY, button, window.x, window.y + window.titleBarHeight)
-                self.activeWindow = window
-                return
-            end
-
-            if window:isMouseInTitleBar(x, y) then
-                if window:isMouseInCloseButton(x, y) then
-                    -- Handle mission state before closing
-                    if self.missionsManager then
-                        self.missionsManager:handleWindowClose(window)
+                -- Handle window controls
+                if window:isMouseInTitleBar(x, y) then
+                    if window:isMouseInCloseButton(x, y) then
+                        if self.missionsManager then
+                            self.missionsManager:handleWindowClose(window)
+                        end
+                        table.remove(self.windows, i)
+                        -- Set new active window after closing
+                        if #self.windows > 0 then
+                            self.activeWindow = self.windows[#self.windows]
+                            self:bringToFront(self.activeWindow)
+                        else
+                            self.activeWindow = nil
+                        end
+                        return
+                    elseif window:isMouseInMinimizeButton(x, y) then
+                        window:minimize()
+                        return
+                    elseif window:isMouseInMaximizeButton(x, y) then
+                        window:maximize()
+                        return
                     end
-                    table.remove(self.windows, i)
+                    
+                    window.isDragging = true
+                    window.dragOffsetX = x - window.x
+                    window.dragOffsetY = y - window.y
                     return
-                elseif window:isMouseInMinimizeButton(x, y) then
-                    window:minimize()
-                    return
-                elseif window:isMouseInMaximizeButton(x, y) then
-                    window:maximize()
+                elseif not window.isMinimized and window:isMouseInResizeHandle(x, y) then
+                    window.isResizing = true
+                    window.dragOffsetX = window.width - (x - window.x)
+                    window.dragOffsetY = window.height - (y - window.y)
                     return
                 end
-                
-                window.isDragging = true
-                window.dragOffsetX = x - window.x
-                window.dragOffsetY = y - window.y
-                
-                table.remove(self.windows, i)
-                table.insert(self.windows, window)
-                break
-            elseif not window.isMinimized and window:isMouseInResizeHandle(x, y) then
-                window.isResizing = true
-                window.dragOffsetX = window.width - (x - window.x)
-                window.dragOffsetY = window.height - (y - window.y)
-                break
+
+                -- Handle content area click
+                local contentX = x - window.x
+                local contentY = y - (window.y + window.titleBarHeight)
+                if contentY >= 0 and window.app and type(window.app.mousepressed) == "function" then
+                    window.app:mousepressed(contentX, contentY, button, window.x, window.y + window.titleBarHeight)
+                end
+                return
             end
         end
+        
+        -- Click was outside all windows, keep current window active
+        -- This allows terminal to keep focus when clicking outside
     end
 end
+
 
 function WindowManager:mousereleased(x, y, button)
     if button == 1 then
@@ -352,38 +408,47 @@ function WindowManager:mousereleased(x, y, button)
 end
 
 function WindowManager:mousemoved(x, y, dx, dy)
-    for _, window in ipairs(self.windows) do
-        if window.isDragging then
-            window.x = x - window.dragOffsetX
-            window.y = y - window.dragOffsetY
-        elseif window.isResizing then
-            local newWidth = x - window.x + window.dragOffsetX
-            local newHeight = y - window.y + window.dragOffsetY
-            window.width = math.max(200, newWidth)  -- Minimum width
-            window.height = math.max(100, newHeight) -- Minimum height
-        else
-            -- Pass mousemoved to app if within content area
-            local contentX = x - window.x
-            local contentY = y - (window.y + window.titleBarHeight)
-            local isInContent = contentX >= 0 and contentX <= window.width and
-                               contentY >= 0 and contentY <= window.height - window.titleBarHeight
-            
-            if isInContent and window.app and type(window.app.mousemoved) == "function" then
-                window.app:mousemoved(contentX, contentY, window.x, window.y + window.titleBarHeight)
-            end
+    -- Handle dragging/resizing of active window first
+    if self.activeWindow then
+        if self.activeWindow.isDragging then
+            self.activeWindow.x = x - self.activeWindow.dragOffsetX
+            self.activeWindow.y = y - self.activeWindow.dragOffsetY
+            return
+        elseif self.activeWindow.isResizing then
+            local newWidth = x - self.activeWindow.x + self.activeWindow.dragOffsetX
+            local newHeight = y - self.activeWindow.y + self.activeWindow.dragOffsetY
+            self.activeWindow.width = math.max(200, newWidth)
+            self.activeWindow.height = math.max(100, newHeight)
+            return
+        end
+    end
+
+    -- Handle mousemoved for window under cursor
+    for i = #self.windows, 1, -1 do
+        local window = self.windows[i]
+        local contentX = x - window.x
+        local contentY = y - (window.y + window.titleBarHeight)
+        local isInContent = contentX >= 0 and contentX <= window.width and
+                           contentY >= 0 and contentY <= window.height - window.titleBarHeight
+        
+        if isInContent and window.app and type(window.app.mousemoved) == "function" then
+            window.app:mousemoved(contentX, contentY, window.x, window.y + window.titleBarHeight)
+            break
         end
     end
 end
 
 function WindowManager:textinput(text)
-    if self.activeWindow then
-        self.activeWindow:textinput(text)
+    -- Only route text input to active window
+    if self.activeWindow and self.activeWindow.app and type(self.activeWindow.app.textinput) == "function" then
+        self.activeWindow.app:textinput(text)
     end
 end
 
 function WindowManager:keypressed(key)
-    if self.activeWindow then
-        self.activeWindow:keypressed(key)
+    -- Only route key presses to active window
+    if self.activeWindow and self.activeWindow.app and type(self.activeWindow.app.keypressed) == "function" then
+        self.activeWindow.app:keypressed(key)
     end
 end
 
