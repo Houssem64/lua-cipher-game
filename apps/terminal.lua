@@ -7,7 +7,8 @@ local States = {
     SUDO = "sudo",
     PASSWORD = "password",
     FTP = "ftp",
-    FTP_PASSWORD = "ftp_password"  -- New state for FTP authentication
+    FTP_PASSWORD = "ftp_password",  -- New state for FTP authentication
+    NANO = "nano"  -- New state for nano editor
 }
 local FTPConnection = {
     host = nil,
@@ -31,7 +32,17 @@ function Terminal:new()
         currentCommand = nil,
         ftpConnection = nil,
         -- Track used commands for tutorial
-        usedCommands = {}
+        usedCommands = {},
+        
+        -- Nano editor state
+        nanoState = {
+            content = "",
+            filename = nil,
+            lines = {},
+            cursorY = 1,
+            cursorX = 1,
+            message = ""
+        }
     }
     setmetatable(obj, self)
     self.__index = self
@@ -257,6 +268,13 @@ function Terminal:handleCommand(command)
                     elseif fullCommand:match("^chmod.*") then self:updateMissionProgress(4, 3)
                     elseif fullCommand == "neofetch" then self:updateMissionProgress(4, 4)
                     end
+                elseif currentMission.id == 5 then
+                    -- Text Editor Master mission
+                    if fullCommand:match("^echo.*>.*notes%.txt") then self:updateMissionProgress(5, 1)
+                    elseif fullCommand == "cat notes.txt" then self:updateMissionProgress(5, 2)
+                    elseif fullCommand == "nano notes.txt" then self:updateMissionProgress(5, 3)
+                    elseif fullCommand:match("^echo.*>.*") then self:updateMissionProgress(5, 6)
+                    end
                 end
             end
         end
@@ -343,7 +361,37 @@ function Terminal:handleCommand(command)
             table.insert(self.history, "rm: missing operand")
         end
     elseif parts[1] == "echo" then
-        table.insert(self.history, table.concat(parts, " ", 2))
+        local outputFile
+        local text = {}
+        local i = 2
+        while i <= #parts do
+            if parts[i] == ">" then
+                outputFile = parts[i + 1]
+                break
+            end
+            table.insert(text, parts[i])
+            i = i + 1
+        end
+        
+        local content = table.concat(text, " ")
+        if outputFile then
+            if FileSystem:writeFile(outputFile, content) then
+                table.insert(self.history, "File written: " .. outputFile)
+            else
+                table.insert(self.history, "Error writing to file: " .. outputFile)
+            end
+        else
+            table.insert(self.history, content)
+        end
+    elseif parts[1] == "nano" then
+        if parts[2] then
+            if not FileSystem:readFile(parts[2]) then
+                FileSystem:createFile(parts[2])
+            end
+            self:startNano(parts[2])
+        else
+            table.insert(self.history, "Usage: nano <filename>")
+        end
     elseif parts[1] == "help" then
         table.insert(self.history, "╭─── Terminal Command Reference ─────────────────────────────╮")
         table.insert(self.history, "│                                                            │")
@@ -368,6 +416,9 @@ function Terminal:handleCommand(command)
         table.insert(self.history, "│  Network:                                                  │")
         table.insert(self.history, "│    ftp       - Connect to FTP server                       │")
         table.insert(self.history, "│    ping      - Test network connectivity                   │")
+        table.insert(self.history, "│                                                            │")
+        table.insert(self.history, "│  Text Editors:                                            │")
+        table.insert(self.history, "│    nano      - Text editor                                │")
         table.insert(self.history, "│                                                            │")
         table.insert(self.history, "│  Terminal Control:                                         │")
         table.insert(self.history, "│    clear     - Clear terminal screen                       │")
@@ -434,6 +485,108 @@ function Terminal:handleCommand(command)
     end
 end
 
+function Terminal:startNano(filename)
+    self.state = States.NANO
+    self.nanoState.filename = filename
+    self.nanoState.content = FileSystem:readFile(filename) or ""
+    self.nanoState.lines = {}
+    for line in (self.nanoState.content .. "\n"):gmatch("([^\n]*)\n") do
+        table.insert(self.nanoState.lines, line)
+    end
+    if #self.nanoState.lines == 0 then
+        table.insert(self.nanoState.lines, "")
+    end
+    self.nanoState.cursorY = 1
+    self.nanoState.cursorX = 1
+    self.nanoState.message = "^X Exit | ^O Save | Home/End Navigate | Arrows Move"
+end
+
+function Terminal:handleNanoInput(key)
+    -- Track nano-related mission progress
+    if _G.missionsManager then
+        local currentMission = nil
+        for _, mission in ipairs(_G.missions.missions) do
+            if mission.selected and not mission.completed and mission.id == 5 then
+                if (key == "o" or key == "x") and (love.keyboard.isDown('lctrl') or love.keyboard.isDown('rctrl')) then
+                    if key == "o" then self:updateMissionProgress(5, 4)
+                    elseif key == "x" then self:updateMissionProgress(5, 5)
+                    end
+                elseif key == "up" or key == "down" or key == "left" or key == "right" then
+                    self:updateMissionProgress(5, 7)
+                end
+                break
+            end
+        end
+    end
+
+    if love.keyboard.isDown('lctrl') or love.keyboard.isDown('rctrl') then
+        if key == "x" then
+            self.state = States.NORMAL
+            self.nanoState.message = ""
+        elseif key == "o" then
+            local content = table.concat(self.nanoState.lines, "\n")
+            if FileSystem:writeFile(self.nanoState.filename, content) then
+                self.nanoState.message = "Saved " .. self.nanoState.filename
+            else
+                self.nanoState.message = "Error saving file"
+            end
+        end
+        return
+    end
+
+    -- Handle arrow keys and navigation
+    if key == "up" then
+        if self.nanoState.cursorY > 1 then
+            self.nanoState.cursorY = self.nanoState.cursorY - 1
+            self.nanoState.cursorX = math.min(self.nanoState.cursorX, #self.nanoState.lines[self.nanoState.cursorY] + 1)
+        end
+    elseif key == "down" then
+        if self.nanoState.cursorY < #self.nanoState.lines then
+            self.nanoState.cursorY = self.nanoState.cursorY + 1
+            self.nanoState.cursorX = math.min(self.nanoState.cursorX, #self.nanoState.lines[self.nanoState.cursorY] + 1)
+        end
+    elseif key == "left" then
+        if self.nanoState.cursorX > 1 then
+            self.nanoState.cursorX = self.nanoState.cursorX - 1
+        elseif self.nanoState.cursorY > 1 then
+            self.nanoState.cursorY = self.nanoState.cursorY - 1
+            self.nanoState.cursorX = #self.nanoState.lines[self.nanoState.cursorY] + 1
+        end
+    elseif key == "right" then
+        local currentLine = self.nanoState.lines[self.nanoState.cursorY]
+        if self.nanoState.cursorX <= #currentLine then
+            self.nanoState.cursorX = self.nanoState.cursorX + 1
+        elseif self.nanoState.cursorY < #self.nanoState.lines then
+            self.nanoState.cursorY = self.nanoState.cursorY + 1
+            self.nanoState.cursorX = 1
+        end
+    elseif key == "home" then
+        self.nanoState.cursorX = 1
+    elseif key == "end" then
+        self.nanoState.cursorX = #self.nanoState.lines[self.nanoState.cursorY] + 1
+    elseif key == "return" then
+        local currentLine = self.nanoState.lines[self.nanoState.cursorY]
+        local beforeCursor = currentLine:sub(1, self.nanoState.cursorX - 1)
+        local afterCursor = currentLine:sub(self.nanoState.cursorX)
+        self.nanoState.lines[self.nanoState.cursorY] = beforeCursor
+        table.insert(self.nanoState.lines, self.nanoState.cursorY + 1, afterCursor)
+        self.nanoState.cursorY = self.nanoState.cursorY + 1
+        self.nanoState.cursorX = 1
+    elseif key == "backspace" then
+        local currentLine = self.nanoState.lines[self.nanoState.cursorY]
+        if self.nanoState.cursorX > 1 then
+            self.nanoState.lines[self.nanoState.cursorY] = currentLine:sub(1, self.nanoState.cursorX - 2) .. currentLine:sub(self.nanoState.cursorX)
+            self.nanoState.cursorX = self.nanoState.cursorX - 1
+        elseif self.nanoState.cursorY > 1 then
+            local previousLine = self.nanoState.lines[self.nanoState.cursorY - 1]
+            self.nanoState.cursorX = #previousLine + 1
+            self.nanoState.lines[self.nanoState.cursorY - 1] = previousLine .. currentLine
+            table.remove(self.nanoState.lines, self.nanoState.cursorY)
+            self.nanoState.cursorY = self.nanoState.cursorY - 1
+        end
+    end
+end
+
 function Terminal:handlePassword(password)
     if password == self.sudoPassword then
         self.state = States.NORMAL
@@ -455,6 +608,45 @@ end
 local default_font = love.graphics.getFont()
 
 function Terminal:draw(x, y, width, height)
+    if self.state == States.NANO then
+        -- Draw nano editor interface
+        love.graphics.setColor(0, 0, 0, 0.9)
+        love.graphics.rectangle("fill", x, y, width, height)
+        love.graphics.setColor(0, 1, 0)
+        
+        local font = love.graphics.newFont("fonts/FiraCode.ttf", 24)
+        love.graphics.setFont(font)
+        
+        -- Draw status bar
+        love.graphics.setColor(0, 0.5, 0)
+        love.graphics.rectangle("fill", x, y, width, 30)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print("File: " .. self.nanoState.filename .. " " .. self.nanoState.message, x + 10, y + 5)
+        
+        -- Draw text content
+        love.graphics.setColor(0, 1, 0)
+        local lineHeight = font:getHeight() * 1.2
+        local visibleLines = math.floor((height - 60) / lineHeight)
+        local startLine = math.max(1, self.nanoState.cursorY - math.floor(visibleLines/2))
+        
+        for i = 1, visibleLines do
+            local lineNum = startLine + i - 1
+            if lineNum <= #self.nanoState.lines then
+                love.graphics.print(self.nanoState.lines[lineNum], x + 10, y + 40 + (i-1) * lineHeight)
+                if lineNum == self.nanoState.cursorY then
+                    -- Draw cursor
+                    local cursorX = x + 10 + font:getWidth(self.nanoState.lines[lineNum]:sub(1, self.nanoState.cursorX - 1))
+                    if self.cursorBlink then
+                        love.graphics.rectangle("fill", cursorX, y + 40 + (i-1) * lineHeight, 2, lineHeight)
+                    end
+                end
+            end
+        end
+        
+        love.graphics.setFont(default_font)
+        return
+    end
+
     -- Draw terminal background
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", x, y, width, height)
@@ -510,7 +702,12 @@ function Terminal:update(dt)
 end
 
 function Terminal:textinput(text)
-    if self.state == States.PASSWORD then
+    if self.state == States.NANO then
+        local currentLine = self.nanoState.lines[self.nanoState.cursorY]
+        self.nanoState.lines[self.nanoState.cursorY] = currentLine:sub(1, self.nanoState.cursorX - 1) .. text .. currentLine:sub(self.nanoState.cursorX)
+        self.nanoState.cursorX = self.nanoState.cursorX + #text
+        return
+    elseif self.state == States.PASSWORD then
         self.currentLine = self.currentLine .. text
     else
         self.currentLine = self.currentLine .. text
@@ -518,7 +715,10 @@ function Terminal:textinput(text)
 end
 
 function Terminal:keypressed(key)
-    if key == "return" then
+    if self.state == States.NANO then
+        self:handleNanoInput(key)
+        return
+    elseif key == "return" then
         if self.state == States.PASSWORD then
             self:handlePassword(self.currentLine)
         elseif self.state == States.FTP_PASSWORD then

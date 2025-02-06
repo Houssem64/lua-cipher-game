@@ -59,6 +59,21 @@ local StoryMissions = {
 				"View system information with 'neofetch'",
 				"Practice secure file operations"
 			}
+		},
+		{
+			id = 5,
+			text = "Text Editor Master",
+			description = "Learn to create and edit files using various text manipulation commands and the nano editor.",
+			reward = "Text Editor Expert Badge",
+			subtasks = {
+				"Create a new file named 'notes.txt' using 'echo Hello > notes.txt'",
+				"View the file contents using 'cat notes.txt'",
+				"Open notes.txt in nano using 'nano notes.txt'",
+				"Add more text and save using Ctrl+O",
+				"Exit nano using Ctrl+X",
+				"Create another file using echo with multiple lines",
+				"Practice file editing with nano's navigation controls"
+			}
 		}
 	}
 }
