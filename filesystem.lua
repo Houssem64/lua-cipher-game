@@ -151,4 +151,67 @@ function FileSystem:moveFile(srcPath, destPath)
     return false
 end
 
+function FileSystem:readFile(name)
+    local parentPath = self.current_path
+    local parent = self:getDirectory(parentPath)
+    if parent and parent[name] then
+        return parent[name]
+    end
+    return nil
+end
+
+function FileSystem:writeFile(name, content)
+    local parentPath = self.current_path
+    local parent = self:getDirectory(parentPath)
+    if parent then
+        parent[name] = content
+        SaveSystem:save(self.root, "filesystem_data")
+        return true
+    end
+    return false
+end
+
+function FileSystem:findFiles(pattern)
+    local function searchDirectory(dir, path, results)
+        for name, content in pairs(dir) do
+            local fullPath = path .. "/" .. name
+            if type(content) == "table" then
+                searchDirectory(content, fullPath, results)
+            elseif type(content) == "string" then
+                if name:match(pattern) then
+                    table.insert(results, fullPath)
+                end
+            end
+        end
+    end
+    
+    local results = {}
+    searchDirectory(self.root, "", results)
+    return results
+end
+
+function FileSystem:setFilePermissions(name, permissions)
+    local parentPath = self.current_path
+    local parent = self:getDirectory(parentPath)
+    if parent and parent[name] then
+        -- Store permissions in a metadata table if it doesn't exist
+        if not parent[name .. "_meta"] then
+            parent[name .. "_meta"] = {}
+        end
+        parent[name .. "_meta"].permissions = permissions
+        SaveSystem:save(self.root, "filesystem_data")
+        return true
+    end
+    return false
+end
+
+function FileSystem:getFilePermissions(name)
+    local parentPath = self.current_path
+    local parent = self:getDirectory(parentPath)
+    if parent and parent[name] and parent[name .. "_meta"] then
+        return parent[name .. "_meta"].permissions
+    end
+    return "644" -- Default permissions
+end
+
 return FileSystem

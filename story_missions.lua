@@ -20,29 +20,46 @@ local StoryMissions = {
 		},
 		{
 			id = 2,
-			text = "Collect 10 coins",
-			description = "Find and collect 10 gold coins",
-			reward = "100 XP",
+			text = "File Detective",
+			description = "Learn advanced file manipulation and search techniques. Master the art of finding and analyzing file contents.",
+			reward = "File Operations Expert Badge",
 			subtasks = {
-				"Find the coin map",
-				"Reach the treasure room", 
-				"Collect all coins",
-				"test"
+				"Create a file named 'secret.txt' with some text using 'echo'",
+				"Use 'cat secret.txt' to view the file contents",
+				"Create another file named 'data.txt'",
+				"Use 'grep' to search for text in your files",
+				"Try 'find' to locate files in the current directory",
+				"Change file permissions using 'chmod'",
+				"Practice file manipulation skills"
 			}
 		},
 		{
 			id = 3,
-			text = "test",
-			description = "test",
-			reward = "100 XP",
+			text = "Network Navigator",
+			description = "Learn essential networking commands and understand basic network operations.",
+			reward = "Network Explorer Badge",
 			subtasks = {
-				"Find the coin map",
-				"Reach the treasure room", 
-				"Collect all coins",
-				"test"
+				"Test network connectivity using 'ping localhost'",
+				"Connect to an FTP server using 'ftp'",
+				"Download a file using FTP 'get' command",
+				"Upload a file using FTP 'put' command",
+				"List FTP server contents using 'ls'",
+				"Successfully close the FTP connection"
+			}
+		},
+		{
+			id = 4,
+			text = "System Administrator",
+			description = "Master system administration tasks and elevated privileges operations.",
+			reward = "Admin Rights Badge",
+			subtasks = {
+				"Use 'sudo' to run commands as superuser",
+				"Create a new directory with restricted permissions",
+				"Modify file ownership and permissions",
+				"View system information with 'neofetch'",
+				"Practice secure file operations"
 			}
 		}
-		-- Add more missions here with incrementing IDs
 	}
 }
 

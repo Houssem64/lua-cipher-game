@@ -204,58 +204,64 @@ function Terminal:handleCommand(command)
     local fullCommand = table.concat(parts, " ")
     self.usedCommands[fullCommand] = true
     
-    -- Check for tutorial mission completion
+    -- Check for mission completion
     if _G.missionsManager then
-        -- Check if mission 1 exists and is selected
+        -- Check if missions exist
         if _G.missions then
-            local mission = _G.missions:getMissionById(1)
-            if mission then
-                print("Found mission 1:", mission.text)
-                print("Mission selected state:", mission.selected)
-                print("Number of missions:", #_G.missions.missions)
-                
-                -- Check if mission is selected or if it's the only mission
-                if (mission.selected or #_G.missions.missions == 1) and not mission.completed then
-                    print("Processing command for tutorial mission:", fullCommand)
-                    -- Tutorial mission checks
-                    if fullCommand == "pwd" and not mission.subtasks[1].completed then
-                        self:updateMissionProgress(1, 1)
-                        print("Updated pwd task")
-                    elseif fullCommand == "neofetch" and not mission.subtasks[2].completed then
-                        self:updateMissionProgress(1, 2)
-                        print("Updated neofetch task")
-                    elseif fullCommand == "whoami" and not mission.subtasks[3].completed then
-                        self:updateMissionProgress(1, 3)
-                        print("Updated whoami task")
-                    elseif fullCommand == "mkdir tutorial" and not mission.subtasks[4].completed then
-                        self:updateMissionProgress(1, 4)
-                        print("Updated mkdir task")
-                    elseif fullCommand == "cd tutorial" and not mission.subtasks[5].completed then
-                        self:updateMissionProgress(1, 5)
-                        print("Updated cd task")
-                    elseif fullCommand == "touch test.txt" and not mission.subtasks[6].completed then
-                        self:updateMissionProgress(1, 6)
-                        print("Updated touch task")
-                    elseif fullCommand == "ls" and not mission.subtasks[7].completed then
-                        self:updateMissionProgress(1, 7)
-                        print("Updated ls task")
-                    elseif fullCommand == "sudo whoami" and not mission.subtasks[8].completed then
-                        self:updateMissionProgress(1, 8)
-                        print("Updated sudo task")
-                    elseif fullCommand == "help" and not mission.subtasks[9].completed then
-                        self:updateMissionProgress(1, 9)
-                        print("Updated help task")
-                    end
-                else
-                    print("Mission 1 is not selected or already completed")
+            -- Get current mission
+            local currentMission = nil
+            for _, mission in ipairs(_G.missions.missions) do
+                if mission.selected and not mission.completed then
+                    currentMission = mission
+                    break
                 end
-            else
-                print("Mission 1 not found")
             end
-        else
-            print("_G.missions not found")
+
+            if currentMission then
+                -- Mission progress tracking based on mission ID
+                if currentMission.id == 1 then
+                    -- Terminal Basics mission checks
+                    if fullCommand == "pwd" then self:updateMissionProgress(1, 1)
+                    elseif fullCommand == "neofetch" then self:updateMissionProgress(1, 2)
+                    elseif fullCommand == "whoami" then self:updateMissionProgress(1, 3)
+                    elseif fullCommand == "mkdir tutorial" then self:updateMissionProgress(1, 4)
+                    elseif fullCommand == "cd tutorial" then self:updateMissionProgress(1, 5)
+                    elseif fullCommand == "touch test.txt" then self:updateMissionProgress(1, 6)
+                    elseif fullCommand == "ls" then self:updateMissionProgress(1, 7)
+                    elseif fullCommand == "sudo whoami" then self:updateMissionProgress(1, 8)
+                    elseif fullCommand == "help" then self:updateMissionProgress(1, 9)
+                    end
+                elseif currentMission.id == 2 then
+                    -- File Detective mission
+                    if fullCommand:match("^echo.*>.*secret%.txt") then self:updateMissionProgress(2, 1)
+                    elseif fullCommand == "cat secret.txt" then self:updateMissionProgress(2, 2)
+                    elseif fullCommand == "touch data.txt" then self:updateMissionProgress(2, 3)
+                    elseif fullCommand:match("^grep.*") then self:updateMissionProgress(2, 4)
+                    elseif fullCommand:match("^find.*") then self:updateMissionProgress(2, 5)
+                    elseif fullCommand:match("^chmod.*") then self:updateMissionProgress(2, 6)
+                    end
+                elseif currentMission.id == 3 then
+                    -- Network Navigator mission
+                    if fullCommand == "ping localhost" then self:updateMissionProgress(3, 1)
+                    elseif fullCommand:match("^ftp.*") and self.state == States.FTP then self:updateMissionProgress(3, 2)
+                    elseif fullCommand == "get" and self.state == States.FTP then self:updateMissionProgress(3, 3)
+                    elseif fullCommand == "put" and self.state == States.FTP then self:updateMissionProgress(3, 4)
+                    elseif fullCommand == "ls" and self.state == States.FTP then self:updateMissionProgress(3, 5)
+                    elseif (fullCommand == "bye" or fullCommand == "quit" or fullCommand == "exit") and self.state == States.FTP then 
+                        self:updateMissionProgress(3, 6)
+                    end
+                elseif currentMission.id == 4 then
+                    -- System Administrator mission
+                    if fullCommand:match("^sudo.*") then self:updateMissionProgress(4, 1)
+                    elseif fullCommand:match("^mkdir.*") and parts[2]:match("^%d+$") then self:updateMissionProgress(4, 2)
+                    elseif fullCommand:match("^chmod.*") then self:updateMissionProgress(4, 3)
+                    elseif fullCommand == "neofetch" then self:updateMissionProgress(4, 4)
+                    end
+                end
+            end
         end
     end
+
 
 
 
@@ -354,9 +360,14 @@ function Terminal:handleCommand(command)
         table.insert(self.history, "│    mkdir     - Create a new directory                      │")
         table.insert(self.history, "│    touch     - Create a new empty file                     │")
         table.insert(self.history, "│    rm        - Remove a file                               │")
+        table.insert(self.history, "│    cat       - Display file contents                       │")
+        table.insert(self.history, "│    grep      - Search for patterns in files                │")
+        table.insert(self.history, "│    chmod     - Change file permissions                     │")
+        table.insert(self.history, "│    find      - Search for files by pattern                 │")
         table.insert(self.history, "│                                                            │")
         table.insert(self.history, "│  Network:                                                  │")
         table.insert(self.history, "│    ftp       - Connect to FTP server                       │")
+        table.insert(self.history, "│    ping      - Test network connectivity                   │")
         table.insert(self.history, "│                                                            │")
         table.insert(self.history, "│  Terminal Control:                                         │")
         table.insert(self.history, "│    clear     - Clear terminal screen                       │")
@@ -365,6 +376,59 @@ function Terminal:handleCommand(command)
         table.insert(self.history, "│                                                            │")
         table.insert(self.history, "╰────────────────────────────────────────────────────────────╯")
     
+    elseif parts[1] == "ping" then
+        if parts[2] then
+            table.insert(self.history, "PING " .. parts[2] .. " (127.0.0.1) 56(84) bytes of data.")
+            table.insert(self.history, "64 bytes from localhost (127.0.0.1): icmp_seq=1 ttl=64 time=0.035 ms")
+            table.insert(self.history, "64 bytes from localhost (127.0.0.1): icmp_seq=2 ttl=64 time=0.041 ms")
+        else
+            table.insert(self.history, "Usage: ping <hostname>")
+        end
+    elseif parts[1] == "cat" then
+        if parts[2] then
+            local content = FileSystem:readFile(parts[2])
+            if content then
+                table.insert(self.history, content)
+            else
+                table.insert(self.history, "cat: " .. parts[2] .. ": No such file")
+            end
+        else
+            table.insert(self.history, "Usage: cat <filename>")
+        end
+    elseif parts[1] == "grep" then
+        if parts[2] and parts[3] then
+            local content = FileSystem:readFile(parts[3])
+            if content then
+                for line in content:gmatch("[^\r\n]+") do
+                    if line:match(parts[2]) then
+                        table.insert(self.history, line)
+                    end
+                end
+            else
+                table.insert(self.history, "grep: " .. parts[3] .. ": No such file")
+            end
+        else
+            table.insert(self.history, "Usage: grep <pattern> <filename>")
+        end
+    elseif parts[1] == "chmod" then
+        if parts[2] and parts[3] then
+            table.insert(self.history, "Changed permissions for " .. parts[3])
+        else
+            table.insert(self.history, "Usage: chmod <permissions> <filename>")
+        end
+    elseif parts[1] == "find" then
+        if parts[2] then
+            local files = FileSystem:findFiles(parts[2])
+            if #files > 0 then
+                for _, file in ipairs(files) do
+                    table.insert(self.history, file)
+                end
+            else
+                table.insert(self.history, "No files found")
+            end
+        else
+            table.insert(self.history, "Usage: find <pattern>")
+        end
     else
         table.insert(self.history, "Command not found: " .. parts[1])
     end
