@@ -279,6 +279,29 @@ function WebBrowser:drawWelcomePage(x, y, width, height)
 	end
 end
 
+function WebBrowser:drawAboutPage(x, y, width, height)
+	self:drawWelcomePage(x, y, width, height)
+end
+
+function WebBrowser:drawAppPage(x, y, width, height)
+	love.graphics.setColor(unpack(self.colors.text))
+	local appName = self.currentUrl:match("^app:(.+)$")
+	love.graphics.print(
+		"Opening application: " .. appName,
+		x + self.contentArea.padding,
+		y + self.contentArea.padding
+	)
+end
+
+function WebBrowser:drawWebPage(x, y, width, height)
+	love.graphics.setColor(unpack(self.colors.text))
+	love.graphics.print(
+		"Opening web page: " .. self.currentUrl,
+		x + self.contentArea.padding,
+		y + self.contentArea.padding
+	)
+end
+
 function WebBrowser:keypressed(key)
 	if key == "escape" then
 		self.activeField = nil
