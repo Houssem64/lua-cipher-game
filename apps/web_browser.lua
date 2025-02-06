@@ -1,48 +1,41 @@
 local SearchItems = require("data/search_items")
+local Terminal = require("apps/terminal")
+local FileManager = require("apps/file_manager")
+local EmailClient = require("apps/email_client")
 
 local WebBrowser = {}
 
 function WebBrowser:new()
 	local obj = {
-		currentUrl = "about:home",
 		searchText = "",
-		history = {},
-		historyIndex = 1,
 		width = 0,
 		height = 0,
 		activeField = nil,
-		searchBarHeight = 40,
-		urlBarHeight = 40,
-		toolbarHeight = 80,
-		isLoading = false,
-		loadingProgress = 0,
-		buttonWidth = 30,
-		defaultProtocol = "https://",
-		statusBarHeight = 25,
-		statusMessage = "Ready",
+		searchBarHeight = 50,
+		toolbarHeight = 70,
 		searchResults = {},
 		showSearchResults = false,
 		selectedResult = 1,
-		hoveredButton = nil,
 		hoveredResult = nil,
+		expandedResults = nil,
 		colors = {
 			background = {0.15, 0.15, 0.15},
 			toolbar = {0.2, 0.2, 0.2},
-			button = {0.25, 0.25, 0.25},
-			buttonHover = {0.3, 0.3, 0.3},
 			input = {0.1, 0.1, 0.1},
+			inputBorder = {0.3, 0.3, 0.3},
+			inputFocus = {0.4, 0.4, 0.4},
 			text = {0.9, 0.9, 0.9},
+			dimText = {0.7, 0.7, 0.7},
 			accent = {0.3, 0.6, 0.9},
-			statusBar = {0.2, 0.2, 0.2},
-			content = {0.12, 0.12, 0.12},
 			searchResult = {0.18, 0.18, 0.18},
 			searchResultHover = {0.22, 0.22, 0.22},
-			dimText = {0.7, 0.7, 0.7}
+			linkText = {0.4, 0.7, 1.0},
+			linkHover = {0.5, 0.8, 1.0}
 		},
 		contentArea = {
 			padding = 20,
-			title = "Welcome to the Browser",
-			message = "Use the search bar above to find applications or enter a URL"
+			title = "LÖVE Search",
+			message = "Search for LÖVE documentation, tutorials, and system applications"
 		}
 	}
 	setmetatable(obj, self)
@@ -61,11 +54,10 @@ function WebBrowser:searchItems(query)
 	query = query:lower()
 	
 	for _, item in ipairs(SearchItems) do
-		-- Search in title
-		if item.title:lower():find(query, 1, true) then
+		if item.title:lower():find(query, 1, true) or
+		   item.description:lower():find(query, 1, true) then
 			table.insert(self.searchResults, item)
 		else
-			-- Search in keywords
 			for _, keyword in ipairs(item.keywords) do
 				if keyword:lower():find(query, 1, true) then
 					table.insert(self.searchResults, item)
@@ -77,375 +69,239 @@ function WebBrowser:searchItems(query)
 	
 	self.showSearchResults = #self.searchResults > 0
 	self.selectedResult = 1
+	self.expandedResults = nil
 end
 
 function WebBrowser:draw(x, y, width, height)
-	self.width = width
-	self.height = height
-	
-	-- Draw background
 	love.graphics.setColor(unpack(self.colors.background))
 	love.graphics.rectangle("fill", x, y, width, height)
 	
-	-- Draw toolbar background
 	love.graphics.setColor(unpack(self.colors.toolbar))
 	love.graphics.rectangle("fill", x, y, width, self.toolbarHeight)
 	
-	-- Draw navigation buttons
-	self:drawButton("←", x + 10, y + 10, self.historyIndex > 1)
-	self:drawButton("→", x + 50, y + 10, self.historyIndex < #self.history)
-	self:drawButton("⟳", x + width - 40, y + 10, true)
-	
-	-- Draw URL bar
+	local searchY = y + 10
 	love.graphics.setColor(unpack(self.colors.input))
-	love.graphics.rectangle("fill", x + 90, y + 10, width - 140, self.urlBarHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print(self.currentUrl, x + 100, y + 20)
-	
-	-- Draw search bar
-	love.graphics.setColor(unpack(self.colors.input))
-	love.graphics.rectangle("fill", x + 10, y + self.urlBarHeight + 10, width - 20, self.searchBarHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print("Search:", x + 20, y + self.urlBarHeight + 20)
-	love.graphics.print(self.searchText, x + 100, y + self.urlBarHeight + 20)
-	
-	-- Draw search results
-	if self.showSearchResults and self.searchText ~= "" then
-		love.graphics.setColor(unpack(self.colors.input))
-		local resultsHeight = #self.searchResults * 40
-		love.graphics.rectangle("fill", x + 10, y + self.toolbarHeight, width - 20, resultsHeight)
-		
-		for i, result in ipairs(self.searchResults) do
-			if i == self.selectedResult or i == self.hoveredResult then
-				love.graphics.setColor(unpack(self.colors.searchResultHover))
-			else
-				love.graphics.setColor(unpack(self.colors.searchResult))
-			end
-			love.graphics.rectangle("fill", x + 10, y + self.toolbarHeight + (i-1)*40, width - 20, 40)
-			
-			love.graphics.setColor(unpack(self.colors.text))
-			love.graphics.print(result.title, x + 20, y + self.toolbarHeight + (i-1)*40 + 10)
-			love.graphics.setColor(unpack(self.colors.dimText))
-			love.graphics.print(result.description, x + 20, y + self.toolbarHeight + (i-1)*40 + 25)
-		end
-	end
-	
-	-- Draw loading bar
-	if self.isLoading then
-		love.graphics.setColor(unpack(self.colors.accent))
-		love.graphics.rectangle("fill", x, y + self.toolbarHeight - 2, width * self.loadingProgress, 2)
-	end
-	
-	-- Draw content area
-	love.graphics.setColor(unpack(self.colors.content))
-	local contentY = y + self.toolbarHeight
-	local contentHeight = height - self.toolbarHeight - self.statusBarHeight
-	love.graphics.rectangle("fill", x, contentY, width, contentHeight)
-	
-	-- Draw content based on URL type
-	if self.currentUrl:match("^about:") then
-		self:drawAboutPage(x, contentY, width, contentHeight)
-	elseif self.currentUrl:match("^app:") then
-		self:drawAppPage(x, contentY, width, contentHeight)
+	love.graphics.rectangle("fill", x + 20, searchY, width - 40, self.searchBarHeight)
+	if self.activeField == "search" then
+		love.graphics.setColor(unpack(self.colors.inputFocus))
 	else
-		self:drawWebPage(x, contentY, width, contentHeight)
+		love.graphics.setColor(unpack(self.colors.inputBorder))
 	end
-
+	love.graphics.rectangle("line", x + 20, searchY, width - 40, self.searchBarHeight)
 	
-	-- Draw status bar
-	love.graphics.setColor(unpack(self.colors.statusBar))
-	love.graphics.rectangle("fill", x, height - self.statusBarHeight, width, self.statusBarHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	local status = self.isLoading and "Loading... " .. math.floor(self.loadingProgress * 100) .. "%" or self.statusMessage
-	love.graphics.print(status, x + 10, height - self.statusBarHeight + 5)
+	if self.searchText == "" then
+		love.graphics.setColor(unpack(self.colors.dimText))
+		love.graphics.print("Search LÖVE documentation and apps...", x + 35, searchY + 15)
+	else
+		love.graphics.setColor(unpack(self.colors.text))
+		love.graphics.print(self.searchText, x + 35, searchY + 15)
+	end
 	
-	-- Draw active field indicator
-	if self.activeField then
-		love.graphics.setColor(self.colors.accent[1], self.colors.accent[2], self.colors.accent[3], 0.3)
-		if self.activeField == "url" then
-			love.graphics.rectangle("fill", x + 90, y + 10, width - 140, self.urlBarHeight)
-		else
-			love.graphics.rectangle("fill", x + 10, y + self.urlBarHeight + 10, width - 20, self.searchBarHeight)
-		end
+	if self.showSearchResults and self.searchText ~= "" then
+		self:drawSearchResults(x, y + self.toolbarHeight + 10, width)
+	else
+		self:drawWelcomePage(x, y + self.toolbarHeight, width, height - self.toolbarHeight)
 	end
 end
 
-function WebBrowser:drawButton(text, x, y, enabled)
-	local isHovered = (self.hoveredButton == "back" and text == "←") or
-					 (self.hoveredButton == "forward" and text == "→") or
-					 (self.hoveredButton == "refresh" and text == "⟳")
-	
-	if enabled then
-		if isHovered then
-			love.graphics.setColor(unpack(self.colors.buttonHover))
-		else
-			love.graphics.setColor(unpack(self.colors.button))
-		end
-	else
-		love.graphics.setColor(self.colors.button[1] * 0.7, self.colors.button[2] * 0.7, self.colors.button[3] * 0.7)
+function WebBrowser:launchSystemApp(app)
+	if app == "terminal" then
+		return Terminal:new()
+	elseif app == "files" then
+		return FileManager:new()
+	elseif app == "email" then
+		return EmailClient:new()
 	end
-	
-	love.graphics.rectangle("fill", x, y, self.buttonWidth, self.urlBarHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print(text, x + 10, y + 10)
+	return nil
 end
 
 function WebBrowser:mousepressed(x, y, button)
 	if button == 1 then
-		-- Check search results clicks
-		if self.showSearchResults and self.searchText ~= "" then
-			local resultY = y - self.toolbarHeight
-			local resultIndex = math.floor(resultY / 40) + 1
-			if resultIndex >= 1 and resultIndex <= #self.searchResults and
-			   x >= 10 and x <= self.width - 10 then
-				self.currentUrl = self.searchResults[resultIndex].url
-				table.insert(self.history, self.currentUrl)
-				self.historyIndex = #self.history
-				self.searchText = ""
-				self.showSearchResults = false
-				self:startLoading()
-				return
+		local searchY = y - 10
+		if searchY >= 0 and searchY <= self.searchBarHeight and
+		   x >= 20 and x <= self.width - 20 then
+			self.activeField = "search"
+			return
+		end
+		
+		if self.showSearchResults then
+			local resultsY = self.toolbarHeight + 10
+			for i, result in ipairs(self.searchResults) do
+				local isExpanded = self.expandedResults == i
+				local itemHeight = isExpanded and (80 + #result.results * 60) or 80
+				
+				if y >= resultsY and y <= resultsY + itemHeight and
+				   x >= 20 and x <= self.width - 20 then
+					if result.url:match("^search:") then
+						self.expandedResults = self.expandedResults == i and nil or i
+					end
+					
+					if isExpanded and result.results then
+						for j, subResult in ipairs(result.results) do
+							local subY = resultsY + 80 + (j-1) * 60
+							if y >= subY and y <= subY + 50 and
+							   x >= 60 and x <= self.width - 40 then
+								if subResult.url:match("^app:") then
+									local app = subResult.url:match("^app:(.+)$")
+									local appInstance = self:launchSystemApp(app)
+									if appInstance and _G.windowManager then
+										_G.windowManager:createWindow(app:gsub("^%l", string.upper), appInstance)
+									end
+								else
+									love.system.openURL(subResult.url)
+								end
+								self.searchText = ""
+								self.showSearchResults = false
+								return
+							end
+						end
+					end
+					return
+				end
+				resultsY = resultsY + itemHeight + 10
 			end
 		end
-
-		-- Check refresh button
-		if y >= 10 and y <= self.urlBarHeight + 10 and 
-		   x >= self.width - 40 and x <= self.width - 10 then
-			self:refresh()
-			return
-		end
 		
-		-- Check back button
-		if y >= 10 and y <= self.urlBarHeight + 10 and x >= 10 and x <= 40 then
-			self:navigateBack()
-			return
-		end
-		
-		-- Check forward button
-		if y >= 10 and y <= self.urlBarHeight + 10 and x >= 50 and x <= 80 then
-			self:navigateForward()
-			return
-		end
-		
-		-- Check URL bar click
-		if y <= self.urlBarHeight + 10 and x >= 90 then
-			self.activeField = "url"
-		-- Check search bar click
-		elseif y <= self.toolbarHeight then
-			self.activeField = "search"
-		else
-			self.activeField = nil
-		end
+		self.activeField = nil
 	end
 end
 
 function WebBrowser:textinput(text)
-	if self.activeField == "url" then
-		self.currentUrl = self.currentUrl .. text
-	elseif self.activeField == "search" then
+	if self.activeField == "search" then
 		self.searchText = self.searchText .. text
 		self:searchItems(self.searchText)
 	end
 end
 
-function WebBrowser:navigateBack()
-	if self.historyIndex > 1 then
-		self.historyIndex = self.historyIndex - 1
-		self.currentUrl = self.history[self.historyIndex]
-		self:startLoading()
-	end
-end
-
-function WebBrowser:navigateForward()
-	if self.historyIndex < #self.history then
-		self.historyIndex = self.historyIndex + 1
-		self.currentUrl = self.history[self.historyIndex]
-		self:startLoading()
-	end
-end
-
-function WebBrowser:startLoading()
-	self.isLoading = true
-	self.loadingProgress = 0
-	self.statusMessage = "Loading " .. self.currentUrl
-end
-
-function WebBrowser:update(dt)
-	if self.isLoading then
-		self.loadingProgress = self.loadingProgress + dt
-		if self.loadingProgress >= 1 then
-			self.isLoading = false
-			self.loadingProgress = 0
-			self.statusMessage = "Done"
-		end
-	end
-end
-
-function WebBrowser:refresh()
-	self:startLoading()
-end
-
-function WebBrowser:formatUrl(url)
-	if url:match("^https?://") then
-		return url
-	elseif url:match("^%w+%.%w+") then
-		return self.defaultProtocol .. url
-	else
-		return self.defaultProtocol .. "www.google.com/search?q=" .. url
-	end
-end
-
 function WebBrowser:mousemoved(x, y)
-	-- Check button hovers
-	if y >= 10 and y <= self.urlBarHeight + 10 then
-		if x >= 10 and x <= 40 then
-			self.hoveredButton = "back"
-		elseif x >= 50 and x <= 80 then
-			self.hoveredButton = "forward"
-		elseif x >= self.width - 40 and x <= self.width - 10 then
-			self.hoveredButton = "refresh"
-		else
-			self.hoveredButton = nil
-		end
-	else
-		self.hoveredButton = nil
+	local searchY = y - 10
+	if searchY >= 0 and searchY <= self.searchBarHeight and
+	   x >= 20 and x <= self.width - 20 then
+		love.mouse.setCursor(love.mouse.getSystemCursor("ibeam"))
+		return
 	end
 	
-	-- Check search result hovers
-	if self.showSearchResults and self.searchText ~= "" then
-		local resultY = y - (self.toolbarHeight)
-		local resultIndex = math.floor(resultY / 40) + 1
-		if resultIndex >= 1 and resultIndex <= #self.searchResults and
-		   x >= 10 and x <= self.width - 10 then
-			self.hoveredResult = resultIndex
-		else
-			self.hoveredResult = nil
+	if self.showSearchResults then
+		local resultsY = self.toolbarHeight + 10
+		for i, result in ipairs(self.searchResults) do
+			local isExpanded = self.expandedResults == i
+			local itemHeight = isExpanded and (80 + #result.results * 60) or 80
+			
+			if y >= resultsY and y <= resultsY + itemHeight and
+			   x >= 20 and x <= self.width - 20 then
+				self.hoveredResult = i
+				
+				if isExpanded and result.results then
+					for j, subResult in ipairs(result.results) do
+						local subY = resultsY + 80 + (j-1) * 60
+						if y >= subY and y <= subY + 50 then
+							love.mouse.setCursor(love.mouse.getSystemCursor("hand"))
+							return
+						end
+					end
+				end
+				return
+			end
+			resultsY = resultsY + itemHeight + 10
 		end
+		self.hoveredResult = nil
+	end
+	
+	love.mouse.setCursor(love.mouse.getSystemCursor("arrow"))
+end
+
+function WebBrowser:drawSearchResults(x, y, width)
+	for i, result in ipairs(self.searchResults) do
+		local isExpanded = self.expandedResults == i
+		local itemHeight = isExpanded and (80 + #result.results * 60) or 80
+		
+		if i == self.selectedResult or i == self.hoveredResult then
+			love.graphics.setColor(unpack(self.colors.searchResultHover))
+		else
+			love.graphics.setColor(unpack(self.colors.searchResult))
+		end
+		love.graphics.rectangle("fill", x + 20, y, width - 40, itemHeight)
+		
+		love.graphics.setColor(unpack(self.colors.text))
+		love.graphics.print(result.title, x + 40, y + 15)
+		love.graphics.setColor(unpack(self.colors.dimText))
+		love.graphics.print(result.description, x + 40, y + 40)
+		
+		if isExpanded and result.results then
+			for j, subResult in ipairs(result.results) do
+				local subY = y + 80 + (j-1) * 60
+				if self.hoveredResult == i and 
+				   love.mouse.getY() >= subY and 
+				   love.mouse.getY() <= subY + 50 then
+					love.graphics.setColor(unpack(self.colors.linkHover))
+				else
+					love.graphics.setColor(unpack(self.colors.linkText))
+				end
+				love.graphics.print(subResult.title, x + 60, subY)
+				love.graphics.setColor(unpack(self.colors.dimText))
+				love.graphics.print(subResult.description, x + 60, subY + 25)
+			end
+		end
+		
+		y = y + itemHeight + 10
 	end
 end
 
-function WebBrowser:drawAboutPage(x, y, width, height)
+function WebBrowser:drawWelcomePage(x, y, width, height)
 	love.graphics.setColor(unpack(self.colors.text))
 	local font = love.graphics.getFont()
 	local titleWidth = font:getWidth(self.contentArea.title)
 	local messageWidth = font:getWidth(self.contentArea.message)
 	
-	-- Draw centered title
 	love.graphics.print(
 		self.contentArea.title,
 		x + (width - titleWidth) / 2,
-		y + self.contentArea.padding
+		y + 50
 	)
 	
-	-- Draw centered message
+	love.graphics.setColor(unpack(self.colors.dimText))
 	love.graphics.print(
 		self.contentArea.message,
 		x + (width - messageWidth) / 2,
-		y + self.contentArea.padding + 40
+		y + 100
 	)
 	
-	-- Draw keyboard shortcuts
-	local shortcuts = {
-		"Keyboard Shortcuts:",
-		"Ctrl+L - Focus URL bar",
-		"Ctrl+K - Focus search bar",
-		"Ctrl+R or F5 - Refresh page",
-		"Esc - Clear selection",
-		"Enter - Navigate to URL/Search",
-		"Up/Down - Navigate search results"
+	love.graphics.print("Try searching for:", x + 40, y + 180)
+	local suggestions = {
+		"• Tutorials and getting started guides",
+		"• API documentation and references", 
+		"• Game development resources",
+		"• System applications"
 	}
 	
-	for i, shortcut in ipairs(shortcuts) do
-		love.graphics.print(
-			shortcut,
-			x + self.contentArea.padding,
-			y + self.contentArea.padding + 120 + (i-1)*25
-		)
+	for i, suggestion in ipairs(suggestions) do
+		love.graphics.print(suggestion, x + 60, y + 210 + (i-1) * 30)
 	end
-end
-
-function WebBrowser:drawAppPage(x, y, width, height)
-	love.graphics.setColor(unpack(self.colors.text))
-	local appName = self.currentUrl:match("^app:(.+)$")
-	love.graphics.print(
-		"Opening application: " .. appName,
-		x + self.contentArea.padding,
-		y + self.contentArea.padding
-	)
-end
-
-function WebBrowser:drawWebPage(x, y, width, height)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print(
-		"Browsing: " .. self.currentUrl,
-		x + self.contentArea.padding,
-		y + self.contentArea.padding
-	)
 end
 
 function WebBrowser:keypressed(key)
-	-- Handle keyboard shortcuts
-	if love.keyboard.isDown("lctrl") or love.keyboard.isDown("rctrl") then
-		if key == "l" then
-			self.activeField = "url"
-			self.currentUrl = ""
-			return
-		elseif key == "k" then
-			self.activeField = "search"
-			self.searchText = ""
-			return
-		elseif key == "r" then
-			self:refresh()
-			return
-		end
-	elseif key == "f5" then
-		self:refresh()
-		return
-	end
-
-	if self.showSearchResults then
-		if key == "up" then
-			self.selectedResult = math.max(1, self.selectedResult - 1)
-			return
-		elseif key == "down" then
-			self.selectedResult = math.min(#self.searchResults, self.selectedResult + 1)
-			return
-		end
-	end
-
-	if key == "backspace" then
-		if self.activeField == "url" then
-			self.currentUrl = self.currentUrl:sub(1, -2)
-		elseif self.activeField == "search" then
+	if key == "escape" then
+		self.activeField = nil
+		self.showSearchResults = false
+		self.searchText = ""
+	elseif key == "backspace" then
+		if self.activeField == "search" then
 			self.searchText = self.searchText:sub(1, -2)
 			self:searchItems(self.searchText)
 		end
 	elseif key == "return" then
-		if self.activeField == "url" then
-			self.currentUrl = self:formatUrl(self.currentUrl)
-			table.insert(self.history, self.currentUrl)
-			self.historyIndex = #self.history
-			self:startLoading()
-		elseif self.activeField == "search" then
-			if self.showSearchResults and self.searchResults[self.selectedResult] then
-				self.currentUrl = self.searchResults[self.selectedResult].url
-				table.insert(self.history, self.currentUrl)
-				self.historyIndex = #self.history
-				self.searchText = ""
-				self.showSearchResults = false
-				self:startLoading()
-			else
-				self.currentUrl = self:formatUrl(self.searchText)
-				table.insert(self.history, self.currentUrl)
-				self.historyIndex = #self.history
-				self.searchText = ""
-				self:startLoading()
+		if self.activeField == "search" and self.showSearchResults then
+			local result = self.searchResults[self.selectedResult]
+			if result then
+				if result.url:match("^search:") then
+					self.expandedResults = self.expandedResults == self.selectedResult and nil or self.selectedResult
+				end
 			end
 		end
-		self.activeField = nil
-	elseif key == "escape" then
-		self.activeField = nil
-		self.showSearchResults = false
+	elseif key == "up" and self.showSearchResults then
+		self.selectedResult = math.max(1, self.selectedResult - 1)
+	elseif key == "down" and self.showSearchResults then
+		self.selectedResult = math.min(#self.searchResults, self.selectedResult + 1)
 	end
 end
 
