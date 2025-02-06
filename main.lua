@@ -14,7 +14,7 @@ local MissionsManager = require("missions_manager")
 local StoryMissions = require("story_missions")
 local MainMenu = require("main_menu")
 local MusicApp = require("apps.music_app")
-local moonshine = require 'moonshine'
+
 local ReelsApp = require("apps.reelsapp")
 local MissionsApp = require("apps.missions_app")
 local desktop
@@ -31,10 +31,10 @@ function love.load()
     love.keyboard.setKeyRepeat(true)
 
     FileSystem:loadState() 
-    effect = moonshine(moonshine.effects.filmgrain)
+--[[     effect = moonshine(moonshine.effects.filmgrain)
     .chain(moonshine.effects.vignette)
 effect.filmgrain.size = 2
-
+ ]]
 
     -- Initialize main menu first
     mainMenu = MainMenu.new()
