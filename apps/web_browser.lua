@@ -18,6 +18,9 @@ function WebBrowser:new()
 		selectedResult = 1,
 		hoveredResult = nil,
 		expandedResults = nil,
+		cursorPos = 0,
+		cursorVisible = true,
+		cursorBlinkTime = 0,
 		colors = {
 			background = {0.15, 0.15, 0.15},
 			toolbar = {0.2, 0.2, 0.2},
@@ -73,6 +76,9 @@ function WebBrowser:searchItems(query)
 end
 
 function WebBrowser:draw(x, y, width, height)
+	self.width = width
+	self.height = height
+
 	love.graphics.setColor(unpack(self.colors.background))
 	love.graphics.rectangle("fill", x, y, width, height)
 	
@@ -94,7 +100,17 @@ function WebBrowser:draw(x, y, width, height)
 		love.graphics.print("Search LÖVE documentation and apps...", x + 35, searchY + 15)
 	else
 		love.graphics.setColor(unpack(self.colors.text))
-		love.graphics.print(self.searchText, x + 35, searchY + 15)
+		local beforeCursor = self.searchText:sub(1, self.cursorPos)
+		local afterCursor = self.searchText:sub(self.cursorPos + 1)
+		love.graphics.print(beforeCursor, x + 35, searchY + 15)
+		
+		-- Draw blinking cursor
+		if self.activeField == "search" and self.cursorVisible then
+			local cursorX = x + 35 + love.graphics.getFont():getWidth(beforeCursor)
+			love.graphics.rectangle("fill", cursorX, searchY + 15, 2, 20)
+		end
+		
+		love.graphics.print(afterCursor, x + 35 + love.graphics.getFont():getWidth(beforeCursor), searchY + 15)
 	end
 	
 	if self.showSearchResults and self.searchText ~= "" then
@@ -117,13 +133,40 @@ end
 
 function WebBrowser:mousepressed(x, y, button)
 	if button == 1 then
-		local searchY = y - 10
-		if searchY >= 0 and searchY <= self.searchBarHeight and
+		-- Calculate search bar area relative to window position
+		local searchY = 10
+		local searchBarBottom = searchY + self.searchBarHeight
+
+		-- Check if click is in search bar area
+		if y >= searchY and y <= searchBarBottom and
 		   x >= 20 and x <= self.width - 20 then
 			self.activeField = "search"
-			return
+			-- Calculate cursor position based on click position relative to text start
+			local textStartX = 35
+			local clickX = x - textStartX
+			local text = self.searchText
+			local font = love.graphics.getFont()
+			
+			if clickX <= 0 then
+				self.cursorPos = 0
+			else
+				for i = 0, #text do
+					local textWidth = font:getWidth(text:sub(1, i))
+					if clickX <= textWidth then
+						self.cursorPos = i
+						break
+					end
+					if i == #text then
+						self.cursorPos = #text
+					end
+				end
+			end
+			self.cursorVisible = true
+			self.cursorBlinkTime = 0
+			return true
 		end
-		
+
+		-- Handle search results area clicks
 		if self.showSearchResults then
 			local resultsY = self.toolbarHeight + 10
 			for i, result in ipairs(self.searchResults) do
@@ -166,16 +209,25 @@ function WebBrowser:mousepressed(x, y, button)
 	end
 end
 
+
 function WebBrowser:textinput(text)
 	if self.activeField == "search" then
-		self.searchText = self.searchText .. text
+		local before = self.searchText:sub(1, self.cursorPos)
+		local after = self.searchText:sub(self.cursorPos + 1)
+		self.searchText = before .. text .. after
+		self.cursorPos = self.cursorPos + #text
 		self:searchItems(self.searchText)
+		return true
 	end
+	return false
 end
 
 function WebBrowser:mousemoved(x, y)
-	local searchY = y - 10
-	if searchY >= 0 and searchY <= self.searchBarHeight and
+	-- Update search bar hover detection
+	local searchY = 10
+	local searchBarBottom = searchY + self.searchBarHeight
+
+	if y >= searchY and y <= searchBarBottom and
 	   x >= 20 and x <= self.width - 20 then
 		love.mouse.setCursor(love.mouse.getSystemCursor("ibeam"))
 		return
@@ -210,6 +262,7 @@ function WebBrowser:mousemoved(x, y)
 	love.mouse.setCursor(love.mouse.getSystemCursor("arrow"))
 end
 
+
 function WebBrowser:drawSearchResults(x, y, width)
 	for i, result in ipairs(self.searchResults) do
 		local isExpanded = self.expandedResults == i
@@ -230,9 +283,10 @@ function WebBrowser:drawSearchResults(x, y, width)
 		if isExpanded and result.results then
 			for j, subResult in ipairs(result.results) do
 				local subY = y + 80 + (j-1) * 60
+				local mx, my = love.mouse.getPosition()
 				if self.hoveredResult == i and 
-				   love.mouse.getY() >= subY and 
-				   love.mouse.getY() <= subY + 50 then
+				   my >= subY and 
+				   my <= subY + 50 then
 					love.graphics.setColor(unpack(self.colors.linkHover))
 				else
 					love.graphics.setColor(unpack(self.colors.linkText))
@@ -302,16 +356,33 @@ function WebBrowser:drawWebPage(x, y, width, height)
 	)
 end
 
+function WebBrowser:update(dt)
+	-- Add cursor blinking
+	self.cursorBlinkTime = (self.cursorBlinkTime or 0) + dt
+	if self.cursorBlinkTime >= 0.5 then
+		self.cursorBlinkTime = 0
+		self.cursorVisible = not self.cursorVisible
+	end
+end
+
 function WebBrowser:keypressed(key)
 	if key == "escape" then
 		self.activeField = nil
 		self.showSearchResults = false
 		self.searchText = ""
+		self.cursorPos = 0
 	elseif key == "backspace" then
-		if self.activeField == "search" then
-			self.searchText = self.searchText:sub(1, -2)
+		if self.activeField == "search" and self.cursorPos > 0 then
+			local before = self.searchText:sub(1, self.cursorPos - 1)
+			local after = self.searchText:sub(self.cursorPos + 1)
+			self.searchText = before .. after
+			self.cursorPos = self.cursorPos - 1
 			self:searchItems(self.searchText)
 		end
+	elseif key == "left" and self.activeField == "search" then
+		self.cursorPos = math.max(0, self.cursorPos - 1)
+	elseif key == "right" and self.activeField == "search" then
+		self.cursorPos = math.min(#self.searchText, self.cursorPos + 1)
 	elseif key == "return" then
 		if self.activeField == "search" and self.showSearchResults then
 			local result = self.searchResults[self.selectedResult]
