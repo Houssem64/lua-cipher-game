@@ -1,6 +1,6 @@
 local Chat = {
     config = {
-        button_radius = 20,
+        button_radius = 15,
         panel_width = 400, -- Increased panel width
         slide_speed = 1000,
         button_color = {0.4, 0.6, 1},
@@ -92,8 +92,8 @@ function Chat.new(x, y, config)
     
     -- Button properties (positioned relative to virtual resolution)
     self.button = {
-        x = self.gameWidth - 60,  -- Position from right edge
-        y =  60,  -- Below status bar, adjusted by y_offset
+        x = self.gameWidth - 250,  -- Position from right edge
+        y =  5,  -- Below status bar, adjusted by y_offset
         width = 40,
         height = 40,
         radius = self.config.button_radius
@@ -238,8 +238,8 @@ function Chat:draw()
     -- Draw AI text on button
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("AI", 
-        self.button.x + 7, 
-        self.button.y + 10)
+        self.button.x+4 , 
+        self.button.y+2 )
 
     if self.panel.x < self.gameWidth then
         -- Draw chat panel background

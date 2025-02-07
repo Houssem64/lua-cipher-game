@@ -1,6 +1,6 @@
 local MusicApp = {
     config = {
-        button_radius = 20,  -- Radius of the toggle button
+        button_radius = 15,  -- Radius of the toggle button
         panel_width = 400,   -- Width of the sliding panel
         slide_speed = 1000,  -- Speed of the sliding animation
         button_color = {0.1176, 0.84313, 0.3764},  -- Green color for the toggle button
@@ -22,8 +22,8 @@ function MusicApp:new()
 
     -- Toggle button properties
     obj.button = {
-        x = obj.gameWidth - 60,  -- Position from the right edge
-        y = 180,  -- Position from the top
+        x = obj.gameWidth - 150,  -- Position from the right edge
+        y = 5,  -- Position from the top
         radius = obj.config.button_radius
     }
 
@@ -31,7 +31,7 @@ function MusicApp:new()
     obj.panel = {
         x = obj.gameWidth,  -- Start off-screen
         target_x = obj.gameWidth - obj.config.panel_width,  -- Target position when open
-        y = 0,  -- Align with the top of the screen
+        y = 40,  -- Align with the top of the screen
         width = obj.config.panel_width,
         height = obj.gameHeight,
         visible = false  -- Panel starts closed

@@ -174,11 +174,12 @@ function love.draw()
     -- Draw game components only if main menu is not active
     if not mainMenu.isActive then
         windowManager:draw()
+        statusBar:draw()
         reelsApp:draw()
         musicApp:draw(0, 0, gameWidth, gameHeight)
         chat:draw()
         _G.missions:draw()
-        statusBar:draw()
+      
     end
 
 

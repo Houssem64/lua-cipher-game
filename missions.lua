@@ -1,7 +1,7 @@
 -- missions.lua
 local Missions = {
     config = {
-        button_radius = 20,
+        button_radius = 15,
         panel_width = 500,
         slide_speed = 1000,
         button_color = {0.6, 0.4, 1},
@@ -37,8 +37,8 @@ function Missions.new(x, y, config)
     
     -- Mission button properties
     self.button = {
-        x = self.gameWidth - 60,  -- Position from right edge
-        y = 120,  -- Below chat button
+        x = self.gameWidth - 300,  -- Position from right edge
+        y = 5,  -- Below chat button
         width = 40,
         height = 40,
         radius = self.config.button_radius
@@ -184,8 +184,8 @@ function Missions:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(text_size)
     love.graphics.print("M", 
-        self.button.x + 12, 
-        self.button.y + 10)
+        self.button.x + 10, 
+        self.button.y + 5)
 
 
     -- Draw mission panel

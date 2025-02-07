@@ -1,6 +1,6 @@
 local ReelsApp = {
     config = {
-        button_radius = 20,
+        button_radius = 15,
         panel_width = 500,
         slide_speed = 1000,
         button_color = {0.9, 0.2, 0.4},
@@ -91,8 +91,8 @@ function ReelsApp:new()
     obj.gameHeight = 1080
     
     obj.button = {
-        x = obj.gameWidth - 60,
-        y = 240,
+        x = obj.gameWidth - 200,
+        y = 5,
         radius = obj.config.button_radius
     }
 
@@ -100,7 +100,7 @@ function ReelsApp:new()
     obj.panel = {
         x = obj.gameWidth,
         target_x = obj.gameWidth - obj.config.panel_width,
-        y = 0,
+        y = 40,
         width = obj.config.panel_width,
         height = obj.gameHeight,
         visible = false
