@@ -21,7 +21,8 @@ function StatusBar:new()
         width = 1920, -- Set to virtual width (1920 for 1080p)
         backgroundColor = {0.15, 0.15, 0.15},
         textColor = {1, 1, 1},
-        activeColor = {0.3, 0.5, 0.7},
+        activeColor = {0.862, 0.862, 0.862},
+        focusedColor = {0, 0.749, 1}, -- Add focused window highlight color
         windowManager = nil,
         icons = Icons:new(),
         apps = {
@@ -43,10 +44,10 @@ end
 function StatusBar:isAppOpen(appName)
     for _, window in ipairs(self.windowManager.windows) do
         if window.appName == appName then
-            return true
+            return true, window == self.windowManager.activeWindow
         end
     end
-    return false
+    return false, false
 end
 
 function StatusBar:draw()
@@ -57,8 +58,9 @@ function StatusBar:draw()
     -- Draw app icons
     for i, app in ipairs(self.apps) do
         -- Draw highlight if app is open
-        if self:isAppOpen(app.name) then
-            love.graphics.setColor(self.activeColor)
+        local isOpen, isFocused = self:isAppOpen(app.name)
+        if isOpen then
+            love.graphics.setColor(isFocused and self.focusedColor or self.activeColor)
             love.graphics.rectangle("fill", 8 + (i-1) * ICON_SPACING, 2, ICON_SIZE + 4, ICON_SIZE + 4)
         end
         

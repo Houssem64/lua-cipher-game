@@ -35,7 +35,22 @@ function Window:new(title, width, height, manager)
             close = {color = {0.8, 0.2, 0.2}},
             minimize = {color = {0.8, 0.8, 0.2}},
             maximize = {color = {0.2, 0.8, 0.2}}
-        }
+        },
+        buttonHoverStates = {
+            close = false,
+            minimize = false,
+            maximize = false
+        },
+        minimizeAnimation = {
+            active = false,
+            progress = 0,
+            startX = 0,
+            startY = 0,
+            startWidth = 0,
+            startHeight = 0,
+            duration = 0.2
+        },
+        statusbarPosition = 0
     }
     setmetatable(obj, self)
     self.__index = self
@@ -43,14 +58,50 @@ function Window:new(title, width, height, manager)
 end
 
 function Window:minimize()
-    self.isMinimized = not self.isMinimized
-    if self.isMinimized then
+    if not self.isMinimized then
+        -- Calculate statusbar position (200px width for each minimized window)
+        local minimizedCount = 0
+        for _, win in ipairs(self.manager.windows) do
+            if win.isMinimized then
+                minimizedCount = minimizedCount + 1
+            end
+        end
+        self.statusbarPosition = minimizedCount * 200
+
+        -- Store original state
         self.originalHeight = self.height
-        self.height = self.titleBarHeight
+        self.originalWidth = self.width
+        self.originalX = self.x
+        self.originalY = self.y
+
+        -- Start minimize animation
+        self.minimizeAnimation = {
+            active = true,
+            progress = 0,
+            startX = self.x,
+            startY = self.y,
+            startWidth = self.width,
+            startHeight = self.height,
+            duration = 0.2
+        }
+        self.isMinimized = true
     else
-        self.height = self.originalHeight
+        -- Restore window with animation
+        self.minimizeAnimation = {
+            active = true,
+            progress = 0,
+            startX = self.x,
+            startY = self.y,
+            startWidth = self.width,
+            startHeight = self.height,
+            duration = 0.2
+        }
+        self.isMinimized = false
     end
 end
+
+
+
 
 function Window:maximize()
     self.isMaximized = not self.isMaximized
@@ -105,12 +156,37 @@ function Window:isMouseInMaximizeButton(x, y)
            y >= buttonY and y <= buttonY + self.buttonSize - 2
 end
 
+
+
+
 function Window:draw()
     -- Draw window background with slightly different color if active
     local default_font = love.graphics.getFont()
     local font = love.graphics.newFont("fonts/FiraCode.ttf", 21)
     font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
+
+    -- Draw minimized window in statusbar with highlight if active
+    if self.isMinimized then
+        -- Draw background
+        love.graphics.setColor(0.3, 0.3, 0.3)
+        love.graphics.rectangle("fill", self.statusbarPosition, 0, 200, STATUSBAR_HEIGHT)
+        
+        -- Draw active highlight with different color
+        if self == self.manager.activeWindow then
+            -- Use orange/amber color for active window in statusbar
+            love.graphics.setColor(1, 0.6, 0.1, 0.4)  -- Orange highlight
+            love.graphics.rectangle("fill", self.statusbarPosition, 0, 200, STATUSBAR_HEIGHT)
+            -- Add a brighter border
+            love.graphics.setColor(1, 0.6, 0.1, 0.8)
+            love.graphics.rectangle("line", self.statusbarPosition, 0, 200, STATUSBAR_HEIGHT)
+        end
+        
+        -- Draw title
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(self.title, self.statusbarPosition + 10, 5)
+        return
+    end
 
     -- Draw base window background
     love.graphics.setColor(0.3, 0.3, 0.3)
@@ -122,17 +198,26 @@ function Window:draw()
 
     -- Draw active window highlights
     if self == self.manager.activeWindow then
-        -- Highlight border
-        love.graphics.setColor(0.5, 0.5, 0.8, 0.5)
+        -- Draw outer glow
+        love.graphics.setColor(0.4, 0.6, 1, 0.3)
+        love.graphics.rectangle("line", self.x - 3, self.y - 3, self.width + 6, self.height + 6)
+        
+        -- Draw main border
+        love.graphics.setColor(0.4, 0.6, 1, 0.6)
+        love.graphics.rectangle("line", self.x - 2, self.y - 2, self.width + 4, self.height + 4)
+        
+        -- Draw inner border
+        love.graphics.setColor(0.4, 0.6, 1, 0.4)
         love.graphics.rectangle("line", self.x - 1, self.y - 1, self.width + 2, self.height + 2)
         
-        -- Slightly lighter background
-        love.graphics.setColor(0.35, 0.35, 0.35, 0.3)
+        -- Subtle fill
+        love.graphics.setColor(0.4, 0.6, 1, 0.1)
         love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
         
-        -- Lighter title bar
-        love.graphics.setColor(0.45, 0.45, 0.45, 0.3)
+        -- Enhanced title bar
+        love.graphics.setColor(0.4, 0.6, 1, 0.15)
         love.graphics.rectangle("fill", self.x, self.y, self.width, self.titleBarHeight)
+
     else
         -- Darken inactive windows
         love.graphics.setColor(0, 0, 0, 0.1)
@@ -143,23 +228,38 @@ function Window:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(self.title, self.x + 5, self.y + 5)
 
-    -- Draw window buttons
-    local buttonSpacing = 5
+    -- Draw window buttons with hover effects
+    local buttonSpacing = 5  -- Consistent spacing
     local buttonX = self.x + self.width - self.buttonSize - buttonSpacing
 
-    -- Close button
-    love.graphics.setColor(self.buttons.close.color)
-    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    -- Close button with hover
+    if self.buttonHoverStates.close then
+        love.graphics.setColor(0.9, 0.3, 0.3)  -- Brighter on hover
+    else
+        love.graphics.setColor(self.buttons.close.color)
+    end
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2, 2)
 
-    -- Maximize button
-    buttonX = buttonX - self.buttonSize - buttonSpacing
-    love.graphics.setColor(self.buttons.maximize.color)
-    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    -- Maximize button with hover
+    buttonX = self.x + self.width - (self.buttonSize * 2) - 10
+    if self.buttonHoverStates.maximize then
+        love.graphics.setColor(0.3, 0.9, 0.3)
+    else
+        love.graphics.setColor(self.buttons.maximize.color)
+    end
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2, 2)
 
-    -- Minimize button
-    buttonX = buttonX - self.buttonSize - buttonSpacing
-    love.graphics.setColor(self.buttons.minimize.color)
-    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2)
+    -- Minimize button with hover
+    buttonX = self.x + self.width - (self.buttonSize * 3) - 15
+    if self.buttonHoverStates.minimize then
+        love.graphics.setColor(0.9, 0.9, 0.3)
+    else
+        love.graphics.setColor(self.buttons.minimize.color)
+    end
+    love.graphics.rectangle("fill", buttonX, self.y + 3, self.buttonSize - 2, self.buttonSize - 2, 2)
+
+
+
 
     -- Draw resize handle if not minimized
     if not self.isMinimized then
@@ -226,6 +326,41 @@ function Window:keypressed(key)
 end
 
 function Window:update(dt)
+    if self.minimizeAnimation.active then
+        self.minimizeAnimation.progress = self.minimizeAnimation.progress + dt / self.minimizeAnimation.duration
+        if self.minimizeAnimation.progress >= 1 then
+            self.minimizeAnimation.active = false
+            self.minimizeAnimation.progress = 1
+            if self.isMinimized then
+                -- Final minimized position at statusbar
+                self.y = 0
+                self.height = STATUSBAR_HEIGHT
+                self.width = 200
+                self.x = self.statusbarPosition
+            else
+                -- Restore to original position
+                self.x = self.originalX
+                self.y = self.originalY
+                self.width = self.originalWidth
+                self.height = self.originalHeight
+            end
+        else
+            -- Animate position and size
+            local progress = self.minimizeAnimation.progress
+            if self.isMinimized then
+                self.y = self.minimizeAnimation.startY + (0 - self.minimizeAnimation.startY) * progress
+                self.height = self.minimizeAnimation.startHeight + (STATUSBAR_HEIGHT - self.minimizeAnimation.startHeight) * progress
+                self.width = self.minimizeAnimation.startWidth + (200 - self.minimizeAnimation.startWidth) * progress
+                self.x = self.minimizeAnimation.startX + (self.statusbarPosition - self.minimizeAnimation.startX) * progress
+            else
+                self.y = self.minimizeAnimation.startY + (self.originalY - self.minimizeAnimation.startY) * progress
+                self.height = self.minimizeAnimation.startHeight + (self.originalHeight - self.minimizeAnimation.startHeight) * progress
+                self.width = self.minimizeAnimation.startWidth + (self.originalWidth - self.minimizeAnimation.startWidth) * progress
+                self.x = self.minimizeAnimation.startX + (self.originalX - self.minimizeAnimation.startX) * progress
+            end
+        end
+    end
+
     if self.app and type(self.app.update) == "function" then
         self.app:update(dt)
     end
@@ -243,11 +378,39 @@ function Window:mousepressed(x, y, button)
 end
 
 function Window:mousemoved(x, y, dx, dy)
+    -- Update button hover states
+    self.buttonHoverStates.close = self:isMouseInCloseButton(x, y)
+    self.buttonHoverStates.minimize = self:isMouseInMinimizeButton(x, y)
+    self.buttonHoverStates.maximize = self:isMouseInMaximizeButton(x, y)
+
     if self.app and type(self.app.mousemoved) == "function" then
         local contentX = x - self.x
         local contentY = y - (self.y + self.titleBarHeight)
         self.app:mousemoved(contentX, contentY, self.x, self.y + self.titleBarHeight)
     end
+end
+
+function Window:wheelmoved(x, y, baseX, baseY)
+    if not baseX or not baseY then return end
+    
+    -- Only handle wheel events if we're not minimized and we have missions to scroll
+    if self.isMinimized then return false end
+    
+    -- Make scrolling more responsive
+    local scrollAmount = y * 0.5  -- Adjust speed for smoother scrolling
+    
+    -- Only scroll if we have more missions than visible and we're in the missions area
+    if self.missions and #self.missions > self.maxMissionsVisible then
+        local oldScrollPosition = self.scrollPosition
+        self.scrollPosition = math.max(0, math.min(
+            self.scrollPosition + scrollAmount,  -- Changed direction for natural feel
+            #self.missions - self.maxMissionsVisible
+        ))
+        
+        -- Return true if we actually scrolled
+        return oldScrollPosition ~= self.scrollPosition
+    end
+    return false
 end
 
 -- WindowManager class
@@ -369,7 +532,9 @@ function WindowManager:mousepressed(x, y, button)
                     elseif window:isMouseInMaximizeButton(x, y) then
                         window:maximize()
                         return
+
                     end
+
                     
                     window.isDragging = true
                     window.dragOffsetX = x - window.x
@@ -451,5 +616,13 @@ function WindowManager:keypressed(key)
         self.activeWindow.app:keypressed(key)
     end
 end
+
+function WindowManager:wheelmoved(x, y)
+    if self.activeWindow then
+        return self.activeWindow:wheelmoved(x, y, x, y)
+    end
+    return false
+end
+
 
 return WindowManager
