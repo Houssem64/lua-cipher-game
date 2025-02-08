@@ -1,4 +1,5 @@
 local SaveSystem = require("modules/save_system")
+local Ranks = require("modules/ranks")
 
 local MissionsManager = {}
 MissionsManager.__index = MissionsManager
@@ -7,9 +8,12 @@ function MissionsManager.new()
     local self = setmetatable({}, MissionsManager)
     self.missions = {}
     
-    -- Load saved mission progress
+    -- Load saved mission progress and ELO
     local savedProgress = SaveSystem:load("mission_progress") or {}
     self.savedState = savedProgress
+    self.elo = savedProgress.elo or 0  -- Start with base ELO of 0
+    self.currentRank = Ranks:getRankByELO(self.elo)
+
     
     return self
 end
@@ -17,7 +21,8 @@ end
 function MissionsManager:saveMissionState()
     local progress = {
         completed = {},
-        subtasks = {}
+        subtasks = {},
+        elo = self.elo
     }
     
     -- Save mission completion states
@@ -185,6 +190,53 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
 end
 
 
+function MissionsManager:addELO(amount)
+    local oldRank = self.currentRank
+    self.elo = self.elo + amount
+    self.currentRank = Ranks:getRankByELO(self.elo)
+    
+    -- Check for rank up
+    if oldRank and oldRank.name ~= self.currentRank.name then
+        if _G.missions then
+            _G.missions:startRankUpNotification(self.currentRank.name)
+        end
+    end
+    
+    self:saveMissionState()
+    return self.currentRank
+end
+
+function MissionsManager:getCurrentRank()
+    return self.currentRank
+end
+
+function MissionsManager:getELO()
+    return self.elo
+end
+
+function MissionsManager:getRankProgress()
+    return Ranks:getProgress(self.elo)
+end
+
+function MissionsManager:checkRankRequirement(requiredRank)
+    -- Ensure we have a valid currentRank
+    if not self.currentRank then
+        self.currentRank = Ranks:getRankByELO(self.elo or 0)
+    end
+    
+    local currentRankELO = self.currentRank.elo_required or 0
+    local requiredRankELO = 0
+    
+    for _, rank in ipairs(Ranks.ranks) do
+        if rank.name == requiredRank then
+            requiredRankELO = rank.elo_required
+            break
+        end
+    end
+    
+    return currentRankELO >= requiredRankELO
+end
+
 function MissionsManager:completeMission(id)
     for _, mission in ipairs(self.missions) do
         if mission.id == id and not mission.completed then
@@ -195,6 +247,14 @@ function MissionsManager:completeMission(id)
                 subtask.completed = true
             end
             mission.completedSubtasks = #mission.subtasks
+            
+            -- Add ELO reward
+            if mission.reward and mission.reward.elo then
+                self:addELO(mission.reward.elo)
+            else
+                -- Default ELO reward if none specified
+                self:addELO(25)  -- Default ELO gain per mission
+            end
             
             -- Play completion sound and show notification
             if _G.missions then
@@ -350,7 +410,18 @@ function MissionsManager:toggleSubtaskComplete(missionId, subtaskIndex)
         mission.completedSubtasks = completedCount
         mission.progress = completedCount / #mission.subtasks
         mission.subtaskProgress = mission.progress -- Add subtask progress tracking
-        mission.completed = completedCount == #mission.subtasks
+        
+        -- If all subtasks are complete and mission wasn't already completed, complete it with ELO reward
+        if completedCount == #mission.subtasks and not mission.completed then
+            mission.completed = true
+            -- Add ELO reward
+            if mission.reward and mission.reward.elo then
+                self:addELO(mission.reward.elo)
+            else
+                -- Default ELO reward if none specified
+                self:addELO(25)  -- Default ELO gain per mission
+            end
+        end
         
         -- Save state after update
         self:saveMissionState()

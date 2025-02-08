@@ -91,6 +91,15 @@ function Missions.new(x, y, config)
         alpha = 0,
         text = ""
     }
+
+    -- Rank display initialization
+    self.rankDisplay = {
+        x = self.gameWidth - 500,
+        y = self.gameHeight - 500,
+        width = 180,
+        height = 40,
+        alpha = 0.9
+    }
     
     return self
 end
@@ -410,6 +419,64 @@ function Missions:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(default_font)
     
+    -- Draw rank display
+    if _G.missionsManager then
+        local rank = _G.missionsManager:getCurrentRank()
+        local progress = _G.missionsManager:getRankProgress()
+        local elo = _G.missionsManager:getELO()
+        
+        -- Background
+        love.graphics.setColor(0, 0, 0, self.rankDisplay.alpha * 0.7)
+        love.graphics.rectangle('fill',
+            self.rankDisplay.x,
+            self.rankDisplay.y,
+            self.rankDisplay.width,
+            self.rankDisplay.height,
+            10)
+        
+        -- Border
+        love.graphics.setColor(0.6, 0.4, 1, self.rankDisplay.alpha)
+        love.graphics.rectangle('line',
+            self.rankDisplay.x,
+            self.rankDisplay.y,
+            self.rankDisplay.width,
+            self.rankDisplay.height,
+            10)
+        
+        -- Rank text
+        love.graphics.setColor(1, 1, 1, self.rankDisplay.alpha)
+        local rankFont = love.graphics.newFont(14)
+        love.graphics.setFont(rankFont)
+        love.graphics.print("Rank: " .. rank.name,
+            self.rankDisplay.x + 10,
+            self.rankDisplay.y + 5)
+        
+        -- ELO text
+        local eloFont = love.graphics.newFont(12)
+        love.graphics.setFont(eloFont)
+        love.graphics.print("ELO: " .. elo,
+            self.rankDisplay.x + 10,
+            self.rankDisplay.y + 25)
+        
+--[[         -- Progress bar background
+        love.graphics.setColor(0.3, 0.3, 0.3, self.rankDisplay.alpha)
+        love.graphics.rectangle('fill',
+            self.rankDisplay.x + 10,
+            self.rankDisplay.y + 35,
+            self.rankDisplay.width - 20,
+            4,
+            2)
+        
+        -- Progress bar fill
+        love.graphics.setColor(0.6, 0.4, 1, self.rankDisplay.alpha)
+        love.graphics.rectangle('fill',
+            self.rankDisplay.x + 10,
+            self.rankDisplay.y + 35,
+            (self.rankDisplay.width - 20) * progress,
+            4,
+            2) ]]
+    end
+
     -- Draw notification last to ensure it's on top
     if self.notification.active then
         -- Draw glow effect
@@ -715,6 +782,34 @@ end
 
 
 
+
+function Missions:startRankUpNotification(newRank)
+    -- Reset notification state
+    self:resetNotification()
+    
+    -- Set up rank up notification
+    self.notification = {
+        active = true,
+        progress = 0,
+        x = self.button.x + self.button.radius,
+        y = self.button.y + self.button.radius,
+        target_x = self.gameWidth / 2,
+        target_y = self.gameHeight / 3,
+        scale = 0,
+        alpha = 1,
+        text = "Rank Up! " .. newRank
+    }
+    
+    -- Play completion sound with higher pitch for rank up
+    if self.completion_sound then
+        local sound = self.completion_sound:clone()
+        if sound then
+            sound:setPitch(1.5)
+            sound:setVolume(0.4)
+            sound:play()
+        end
+    end
+end
 
 function Missions:completeMissionById(missionId)
     local mission = self:getMissionById(missionId)

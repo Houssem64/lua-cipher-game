@@ -8,6 +8,9 @@ function MissionsApp.new()
 	local self = setmetatable({}, MissionsApp)
 	self.missions = StoryMissions.getAllMissions()
 	self.selectedMission = nil
+	
+	-- Add rank requirement display
+	self.rankRequirementFont = love.graphics.newFont(16)
 	self.viewedMission = nil  -- Add viewed mission tracking
 	self.scrollPosition = 0
 	self.maxMissionsVisible = 8
@@ -15,12 +18,12 @@ function MissionsApp.new()
 	
 	-- Common layout variables
 	self.padding = 30
-	self.missionHeight = 150
+	self.missionHeight = 180  -- Increased from 150 to fit rank and XP info
 	self.startY = self.padding + 60
 	self.selectButtonWidth = 120
 	self.selectButtonHeight = 35
 	self.selectButtonX = self.padding + 15
-	self.selectButtonY = 90
+	self.selectButtonY = 100
 	self.selectButtonPadding = 5
 	
 	-- Load completion sound
@@ -136,6 +139,23 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.print(mission.text, x + self.padding + 20, missionY + 15)
 		love.graphics.setColor(0.5, 0.5, 0.5)
 		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + self.padding + 20, missionY + 45)
+
+		-- Add rank requirement display
+		if mission.rank_required then
+			-- Check if player meets rank requirement
+			local rankColor = {0.6, 0.4, 1} -- Default purple
+			if _G.missionsManager and not _G.missionsManager:checkRankRequirement(mission.rank_required) then
+				rankColor = {0.8, 0.2, 0.2} -- Red if requirement not met
+			end
+			love.graphics.setColor(unpack(rankColor))
+			love.graphics.print("Required Rank: " .. mission.rank_required, x + self.padding + 20, missionY + 70)
+		end
+
+		-- Also add ELO reward display
+		if type(mission.reward) == "table" and mission.reward.elo then
+			love.graphics.setColor(0.4, 0.6, 0.2)
+			love.graphics.print("+" .. mission.reward.elo .. " ELO", x + leftPanelWidth - self.padding*6, missionY + 70)
+		end
 		
 		-- Draw mission completion status
 		if self.completedMissions[i] then
@@ -181,6 +201,20 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.setColor(0.4, 0.4, 0.4)
 		love.graphics.printf(mission.description, rightX + self.padding, y + self.padding + 100, rightPanelWidth - self.padding*4)
 
+		-- Draw rank requirement if present
+		if mission.rank_required then
+			love.graphics.setColor(0.6, 0.4, 1)
+			love.graphics.setFont(self.rankRequirementFont)
+			love.graphics.print("Required Rank: " .. mission.rank_required, rightX + self.padding, y + self.padding + 150)
+			
+			-- Check if player meets rank requirement
+			if _G.missionsManager and not _G.missionsManager:checkRankRequirement(mission.rank_required) then
+				love.graphics.setColor(0.8, 0.2, 0.2)
+				love.graphics.print("You need to reach this rank to start this mission", rightX + self.padding, y + self.padding + 170)
+			end
+			love.graphics.setFont(font) -- Reset font
+		end
+
 		-- Draw tasks section
 		love.graphics.setColor(0.2, 0.2, 0.2)
 		love.graphics.print("Tasks:", rightX + self.padding, y + self.padding + 180)
@@ -191,10 +225,22 @@ function MissionsApp:draw(x, y, width, height)
 		end
 
 		-- Draw reward with enhanced visuals
-		love.graphics.setColor(0.4, 0.6, 0.2)
-		love.graphics.rectangle("fill", rightX + self.padding, y + height - 80, rightPanelWidth - self.padding*4, 40, 8)
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Reward: " .. mission.reward, rightX + self.padding + 15, y + height - 70)
+		if mission.reward then
+			-- Draw reward background
+			love.graphics.setColor(0.4, 0.6, 0.2)
+			love.graphics.rectangle("fill", rightX + self.padding, y + height - 80, rightPanelWidth - self.padding*4, 40, 8)
+			love.graphics.setColor(1, 1, 1)
+			
+			-- Draw badge reward
+			if type(mission.reward) == "table" then
+				love.graphics.print("Rewards:", rightX + self.padding + 15, y + height - 70)
+				love.graphics.print(mission.reward.badge, rightX + self.padding + 100, y + height - 70)
+				love.graphics.print("+" .. mission.reward.elo .. " ELO", rightX + rightPanelWidth - self.padding*6, y + height - 70)
+			else
+				-- Fallback for old reward format
+				love.graphics.print("Reward: " .. mission.reward, rightX + self.padding + 15, y + height - 70)
+			end
+		end
 	end
 
 	-- Reset font
@@ -238,6 +284,13 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 				local buttonY = missionStartY + (clickedIndex - 1 - self.scrollPosition) * self.missionHeight + self.selectButtonY
 				if relativeY >= buttonY and relativeY <= buttonY + self.selectButtonHeight and 
 				   relativeX >= self.selectButtonX and relativeX <= self.selectButtonX + self.selectButtonWidth then
+					local mission = self.missions[clickedIndex]
+					if mission.rank_required and _G.missionsManager and 
+					   not _G.missionsManager:checkRankRequirement(mission.rank_required) then
+						-- Don't allow selection if rank requirement not met
+						return
+					end
+					
 					-- Toggle selection
 					if self.selectedMission == clickedIndex then
 						self:selectMission(nil)  -- Deselect if already selected
@@ -375,6 +428,16 @@ function MissionsApp:selectMission(indexOrId)
 	local index = type(indexOrId) == "number" and indexOrId or self:getMissionIndexById(indexOrId)
 	if not index then return end
 
+	local mission = self.missions[index]
+	
+	-- Check rank requirement
+	if mission.rank_required and _G.missionsManager then
+		if not _G.missionsManager:checkRankRequirement(mission.rank_required) then
+			-- Don't allow selection if rank requirement not met
+			return
+		end
+	end
+
 	self.selectedMission = index
 	self.viewedMission = nil  -- Clear viewed mission when selecting
 	
@@ -383,7 +446,6 @@ function MissionsApp:selectMission(indexOrId)
 		_G.missions.missions = {}
 		_G.missions.panel.visible = true  -- Keep panel visible
 		
-		local mission = self.missions[index]
 		-- Format subtasks with current completion state
 		local formattedSubtasks = {}
 		for i, subtask in ipairs(mission.subtasks) do
@@ -403,20 +465,19 @@ function MissionsApp:selectMission(indexOrId)
 			progress = self:getMissionProgress(index),
 			subtaskProgress = self:getMissionProgress(index),
 			selected = true,  -- Ensure this is set
-			reward = mission.reward
+			reward = mission.reward,
+			rank_required = mission.rank_required
 		}
 		_G.missions:addMission(newMission)
-		
-		-- Debug print
-		print("Added mission to _G.missions:", newMission.id, "selected:", newMission.selected)
 	end
 
 	-- Update mission state in missions manager
 	if _G.missionsManager then
 		_G.missionsManager.lastSelectedMissionIndex = index
-		_G.missionsManager.lastSelectedMissionId = self.missions[index].id
+		_G.missionsManager.lastSelectedMissionId = mission.id
 	end
 end
+
 
 
 
@@ -458,12 +519,16 @@ function MissionsApp:resetProgress()
 	-- Clear saved progress by saving empty state
 	SaveSystem:save({
 		completed = {},
-		subtasks = {}
+		subtasks = {},
+		elo = 0  -- Reset to base ELO of 0
 	}, "mission_progress")
 	
 	-- Reset missions manager
 	if _G.missionsManager then
 		_G.missionsManager:resetAllMissions()
+		-- Reset ELO and rank
+		_G.missionsManager.elo = 0
+		_G.missionsManager.currentRank = _G.missionsManager.ranks and _G.missionsManager.ranks[1] or nil
 	end
 	
 	-- Reset missions display
@@ -471,7 +536,8 @@ function MissionsApp:resetProgress()
 		_G.missions.missions = {}
 		_G.missions.savedState = {
 			completed = {},
-			subtasks = {}
+			subtasks = {},
+			elo = 0
 		}
 		-- Keep panel visible to show "No missions selected"
 		_G.missions.panel.visible = true
@@ -518,7 +584,8 @@ end
 function MissionsApp:saveMissionProgress()
 	local progress = {
 		completed = {},
-		subtasks = {}
+		subtasks = {},
+		elo = _G.missionsManager and _G.missionsManager:getELO() or 0
 	}
 	
 	-- Save completed missions
@@ -534,7 +601,7 @@ function MissionsApp:saveMissionProgress()
 		end
 	end
 	
-	SaveSystem:save("mission_progress", progress)
+	SaveSystem:save(progress, "mission_progress")
 end
 
 function MissionsApp:getMissionProgress(index)
