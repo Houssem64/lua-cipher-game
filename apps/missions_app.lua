@@ -280,11 +280,14 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 			local clickedIndex = math.floor(clickedY / self.missionHeight) + self.scrollPosition + 1
 
 			if clickedIndex > 0 and clickedIndex <= #self.missions then
-				-- Check if click was on the select button
+				local mission = self.missions[clickedIndex]
+				-- First show the mission details in right panel
+				self.viewedMission = clickedIndex
+				
+				-- Then check if click was on the select button
 				local buttonY = missionStartY + (clickedIndex - 1 - self.scrollPosition) * self.missionHeight + self.selectButtonY
 				if relativeY >= buttonY and relativeY <= buttonY + self.selectButtonHeight and 
 				   relativeX >= self.selectButtonX and relativeX <= self.selectButtonX + self.selectButtonWidth then
-					local mission = self.missions[clickedIndex]
 					if mission.rank_required and _G.missionsManager and 
 					   not _G.missionsManager:checkRankRequirement(mission.rank_required) then
 						-- Don't allow selection if rank requirement not met
@@ -297,9 +300,6 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 					else
 						self:selectMission(clickedIndex)
 					end
-				else
-					-- Just view the mission without selecting it
-					self.viewedMission = clickedIndex
 				end
 			else
 				-- Clear viewed mission if clicked in missions area but not on a mission
