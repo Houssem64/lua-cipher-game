@@ -172,13 +172,16 @@ function MissionsApp:draw(x, y, width, height)
 
 		-- Draw select button with glow effect
 		if self.selectedMission == i then
-			love.graphics.setColor(0.4, 0.6, 1, 0.2)
-			love.graphics.rectangle("fill", x + self.padding + 20, missionY + self.selectButtonY + 5, self.selectButtonWidth + 10, self.selectButtonHeight, 5)
+			love.graphics.setColor(0.2, 0.8, 0.2) -- Green color for selected
+			love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
+			love.graphics.setColor(1, 1, 1)
+			love.graphics.print("Selected", x + self.selectButtonX + 15, missionY + self.selectButtonY + 3)
+		else
+			love.graphics.setColor(0.4, 0.6, 1)
+			love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
+			love.graphics.setColor(1, 1, 1)
+			love.graphics.print("Select", x + self.selectButtonX + 20, missionY + self.selectButtonY + 3)
 		end
-		love.graphics.setColor(0.4, 0.6, 1)
-		love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Select", x + self.selectButtonX + 20, missionY + self.selectButtonY + 3)
 	end
 
 	-- Draw right panel if mission is selected or viewed
