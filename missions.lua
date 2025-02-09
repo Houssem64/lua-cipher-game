@@ -83,13 +83,21 @@ function Missions.new(x, y, config)
     self.notification = {
         active = false,
         progress = 0,
-        x = 0,
-        y = 0,
-        target_x = 0,
-        target_y = 0,
+        x = self.gameWidth / 2,
+        y = self.gameHeight / 2,
+        target_x = self.gameWidth / 2,
+        target_y = self.gameHeight / 2,
         scale = 0,
         alpha = 0,
-        text = ""
+        text = "",
+        color = {0, 1, 0},  -- Lime green
+        rotation = 0,
+        outline_size = 3,
+        particles = {
+            count = 0,
+            max = 20,
+            list = {}  -- Will store active particles
+        }
     }
 
     -- Rank display initialization
@@ -114,56 +122,49 @@ function Missions:update(dt)
             self.panel.x + self.config.slide_speed * dt)
     end
 
-    -- Update notification animation
     if self.notification.active then
-        print("Notification active:", string.format(
-            "progress=%.2f, x=%.2f, y=%.2f, scale=%.2f, alpha=%.2f, text='%s'",
-            self.notification.progress,
-            self.notification.x,
-            self.notification.y,
-            self.notification.scale,
-            self.notification.alpha,
-            self.notification.text
-        ))
-        
-        -- Slow down the animation
-        self.notification.progress = math.min(1, self.notification.progress + dt * 0.75)
-        
-        -- Animate position with easing
+        -- Update particles
+        if self.notification.particles then
+            for i = #self.notification.particles.list, 1, -1 do
+                local particle = self.notification.particles.list[i]
+                particle.x = particle.x + math.cos(particle.angle) * particle.speed * dt
+                particle.y = particle.y + math.sin(particle.angle) * particle.speed * dt
+                particle.life = particle.life - dt
+                particle.size = particle.size * 0.95
+                
+                if particle.life <= 0 then
+                    table.remove(self.notification.particles.list, i)
+                end
+            end
+        end
+
+        self.notification.progress = math.min(1, self.notification.progress + dt)
         local t = self.notification.progress
-        t = t * t * (3 - 2 * t) -- Smooth step interpolation
         
-        -- Calculate positions
-        local startX = self.button.x + self.button.radius
-        local startY = self.button.y + self.button.radius
-        local targetX = self.notification.target_x
-        local targetY = self.notification.target_y
-        
-        self.notification.x = startX + (targetX - startX) * t
-        self.notification.y = startY + (targetY - startY) * t
-        
-        -- Animate scale and alpha with improved timing
+        -- Animation phases
         if t < 0.3 then
-            -- Scale up phase
-            self.notification.scale = (t / 0.3) * 1.5
+            -- Pop in with rotation
+            self.notification.scale = math.sin(t * math.pi * 1.67) * 1.2
+            self.notification.alpha = math.min(t * 3.33, 1)
+            self.notification.rotation = math.sin(t * math.pi * 2) * 0.1
+        elseif t < 0.7 then
+            -- Hold with subtle floating motion
+            self.notification.scale = 1.2 + math.sin(t * 10) * 0.05
             self.notification.alpha = 1
-        elseif t > 0.7 then
-            -- Scale down and fade out phase
-            local fadeT = (t - 0.7) / 0.3
-            self.notification.scale = (1 - fadeT) * 1.5
-            self.notification.alpha = 1 - fadeT
+            self.notification.rotation = math.sin(t * 5) * 0.05
         else
-            -- Hold phase
-            self.notification.scale = 1.5
-            self.notification.alpha = 1
+            -- Fade out
+            local fadeT = (t - 0.7) / 0.3
+            self.notification.scale = 1.2 * (1 - fadeT)
+            self.notification.alpha = 1 - fadeT
+            self.notification.rotation = math.sin(t * 5) * 0.05 * (1 - fadeT)
         end
         
-        -- End animation
-        if t >= 1 then
-            print("Notification animation complete, resetting state")
-            self:resetNotification()
+        if t >= 1.0 then
+            self.notification.active = false
         end
     end
+
 end
 
 
@@ -479,46 +480,56 @@ function Missions:draw()
 
     -- Draw notification last to ensure it's on top
     if self.notification.active then
+        -- Draw particles first
+        if self.notification.particles then
+            for _, particle in ipairs(self.notification.particles.list) do
+                love.graphics.setColor(self.notification.color[1], 
+                                     self.notification.color[2], 
+                                     self.notification.color[3], 
+                                     particle.life * self.notification.alpha)
+                love.graphics.circle('fill', particle.x, particle.y, particle.size * self.notification.scale)
+            end
+        end
+        
         -- Draw glow effect
-        love.graphics.setColor(self.config.completed_color[1], 
-                             self.config.completed_color[2], 
-                             self.config.completed_color[3], 
-                             self.notification.alpha * 0.3)
-        love.graphics.circle('fill', self.notification.x, self.notification.y, 40 * self.notification.scale)
+        love.graphics.setColor(self.notification.color[1], 
+                             self.notification.color[2], 
+                             self.notification.color[3], 
+                             self.notification.alpha * 0.2)  -- Glow effect
+        love.graphics.circle('fill', self.notification.x, self.notification.y, 60 * self.notification.scale)
         
-        -- Draw checkmark with color
-        love.graphics.setColor(self.config.completed_color[1], 
-                             self.config.completed_color[2], 
-                             self.config.completed_color[3], 
-                             self.notification.alpha)
-        
-        -- Save current transform
-        love.graphics.push()
-        
-        -- Set transform for checkmark
-        love.graphics.translate(self.notification.x, self.notification.y)
-        love.graphics.scale(self.notification.scale, self.notification.scale)
-        
-        -- Draw checkmark
-        local size = 30
-        love.graphics.setLineWidth(4)
-        love.graphics.line(-size/2, 0, -size/6, size/2)
-        love.graphics.line(-size/6, size/2, size/2, -size/2)
-        
-        -- Restore transform
-        love.graphics.pop()
-        love.graphics.setLineWidth(1)
-        
-        -- Draw completion text
-        local font = love.graphics.newFont(24)
+        -- Draw text with outline
+        local font = love.graphics.newFont("fonts/FiraCode.ttf", 48)
         love.graphics.setFont(font)
-        local textWidth = font:getWidth(self.notification.text)
-        love.graphics.print(self.notification.text, 
+        local text = "RANK UP!\n" .. self.notification.text
+        local textWidth = font:getWidth(text)
+        local textHeight = font:getHeight() * 2  -- Account for two lines
+        
+        -- Draw black outline
+        love.graphics.setColor(0, 0, 0, self.notification.alpha)
+        for i = 0, 360, 45 do  -- Draw outline in 8 directions
+            local rad = math.rad(i)
+            local ox = math.cos(rad) * self.notification.outline_size
+            local oy = math.sin(rad) * self.notification.outline_size
+            love.graphics.printf(text, 
+                self.notification.x - textWidth/2 + ox,
+                self.notification.y - textHeight/2 + oy,
+                textWidth, "center", self.notification.rotation,
+                self.notification.scale, self.notification.scale)
+        end
+        
+        -- Draw main text in notification color
+        love.graphics.setColor(self.notification.color[1], 
+                             self.notification.color[2], 
+                             self.notification.color[3], 
+                             self.notification.alpha)
+        love.graphics.printf(text, 
             self.notification.x - textWidth/2,
-            self.notification.y + 40 * self.notification.scale,
-            0, self.notification.scale, self.notification.scale)
-        love.graphics.setFont(default_font)
+            self.notification.y - textHeight/2,
+            textWidth, "center", self.notification.rotation,
+            self.notification.scale, self.notification.scale)
     end
+
 
 end
 
@@ -540,15 +551,22 @@ function Missions:resetNotification()
     self.notification = {
         active = false,
         progress = 0,
-        x = self.button.x + self.button.radius,
-        y = self.button.y + self.button.radius,
+        x = self.gameWidth / 2,
+        y = self.gameHeight / 2,
         target_x = self.gameWidth / 2,
-        target_y = self.gameHeight / 3,
+        target_y = self.gameHeight / 2,
         scale = 0,
         alpha = 0,
-        text = ""
+        text = "",
+        color = {0, 1, 0},  -- Lime green
+        rotation = 0,
+        outline_size = 3,
+        particles = {
+            count = 0,
+            max = 20,
+            list = {}  -- Will store active particles
+        }
     }
-    print("Notification state reset")
 end
 
 function Missions:startNotification()
@@ -565,16 +583,34 @@ function Missions:startNotification()
     self.notification = {
         active = true,
         progress = 0,
-        x = self.button.x + self.button.radius,
-        y = self.button.y + self.button.radius,
+        x = self.gameWidth / 2,
+        y = self.gameHeight / 2,
         target_x = self.gameWidth / 2,
-        target_y = self.gameHeight / 3,
+        target_y = self.gameHeight / 2,
         scale = 0,
         alpha = 1,
-        text = "Mission Complete!"
+        text = "Mission Complete!",
+        color = {0.4, 0.8, 0.4},  -- Green color for mission completion
+        rotation = 0,
+        outline_size = 3,
+        particles = {
+            count = 0,
+            max = 20,
+            list = {}
+        }
     }
     
-    print("Starting new notification animation with fresh state")
+    -- Create initial particles
+    for i = 1, 20 do
+        table.insert(self.notification.particles.list, {
+            x = self.gameWidth / 2,
+            y = self.gameHeight / 2,
+            angle = math.random() * math.pi * 2,
+            speed = math.random(100, 200),
+            size = math.random(4, 8),
+            life = 1.0
+        })
+    end
 end
 
 function Missions:resetMissions()
@@ -771,6 +807,7 @@ function Missions:completeSubtask(missionId, subtaskIndex)
                 -- Start notification animation
                 self:startNotification()
             end
+
             
             -- Update saved state
             if _G.missionsManager then
@@ -787,18 +824,38 @@ function Missions:startRankUpNotification(newRank)
     -- Reset notification state
     self:resetNotification()
     
-    -- Set up rank up notification
+    -- Set up rank up notification with new animation properties
     self.notification = {
         active = true,
         progress = 0,
-        x = self.button.x + self.button.radius,
-        y = self.button.y + self.button.radius,
+        x = self.gameWidth / 2,  -- Start from center
+        y = self.gameHeight / 2,
         target_x = self.gameWidth / 2,
-        target_y = self.gameHeight / 3,
+        target_y = self.gameHeight / 2,
         scale = 0,
-        alpha = 1,
-        text = "Rank Up! " .. newRank
+        alpha = 0,
+        text = newRank,
+        color = {0, 1, 0},  -- Lime green
+        rotation = 0,
+        outline_size = 3,
+        particles = {
+            count = 0,
+            max = 20,
+            list = {}  -- Will store active particles
+        }
     }
+    
+    -- Create initial particles
+    for i = 1, 20 do
+        table.insert(self.notification.particles.list, {
+            x = self.gameWidth / 2,
+            y = self.gameHeight / 2,
+            angle = math.random() * math.pi * 2,
+            speed = math.random(100, 200),
+            size = math.random(4, 8),
+            life = 1.0
+        })
+    end
     
     -- Play completion sound with higher pitch for rank up
     if self.completion_sound then
