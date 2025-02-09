@@ -1,4 +1,6 @@
 -- missions.lua
+local RankAnimation = require("modules.rank_animation")
+
 local Missions = {
     config = {
         button_radius = 15,
@@ -76,6 +78,9 @@ function Missions.new(x, y, config)
         self.completion_sound = nil
     end
 
+    -- Add rank animation
+    self.rankAnimation = RankAnimation:new()
+
 
 
 
@@ -122,50 +127,60 @@ function Missions:update(dt)
             self.panel.x + self.config.slide_speed * dt)
     end
 
+    -- Update mission completion notification
     if self.notification.active then
-        -- Update particles
-        if self.notification.particles then
-            for i = #self.notification.particles.list, 1, -1 do
-                local particle = self.notification.particles.list[i]
-                particle.x = particle.x + math.cos(particle.angle) * particle.speed * dt
-                particle.y = particle.y + math.sin(particle.angle) * particle.speed * dt
-                particle.life = particle.life - dt
-                particle.size = particle.size * 0.95
-                
-                if particle.life <= 0 then
-                    table.remove(self.notification.particles.list, i)
-                end
-            end
-        end
+        self:updateNotification(self.notification, dt)
+    end
 
-        self.notification.progress = math.min(1, self.notification.progress + dt)
-        local t = self.notification.progress
-        
-        -- Animation phases
-        if t < 0.3 then
-            -- Pop in with rotation
-            self.notification.scale = math.sin(t * math.pi * 1.67) * 1.2
-            self.notification.alpha = math.min(t * 3.33, 1)
-            self.notification.rotation = math.sin(t * math.pi * 2) * 0.1
-        elseif t < 0.7 then
-            -- Hold with subtle floating motion
-            self.notification.scale = 1.2 + math.sin(t * 10) * 0.05
-            self.notification.alpha = 1
-            self.notification.rotation = math.sin(t * 5) * 0.05
-        else
-            -- Fade out
-            local fadeT = (t - 0.7) / 0.3
-            self.notification.scale = 1.2 * (1 - fadeT)
-            self.notification.alpha = 1 - fadeT
-            self.notification.rotation = math.sin(t * 5) * 0.05 * (1 - fadeT)
-        end
-        
-        if t >= 1.0 then
-            self.notification.active = false
+    -- Update rank animation
+    if self.rankAnimation.active then
+        self.rankAnimation:update(dt)
+    end
+end
+
+function Missions:updateNotification(notification, dt)
+    -- Update particles
+    if notification.particles then
+        for i = #notification.particles.list, 1, -1 do
+            local particle = notification.particles.list[i]
+            particle.x = particle.x + math.cos(particle.angle) * particle.speed * dt
+            particle.y = particle.y + math.sin(particle.angle) * particle.speed * dt
+            particle.life = particle.life - dt
+            particle.size = particle.size * 0.95
+            
+            if particle.life <= 0 then
+                table.remove(notification.particles.list, i)
+            end
         end
     end
 
+    notification.progress = math.min(1, notification.progress + dt)
+    local t = notification.progress
+    
+    -- Animation phases
+    if t < 0.3 then
+        -- Pop in with rotation
+        notification.scale = math.sin(t * math.pi * 1.67) * 1.2
+        notification.alpha = math.min(t * 3.33, 1)
+        notification.rotation = math.sin(t * math.pi * 2) * 0.1
+    elseif t < 0.7 then
+        -- Hold with subtle floating motion
+        notification.scale = 1.2 + math.sin(t * 10) * 0.05
+        notification.alpha = 1
+        notification.rotation = math.sin(t * 5) * 0.05
+    else
+        -- Fade out
+        local fadeT = (t - 0.7) / 0.3
+        notification.scale = 1.2 * (1 - fadeT)
+        notification.alpha = 1 - fadeT
+        notification.rotation = math.sin(t * 5) * 0.05 * (1 - fadeT)
+    end
+    
+    if t >= 1.0 then
+        notification.active = false
+    end
 end
+
 
 
 function Missions:draw()
@@ -501,7 +516,7 @@ function Missions:draw()
         -- Draw text with outline
         local font = love.graphics.newFont("fonts/FiraCode.ttf", 48)
         love.graphics.setFont(font)
-        local text = "RANK UP!\n" .. self.notification.text
+        local text =  self.notification.text
         local textWidth = font:getWidth(text)
         local textHeight = font:getHeight() * 2  -- Account for two lines
         
@@ -530,7 +545,8 @@ function Missions:draw()
             self.notification.scale, self.notification.scale)
     end
 
-
+    -- Draw rank animation on top of everything
+    self.rankAnimation:draw()
 end
 
 
@@ -821,42 +837,10 @@ end
 
 
 function Missions:startRankUpNotification(newRank)
-    -- Reset notification state
-    self:resetNotification()
+    -- Start the new rank animation
+    self.rankAnimation:start("NEW RANK: " .. newRank)
     
-    -- Set up rank up notification with new animation properties
-    self.notification = {
-        active = true,
-        progress = 0,
-        x = self.gameWidth / 2,  -- Start from center
-        y = self.gameHeight / 2,
-        target_x = self.gameWidth / 2,
-        target_y = self.gameHeight / 2,
-        scale = 0,
-        alpha = 0,
-        text = newRank,
-        color = {0, 1, 0},  -- Lime green
-        rotation = 0,
-        outline_size = 3,
-        particles = {
-            count = 0,
-            max = 20,
-            list = {}  -- Will store active particles
-        }
-    }
-    
-    -- Create initial particles
-    for i = 1, 20 do
-        table.insert(self.notification.particles.list, {
-            x = self.gameWidth / 2,
-            y = self.gameHeight / 2,
-            angle = math.random() * math.pi * 2,
-            speed = math.random(100, 200),
-            size = math.random(4, 8),
-            life = 1.0
-        })
-    end
-    
+
     -- Play completion sound with higher pitch for rank up
     if self.completion_sound then
         local sound = self.completion_sound:clone()
