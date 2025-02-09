@@ -86,7 +86,11 @@ function StatusBar:launchApp(app)
     -- Check if the app is already open
     for _, window in ipairs(self.windowManager.windows) do
         if window.appName == app.name then
-            -- App is already open, bring it to front and focus it
+            -- If window is minimized, restore it
+            if window.isMinimized then
+                window:minimize()  -- This will trigger the restore animation
+            end
+            -- Bring window to front and focus it
             self.windowManager:bringToFront(window)
             return
         end
