@@ -1,4 +1,5 @@
 local FileSystem = require("filesystem")
+local SaveSystem = require("modules/save_system")
 
 local Terminal = {}
 
@@ -33,6 +34,7 @@ function Terminal:new()
         ftpConnection = nil,
         -- Track used commands for tutorial
         usedCommands = {},
+        SaveSystem = SaveSystem,
         
         -- Nano editor state
         nanoState = {
@@ -58,7 +60,9 @@ function Terminal:getCurrentPrompt()
         return "[sudo] password for kali: "
     else
         local dir = FileSystem.current_path:match("[^/]+$") or "~"
-        return "kali@kali:" .. (dir == "kali" and "~" or dir) .. "$ "
+        local savedCreds = self.SaveSystem:load("user_credentials")
+        local username = savedCreds and savedCreds.username or "guest"
+        return username .. "@love-Desktop: " .. (dir == username and "~" or dir) .. "$ "
     end
 end
 function Terminal:showNeofetch()
