@@ -18,7 +18,9 @@ local MusicApp = require("apps.music_app")
 
 local ReelsApp = require("apps.reelsapp")
 local MissionsApp = require("apps.missions_app")
+local LoginScreen = require("login_screen")
 local desktop
+local loginScreen
 
 local statusBar
 local windowManager
@@ -33,11 +35,20 @@ function love.load()
     -- Enable key repeat for proper input handling
     love.keyboard.setKeyRepeat(true)
 
-    -- Initialize boot sequence
-    bootSequence = BootSequence:new(function()
-        -- This callback runs when boot sequence completes
+    -- Initialize main menu first
+    mainMenu = MainMenu.new()
+    
+    -- Initialize login screen with success callback
+    loginScreen = LoginScreen:new(function(username)
+        -- This callback runs when login is successful
         gameState = "game"
         mainMenu.isActive = false
+    end)
+    
+    -- Initialize boot sequence with callback to start login screen
+    bootSequence = BootSequence:new(function()
+        loginScreen:start()
+        gameState = "login"
     end)
 
     FileSystem:loadState() 
@@ -45,11 +56,9 @@ function love.load()
     .chain(moonshine.effects.vignette)
 effect.filmgrain.size = 2
  ]]
-
-    -- Initialize main menu first
-    mainMenu = MainMenu.new()
     
     love.graphics.setDefaultFilter("nearest", "nearest", 1)
+
 
 
  
@@ -158,6 +167,8 @@ function love.update(dt)
         mainMenu:update(dt)
     elseif gameState == "boot" then
         bootSequence:update(dt)
+    elseif gameState == "login" then
+        loginScreen:update(dt)
     elseif gameState == "game" then
         windowManager:update(dt)
         chat:update(dt)
@@ -186,6 +197,8 @@ function love.draw()
         mainMenu:draw()
     elseif gameState == "boot" then
         bootSequence:draw()
+    elseif gameState == "login" then
+        loginScreen:draw()
     elseif gameState == "game" then
         windowManager:draw()
         statusBar:draw()
@@ -200,50 +213,47 @@ function love.draw()
 end
 
 function love.keypressed(key)
-    -- Always check main menu first
-    if mainMenu:keypressed(key) then
-        return  -- If main menu handled the key, don't process other inputs
-    end
-    
-    windowManager:keypressed(key)
-    chat:keypressed(key)
+    if gameState == "menu" then
+        if mainMenu:keypressed(key) then return end
+    elseif gameState == "login" then
+        loginScreen:keypressed(key)
+    elseif gameState == "game" then
+        windowManager:keypressed(key)
+        chat:keypressed(key)
+        musicApp:keypressed(key)
+        reelsApp:keypressed(key)
 
-    if key == "c" then
-        -- Get the active mission window from missions manager
-        if _G.missionsManager then
-            local missionApp = _G.missionsManager:getActiveMissionWindow()
-            if missionApp and missionApp.selectedMission then
-                -- Complete the first incomplete subtask
-                local mission = missionApp.missions[missionApp.selectedMission]
-                if mission then
-                    for i = 1, #mission.subtasks do
-                        if not (missionApp.completedSubtasks[missionApp.selectedMission] and 
-                               missionApp.completedSubtasks[missionApp.selectedMission][i]) then
-                            missionApp:toggleSubtaskComplete(missionApp.selectedMission, i)
-                            break
+        if key == "c" then
+            -- Get the active mission window from missions manager
+            if _G.missionsManager then
+                local missionApp = _G.missionsManager:getActiveMissionWindow()
+                if missionApp and missionApp.selectedMission then
+                    -- Complete the first incomplete subtask
+                    local mission = missionApp.missions[missionApp.selectedMission]
+                    if mission then
+                        for i = 1, #mission.subtasks do
+                            if not (missionApp.completedSubtasks[missionApp.selectedMission] and 
+                                   missionApp.completedSubtasks[missionApp.selectedMission][i]) then
+                                missionApp:toggleSubtaskComplete(missionApp.selectedMission, i)
+                                break
+                            end
                         end
                     end
                 end
             end
         end
     end
-
-
-    musicApp:keypressed(key)  -- Pass key events to MusicApp
-    reelsApp:keypressed(key)  -- Pass key events to ReelsApp
-
-
 end
 
+
 function love.textinput(text)
-    -- Only process text input if main menu is not active
-    if not mainMenu.isActive then
-        if text == "/" then
-            print("Main textinput received /") -- Debug print
-        end
+    if gameState == "login" then
+        loginScreen:textinput(text)
+    elseif gameState == "game" then
         windowManager:textinput(text)
         chat:textinput(text)
     end
+
 
 end
 
@@ -260,6 +270,8 @@ function love.mousepressed(x, y, button)
             end
             return
         end
+    elseif gameState == "login" then
+        loginScreen:mousepressed(virtualX, virtualY, button)
     elseif gameState == "game" then
         if virtualY <= STATUSBAR_HEIGHT then
             statusBar:mousepressed(virtualX, virtualY, button)
@@ -271,8 +283,6 @@ function love.mousepressed(x, y, button)
         musicApp:mousepressed(virtualX, virtualY, button)
         reelsApp:mousepressed(virtualX, virtualY, button)
     end
-
-    
 end
 
 function love.mousereleased(x, y, button)
@@ -286,6 +296,12 @@ function love.mousemoved(x, y, dx, dy)
     local virtualY = (y - offsetY) / scale
     local virtualDX = dx / scale
     local virtualDY = dy / scale
-    windowManager:mousemoved(virtualX, virtualY, virtualDX, virtualDY)
-    mainMenu:mousemoved(virtualX, virtualY)
+
+    if gameState == "menu" then
+        mainMenu:mousemoved(virtualX, virtualY)
+    elseif gameState == "login" then
+        loginScreen:mousemoved(virtualX, virtualY)
+    elseif gameState == "game" then
+        windowManager:mousemoved(virtualX, virtualY, virtualDX, virtualDY)
+    end
 end
