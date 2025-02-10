@@ -3,6 +3,7 @@ local BASE_WIDTH = 1920
 local BASE_HEIGHT = 1080
 local STATUSBAR_HEIGHT = 40
 
+local BootSequence = require("boot_sequence")
 local Desktop = require("desktop")
 local StatusBar = require("status_bar")
 local WindowManager = require("window_manager")
@@ -25,10 +26,19 @@ local networkManager
 local mainMenu  -- Add this line to declare mainMenu globally
 local musicApp  -- Add this line to declare musicApp globally
 local webBrowser
+local bootSequence
+local gameState = "menu" -- Can be "menu", "boot", or "game"
 
 function love.load()
     -- Enable key repeat for proper input handling
     love.keyboard.setKeyRepeat(true)
+
+    -- Initialize boot sequence
+    bootSequence = BootSequence:new(function()
+        -- This callback runs when boot sequence completes
+        gameState = "game"
+        mainMenu.isActive = false
+    end)
 
     FileSystem:loadState() 
 --[[     effect = moonshine(moonshine.effects.filmgrain)
@@ -144,17 +154,18 @@ missionsManager:updateProgress(3, 1, true) -- Complete first subtask
 end
 
 function love.update(dt)
-    -- Update main menu first
-    mainMenu:update(dt)
-    
-    -- Only update other components if main menu is not active
-    if not mainMenu.isActive then
+    if gameState == "menu" then
+        mainMenu:update(dt)
+    elseif gameState == "boot" then
+        bootSequence:update(dt)
+    elseif gameState == "game" then
         windowManager:update(dt)
         chat:update(dt)
         _G.missions:update(dt)
-        musicApp:update(dt)  -- Update MusicApp
-        reelsApp:update(dt)  -- Update ReelsApp
+        musicApp:update(dt)
+        reelsApp:update(dt)
     end
+
 
 
 end
@@ -171,20 +182,19 @@ function love.draw()
     love.graphics.translate(offsetX, offsetY)
     love.graphics.scale(scale, scale)
     
-    -- Draw game components only if main menu is not active
-    if not mainMenu.isActive then
+    if gameState == "menu" then
+        mainMenu:draw()
+    elseif gameState == "boot" then
+        bootSequence:draw()
+    elseif gameState == "game" then
         windowManager:draw()
         statusBar:draw()
         reelsApp:draw()
         musicApp:draw(0, 0, gameWidth, gameHeight)
         chat:draw()
         _G.missions:draw()
-      
     end
 
-
-    -- Always draw main menu (it will handle its own visibility)
-    mainMenu:draw()
 
     love.graphics.pop()
 end
@@ -241,12 +251,16 @@ function love.mousepressed(x, y, button)
     local virtualX = (x - offsetX) / scale
     local virtualY = (y - offsetY) / scale
     
-    -- Always check main menu first
-    if mainMenu:mousepressed(virtualX, virtualY) then
-        return  -- If main menu handled the mouse press, don't process other inputs
-    end
-    
-    if not mainMenu.isActive then
+    if gameState == "menu" then
+        if mainMenu:mousepressed(virtualX, virtualY) then
+            -- If start button was clicked, begin boot sequence
+            if mainMenu.startClicked then
+                gameState = "boot"
+                bootSequence:start()
+            end
+            return
+        end
+    elseif gameState == "game" then
         if virtualY <= STATUSBAR_HEIGHT then
             statusBar:mousepressed(virtualX, virtualY, button)
         else
@@ -254,8 +268,8 @@ function love.mousepressed(x, y, button)
         end
         chat:mousepressed(virtualX, virtualY)
         _G.missions:mousepressed(virtualX, virtualY)
-        musicApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to MusicApp
-        reelsApp:mousepressed(virtualX, virtualY, button)  -- Pass mouse events to ReelsApp
+        musicApp:mousepressed(virtualX, virtualY, button)
+        reelsApp:mousepressed(virtualX, virtualY, button)
     end
 
     

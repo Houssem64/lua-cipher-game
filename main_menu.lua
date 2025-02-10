@@ -6,6 +6,7 @@ function MainMenu.new()
     
     -- Initialize main menu state
     self.isActive = true
+    self.startClicked = false
     self.selectedOption = 1
     self.options = {"Start Game", "Options", "Quit"}
     
@@ -123,14 +124,14 @@ function MainMenu:keypressed(key)
         end
     elseif key == "return" or key == "kpenter" then
         if self.selectedOption == 1 then
-            -- Start game (begin transition)
+            -- Set startClicked flag when Start Game is selected
+            self.startClicked = true
             self.transitioning = true
         elseif self.selectedOption == 3 then
-            -- Quit
             love.event.quit()
         end
-        -- Play click sound
         self.clickSound:play()
+
     end
     
     return true
@@ -151,14 +152,14 @@ function MainMenu:mousepressed(x, y)
            y >= optionY and y <= optionY + optionHeight then
             self.selectedOption = i
             if self.selectedOption == 1 then
-                -- Start game (begin transition)
+                -- Set startClicked flag when Start Game is clicked
+                self.startClicked = true
                 self.transitioning = true
             elseif self.selectedOption == 3 then
-                -- Quit
                 love.event.quit()
             end
-            -- Play click sound
             self.clickSound:play()
+
             return true
         end
     end
