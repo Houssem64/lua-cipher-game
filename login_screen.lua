@@ -17,20 +17,47 @@ local LoginScreen = {
 	securityAnswer = "",
 	resetAnswer = "",
 	SaveSystem = require("modules/save_system")
-
 }
 
 function LoginScreen:new(onLoginSuccess)
 	local instance = setmetatable({}, { __index = LoginScreen })
+	-- Initialize all fields with default values
+	instance.username = ""
+	instance.password = ""
+	instance.selectedField = "username"
+	instance.errorMessage = ""
+	instance.active = false
+	instance.cursorBlink = 0
+	instance.showCursor = true
+	instance.loginButtonHovered = false
+	instance.isCreateMode = false
+	instance.isResetMode = false
+	instance.confirmPassword = ""
+	instance.securityQuestion = ""
+	instance.securityAnswer = ""
+	instance.resetAnswer = ""
+	instance.SaveSystem = require("modules/save_system")
+	
+	-- Load font and sound
 	instance.font = love.graphics.newFont("fonts/FiraCode.ttf", 20)
 	instance.startupSound = love.audio.newSource("sounds/startup.wav", "static")
 	instance.onLoginSuccess = onLoginSuccess
+	
 	return instance
 end
 
 function LoginScreen:tryLogin()
+	-- Clear any previous error message
+	self.errorMessage = ""
+
+	-- Validate empty fields first
+	if self.username == "" or self.password == "" then
+		self.errorMessage = "Username and password are required"
+		return
+	end
+
 	if self.isCreateMode then
-		if self.username == "" or self.password == "" or self.securityQuestion == "" or self.securityAnswer == "" then
+		if self.securityQuestion == "" or self.securityAnswer == "" then
 			self.errorMessage = "All fields must be filled"
 			return
 		end
@@ -61,6 +88,11 @@ function LoginScreen:tryLogin()
 			return
 		end
 		
+		if not savedCreds.security_answer then
+			self.errorMessage = "Account data is corrupted"
+			return
+		end
+
 		if self.resetAnswer:lower() == savedCreds.security_answer:lower() then
 			if self.password == "" then
 				self.errorMessage = "New password cannot be empty"
@@ -89,7 +121,7 @@ function LoginScreen:tryLogin()
 		-- Normal login logic
 		local savedCreds = self.SaveSystem:load("user_credentials")
 		if not savedCreds then
-			self.errorMessage = "Invalid credentials"
+			self.errorMessage = "No account exists. Please create one"
 			return
 		end
 		
@@ -372,7 +404,7 @@ function LoginScreen:draw()
 		love.graphics.setColor(0.2, 0.45, 0.2, 1)
 	end
 	love.graphics.rectangle('fill', centerX - buttonWidth/2, buttonY, buttonWidth, buttonHeight, 4, 4)
-	
+
 	-- Button highlight effect
 	if self.loginButtonHovered then
 		love.graphics.setColor(0.3, 0.6, 0.3, 0.2)
@@ -380,23 +412,37 @@ function LoginScreen:draw()
 	end
 
 	love.graphics.setColor(1, 1, 1, 1)
-	local buttonText = self.isCreateMode and "Create" or "Login"
-	love.graphics.print(buttonText, 
-		centerX - self.font:getWidth(buttonText)/2, 
-		buttonY + buttonHeight/2 - self.font:getHeight()/2)
+	local buttonText = "Login"
+	if self.isCreateMode then
+		buttonText = "Create"
+	elseif self.isResetMode then
+		buttonText = "Reset"
+	end
+
+	if buttonText then
+		love.graphics.print(buttonText, 
+			centerX - self.font:getWidth(buttonText)/2, 
+			buttonY + buttonHeight/2 - self.font:getHeight()/2)
+	end
 
 
 
 
 
 	-- Draw error message with fade effect
-	if self.errorMessage ~= "" then
+	if self.errorMessage and self.errorMessage ~= "" then
 		love.graphics.setColor(1, 0.3, 0.3, 0.9)
-		love.graphics.print(self.errorMessage, centerX - boxWidth/2 + padding, centerY + boxHeight/2 + 5)
+		local errorX = centerX - boxWidth/2 + padding
+		local errorY = centerY + boxHeight/2 + 5
+		if self.font then
+			love.graphics.print(self.errorMessage, errorX, errorY)
+		end
 	end
 
 	love.graphics.setColor(1, 1, 1, 1)
-	love.graphics.setFont(prevFont)
+	if prevFont then
+		love.graphics.setFont(prevFont)
+	end
 end
 
 function LoginScreen:mousepressed(x, y, button)
@@ -425,61 +471,61 @@ function LoginScreen:mousepressed(x, y, button)
 	end
 
 	-- Check confirm password field click in create mode
-	if self.isCreateMode then
-		if x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
-		   y >= startY + fieldSpacing * 2 + 25 and y <= startY + fieldSpacing * 2 + 57 then
-			self.selectedField = "confirm"
-			return
-		end
-		
-		-- Check security question field click
-		if x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
-		   y >= startY + fieldSpacing * 3 + 25 and y <= startY + fieldSpacing * 3 + 57 then
-			self.selectedField = "question"
-			return
-		end
-		
-		-- Check security answer field click
-		if x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
-		   y >= startY + fieldSpacing * 4 + 25 and y <= startY + fieldSpacing * 4 + 57 then
-			self.selectedField = "answer"
-			return
-		end
+	if self.isCreateMode and x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
+	   y >= startY + fieldSpacing * 2 + 25 and y <= startY + fieldSpacing * 2 + 57 then
+		self.selectedField = "confirm"
+		return
+	end
+
+	-- Check security question field click in create mode
+	if self.isCreateMode and x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
+	   y >= startY + fieldSpacing * 3 + 25 and y <= startY + fieldSpacing * 3 + 57 then
+		self.selectedField = "question"
+		return
+	end
+
+	-- Check security answer field click in create mode
+	if self.isCreateMode and x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
+	   y >= startY + fieldSpacing * 4 + 25 and y <= startY + fieldSpacing * 4 + 57 then
+		self.selectedField = "answer"
+		return
 	end
 
 	-- Check reset answer field click in reset mode
-	if self.isResetMode then
-		if x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
-		   y >= startY + fieldSpacing + 25 and y <= startY + fieldSpacing + 57 then
-			self.selectedField = "resetAnswer"
-			return
-		end
+	if self.isResetMode and x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
+	   y >= startY + fieldSpacing + 25 and y <= startY + fieldSpacing + 57 then
+		self.selectedField = "resetAnswer"
+		return
 	end
 
 	-- Check reset password text click
 	if not self.isCreateMode and not self.isResetMode then
 		local resetText = "Forgot Password?"
-		local resetTextWidth = self.font:getWidth(resetText)
-		if x >= centerX - resetTextWidth/2 and x <= centerX + resetTextWidth/2 and
-		   y >= centerY + boxHeight/2 - 60 and y <= centerY + boxHeight/2 - 40 then
-			self.isResetMode = true
-			self.password = ""
-			self.confirmPassword = ""
-			self.resetAnswer = ""
-			self.selectedField = "resetAnswer"
-			return
+		if resetText and self.font then
+			local resetTextWidth = self.font:getWidth(resetText)
+			if x >= centerX - resetTextWidth/2 and x <= centerX + resetTextWidth/2 and
+			   y >= centerY + boxHeight/2 + 20 and y <= centerY + boxHeight/2 + 40 then
+				self.isResetMode = true
+				self.password = ""
+				self.confirmPassword = ""
+				self.resetAnswer = ""
+				self.selectedField = "resetAnswer"
+				self.errorMessage = ""
+				return
+			end
 		end
 	end
 
 	-- Check button click
 	local buttonWidth = 120
 	local buttonHeight = 35
-	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5+25
+	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5 + 25
 	
 	if x >= centerX - buttonWidth/2 and x <= centerX + buttonWidth/2 and
 	   y >= buttonY and y <= buttonY + buttonHeight then
 		self:tryLogin()
 	end
+
 
 
 
