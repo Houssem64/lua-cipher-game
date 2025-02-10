@@ -8,20 +8,33 @@ function RankAnimation:new()
 		text = "",
 		revealed_text = "",
 		cursor_pos = 1,
-		time_per_char = 0.12,  -- Slightly slower for better readability
+		time_per_char = 0.08,
 		time_since_last_char = 0,
 		cursor_char = "",
 		cursor_time = 0,
 		cursor_blink_rate = 0.05,
 		background_alpha = 0,
 		text_alpha = 0,
-		fade_in_time = 0.4,
-		hold_time = 2.5,
-		fade_out_time = 0.7,
+		fade_in_time = 0.5,    -- 0.5s fade in
+		hold_time = 3.0,       -- 3.0s hold (including text reveal)
+		fade_out_time = 0.5,   -- 0.5s fade out
 		total_time = 0,
 		scale = 0.8,
-		char_scale = 1.0  -- Added for character reveal effect
+		char_scale = 1.0,
+		rank_up_sound = nil
 	}
+	
+	-- Load rank up sound
+	local success, result = pcall(function()
+		return love.audio.newSource("sounds/rankup.mp3", "static")
+	end)
+	if success then
+		obj.rank_up_sound = result
+		print("Successfully loaded rank up sound")
+	else
+		print("Failed to load rank up sound:", result)
+	end
+	
 	setmetatable(obj, self)
 	self.__index = self
 	return obj
@@ -39,6 +52,13 @@ function RankAnimation:start(text)
 	self.text_alpha = 0
 	self.total_time = 0
 	self.scale = 0.8  -- Initialize scale
+	
+	-- Play rank up sound
+	if self.rank_up_sound then
+		self.rank_up_sound:stop()  -- Stop if already playing
+		self.rank_up_sound:setVolume(0.5)  -- Set volume to 50%
+		self.rank_up_sound:play()
+	end
 end
 
 function RankAnimation:getRandomChar()
@@ -65,6 +85,17 @@ function RankAnimation:update(dt)
 			self.cursor_pos = self.cursor_pos + 1
 			self.time_since_last_char = 0
 			self.char_scale = 1.2  -- Pop effect when revealing new character
+			
+			-- Play a softer sound effect for each character reveal
+			if self.rank_up_sound then
+				local char_sound = self.rank_up_sound:clone()
+				if char_sound then
+					char_sound:setVolume(0.1)
+					char_sound:setPitch(1.5)
+					char_sound:play()
+				end
+			end
+			
 			-- Get new random cursor character
 			self.cursor_char = self:getRandomChar()
 		end
@@ -82,7 +113,7 @@ function RankAnimation:update(dt)
 		self.background_alpha = 1
 		self.text_alpha = 1
 		self.scale = 1 + math.sin(self.total_time * 3) * 0.05
-	elseif self.total_time < self.fade_in_time + self.hold_time + self.fade_out_time then
+	elseif self.total_time < 4.0 then  -- Ensure total duration is exactly 4 seconds
 		local fade_progress = (self.total_time - (self.fade_in_time + self.hold_time)) / self.fade_out_time
 		self.background_alpha = 1 - fade_progress
 		self.text_alpha = 1 - fade_progress
