@@ -11,17 +11,28 @@ local LoginScreen = {
 	onLoginSuccess = nil,
 	loginButtonHovered = false,
 	isCreateMode = false,
-	isResetMode = false,
 	confirmPassword = "",
 	securityQuestion = "",
 	securityAnswer = "",
-	resetAnswer = "",
 	SaveSystem = require("modules/save_system")
 }
 
+function LoginScreen:drawAvatar(x, y, size)
+    -- Draw circular background
+    love.graphics.setColor(0.2, 0.2, 0.25, 1)
+    love.graphics.circle('fill', x, y, size/2)
+    
+    -- Draw head
+    love.graphics.setColor(0.8, 0.8, 0.85, 1)
+    love.graphics.circle('fill', x, y - size/8, size/4)
+    
+    -- Draw body
+    love.graphics.setColor(0.8, 0.8, 0.85, 1)
+    love.graphics.circle('fill', x, y + size/4, size/3)
+end
+
 function LoginScreen:new(onLoginSuccess)
 	local instance = setmetatable({}, { __index = LoginScreen })
-	-- Initialize all fields with default values
 	instance.username = ""
 	instance.password = ""
 	instance.selectedField = "username"
@@ -31,20 +42,18 @@ function LoginScreen:new(onLoginSuccess)
 	instance.showCursor = true
 	instance.loginButtonHovered = false
 	instance.isCreateMode = false
-	instance.isResetMode = false
 	instance.confirmPassword = ""
 	instance.securityQuestion = ""
 	instance.securityAnswer = ""
-	instance.resetAnswer = ""
 	instance.SaveSystem = require("modules/save_system")
 	
-	-- Load font and sound
 	instance.font = love.graphics.newFont("fonts/FiraCode.ttf", 20)
 	instance.startupSound = love.audio.newSource("sounds/startup.wav", "static")
 	instance.onLoginSuccess = onLoginSuccess
 	
 	return instance
 end
+
 
 function LoginScreen:tryLogin()
 	-- Clear any previous error message
@@ -144,8 +153,6 @@ function LoginScreen:start()
 	self.errorMessage = ""
 	self.securityQuestion = ""
 	self.securityAnswer = ""
-	self.resetAnswer = ""
-	self.isResetMode = false
 	
 	-- Check if user exists
 	local savedCreds = self.SaveSystem:load("user_credentials")
@@ -155,6 +162,7 @@ function LoginScreen:start()
 		self.startupSound:play()
 	end
 end
+
 
 function LoginScreen:keypressed(key)
 	if not self.active then return end
@@ -271,30 +279,28 @@ function LoginScreen:draw()
 	local prevFont = love.graphics.getFont()
 	love.graphics.setFont(self.font)
 
-	-- Draw dark background with gradient effect
+	-- Draw dark background
 	love.graphics.setColor(0.08, 0.08, 0.12, 1)
 	love.graphics.rectangle('fill', 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
 	local centerX = love.graphics.getWidth() / 2
 	local centerY = love.graphics.getHeight() / 2
 	local boxWidth = 320
-	local boxHeight = self.isCreateMode and 300 or 250
+	local boxHeight = self.isCreateMode and 300 or 200
 	local padding = 25
 	local fieldSpacing = 70
 	local startY = centerY - 60
 
-	-- Calculate button dimensions early
-	local buttonWidth = 120
-	local buttonHeight = 35
-	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5 + 25
 
-	-- Draw login box background with subtle shadow effect
+
+
+	-- Draw login box background with subtle shadow
 	love.graphics.setColor(0.1, 0.1, 0.1, 0.8)
 	love.graphics.rectangle('fill', centerX - boxWidth/2 + 4, centerY - boxHeight/2 + 4, boxWidth, boxHeight)
 	love.graphics.setColor(0.15, 0.15, 0.18, 1)
 	love.graphics.rectangle('fill', centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight)
 
-	-- Draw title with subtle highlight
+	-- Draw title
 	love.graphics.setColor(0.9, 0.9, 0.95, 1)
 	local title = self.isCreateMode and "Create Account" or "Login"
 	love.graphics.print(title, centerX - self.font:getWidth(title)/2, centerY - boxHeight/2 + padding)
@@ -317,87 +323,11 @@ function LoginScreen:draw()
 	local passwordDisplay = string.rep("*", #self.password) .. (self.selectedField == "password" and self.showCursor and "_" or "")
 	love.graphics.print(passwordDisplay, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing + 30)
 
-	-- Confirm password field if in create mode
-	if self.isCreateMode then
-		love.graphics.setColor(0.8, 0.8, 0.85, 1)
-		love.graphics.print("Confirm Password:", centerX - boxWidth/2 + padding, startY + fieldSpacing * 2)
-		love.graphics.setColor(0.12, 0.12, 0.15, 1)
-		love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing * 2 + 25, boxWidth - padding*2, 32)
-		love.graphics.setColor(1, 1, 1, 1)
-		local confirmDisplay = string.rep("*", #self.confirmPassword) .. (self.selectedField == "confirm" and self.showCursor and "_" or "")
-		love.graphics.print(confirmDisplay, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing * 2 + 30)
-	end
-
-	-- Calculate button dimensions early
+	-- Draw login/create button
 	local buttonWidth = 120
 	local buttonHeight = 35
-	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5 + 25
+	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5
 
-	-- Draw reset password button in login mode
-	if not self.isCreateMode and not self.isResetMode then
-		love.graphics.setColor(0.5, 0.5, 0.6, 1)
-		local resetText = "Forgot Password?"
-		love.graphics.print(resetText, 
-			centerX - self.font:getWidth(resetText)/2, 
-			centerY + boxHeight/2 +20 )  -- Position it 60 pixels from bottom of box
-	end
-
-	-- Draw security question fields in create mode
-	if self.isCreateMode then
-		love.graphics.setColor(0.8, 0.8, 0.85, 1)
-		love.graphics.print("Security Question:", centerX - boxWidth/2 + padding, startY + fieldSpacing * 2)
-		love.graphics.setColor(0.12, 0.12, 0.15, 1)
-		love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing * 2 + 25, boxWidth - padding*2, 32)
-		love.graphics.setColor(1, 1, 1, 1)
-		local questionText = self.securityQuestion .. (self.selectedField == "question" and self.showCursor and "_" or "")
-		love.graphics.print(questionText, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing * 2 + 30)
-
-		love.graphics.setColor(0.8, 0.8, 0.85, 1)
-		love.graphics.print("Security Answer:", centerX - boxWidth/2 + padding, startY + fieldSpacing * 3)
-		love.graphics.setColor(0.12, 0.12, 0.15, 1)
-		love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing * 3 + 25, boxWidth - padding*2, 32)
-		love.graphics.setColor(1, 1, 1, 1)
-		local answerText = self.securityAnswer .. (self.selectedField == "answer" and self.showCursor and "_" or "")
-		love.graphics.print(answerText, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing * 3 + 30)
-	end
-
-	-- Draw reset mode fields
-	if self.isResetMode then
-		local savedCreds = self.SaveSystem:load("user_credentials")
-		if savedCreds then
-			love.graphics.setColor(0.8, 0.8, 0.85, 1)
-			love.graphics.print("Security Question:", centerX - boxWidth/2 + padding, startY)
-			love.graphics.setColor(1, 1, 1, 0.8)
-			love.graphics.print(savedCreds.security_question, centerX - boxWidth/2 + padding, startY + 25)
-
-			love.graphics.setColor(0.8, 0.8, 0.85, 1)
-			love.graphics.print("Answer:", centerX - boxWidth/2 + padding, startY + fieldSpacing)
-			love.graphics.setColor(0.12, 0.12, 0.15, 1)
-			love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing + 25, boxWidth - padding*2, 32)
-			love.graphics.setColor(1, 1, 1, 1)
-			local answerText = self.resetAnswer .. (self.selectedField == "resetAnswer" and self.showCursor and "_" or "")
-			love.graphics.print(answerText, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing + 30)
-
-			-- New password fields
-			love.graphics.setColor(0.8, 0.8, 0.85, 1)
-			love.graphics.print("New Password:", centerX - boxWidth/2 + padding, startY + fieldSpacing * 2)
-			love.graphics.setColor(0.12, 0.12, 0.15, 1)
-			love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing * 2 + 25, boxWidth - padding*2, 32)
-			love.graphics.setColor(1, 1, 1, 1)
-			local passwordText = string.rep("*", #self.password) .. (self.selectedField == "password" and self.showCursor and "_" or "")
-			love.graphics.print(passwordText, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing * 2 + 30)
-
-			love.graphics.setColor(0.8, 0.8, 0.85, 1)
-			love.graphics.print("Confirm Password:", centerX - boxWidth/2 + padding, startY + fieldSpacing * 3)
-			love.graphics.setColor(0.12, 0.12, 0.15, 1)
-			love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, startY + fieldSpacing * 3 + 25, boxWidth - padding*2, 32)
-			love.graphics.setColor(1, 1, 1, 1)
-			local confirmText = string.rep("*", #self.confirmPassword) .. (self.selectedField == "confirm" and self.showCursor and "_" or "")
-			love.graphics.print(confirmText, centerX - boxWidth/2 + padding + 5, startY + fieldSpacing * 3 + 30)
-		end
-	end
-
-	-- Draw login button
 	if self.loginButtonHovered then
 		love.graphics.setColor(0.25, 0.55, 0.25, 1)
 	else
@@ -405,31 +335,14 @@ function LoginScreen:draw()
 	end
 	love.graphics.rectangle('fill', centerX - buttonWidth/2, buttonY, buttonWidth, buttonHeight, 4, 4)
 
-	-- Button highlight effect
-	if self.loginButtonHovered then
-		love.graphics.setColor(0.3, 0.6, 0.3, 0.2)
-		love.graphics.rectangle('fill', centerX - buttonWidth/2, buttonY, buttonWidth, buttonHeight, 4, 4)
-	end
-
+	-- Button text
 	love.graphics.setColor(1, 1, 1, 1)
-	local buttonText = "Login"
-	if self.isCreateMode then
-		buttonText = "Create"
-	elseif self.isResetMode then
-		buttonText = "Reset"
-	end
+	local buttonText = self.isCreateMode and "Create" or "Login"
+	love.graphics.print(buttonText, 
+		centerX - self.font:getWidth(buttonText)/2, 
+		buttonY + buttonHeight/2 - self.font:getHeight()/2)
 
-	if buttonText then
-		love.graphics.print(buttonText, 
-			centerX - self.font:getWidth(buttonText)/2, 
-			buttonY + buttonHeight/2 - self.font:getHeight()/2)
-	end
-
-
-
-
-
-	-- Draw error message with fade effect
+	-- Draw error message
 	if self.errorMessage and self.errorMessage ~= "" then
 		love.graphics.setColor(1, 0.3, 0.3, 0.9)
 		local errorX = centerX - boxWidth/2 + padding
@@ -439,11 +352,29 @@ function LoginScreen:draw()
 		end
 	end
 
+	-- Draw saved credentials box if user exists and not in create mode
+	local savedCreds = self.SaveSystem:load("user_credentials")
+	if savedCreds and not self.isCreateMode then
+		local avatarSize = 80
+		local avatarY = centerY + boxHeight/2 + 60
+		
+		-- Draw avatar
+		self:drawAvatar(centerX, avatarY, avatarSize)
+		
+		-- Draw saved username with subtle glow
+		love.graphics.setColor(1, 1, 1, 1)
+		local savedUsername = savedCreds.username
+		love.graphics.print(savedUsername, 
+			centerX - self.font:getWidth(savedUsername)/2,
+			avatarY + avatarSize/2 + 10)
+	end
+
 	love.graphics.setColor(1, 1, 1, 1)
 	if prevFont then
 		love.graphics.setFont(prevFont)
 	end
 end
+
 
 function LoginScreen:mousepressed(x, y, button)
 	if not self.active or button ~= 1 then return end
@@ -455,6 +386,23 @@ function LoginScreen:mousepressed(x, y, button)
 	local padding = 25
 	local fieldSpacing = 70
 	local startY = centerY - 60
+
+	-- Check avatar click
+	local savedCreds = self.SaveSystem:load("user_credentials")
+	if savedCreds and not self.isCreateMode then
+		local avatarSize = 80
+		local avatarY = centerY + boxHeight/2 + 60
+		
+		-- Check if click is within avatar circle
+		local dx = x - centerX
+		local dy = y - avatarY
+		if (dx * dx + dy * dy) <= (avatarSize/2) * (avatarSize/2) then
+			self.username = savedCreds.username
+			self.password = savedCreds.password
+			self:tryLogin()
+			return
+		end
+	end
 
 	-- Check username field click
 	if x >= centerX - boxWidth/2 + padding and x <= centerX + boxWidth/2 - padding and
