@@ -1,4 +1,5 @@
 local BootSequence = {
+	bootSound = nil,
 	messages = {
 		"[  OK  ] Reached target Local File Systems",
 		"[  OK  ] Started udev Kernel Device Manager",
@@ -45,6 +46,7 @@ function BootSequence:new(onComplete)
 	local instance = setmetatable({}, { __index = BootSequence })
 	instance.terminal_font = love.graphics.newFont("fonts/FiraCode.ttf", 16)
 	instance.onComplete = onComplete
+	instance.bootSound = love.audio.newSource("sounds/bootupsequance.mp3", "stream")
 	return instance
 end
 
@@ -55,6 +57,9 @@ function BootSequence:start()
 	self.timer = 0
 	self.progress = 0
 	self.fade_alpha = 0
+	if self.bootSound then
+		self.bootSound:play()
+	end
 end
 
 function BootSequence:update(dt)
@@ -67,6 +72,9 @@ function BootSequence:update(dt)
 		self.fade_alpha = math.min(1, self.fade_alpha + dt)
 		if self.fade_alpha >= 1 and self.onComplete then
 			self.active = false
+			if self.bootSound then
+				self.bootSound:stop()
+			end
 			self.onComplete()
 		end
 	else
