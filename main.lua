@@ -270,6 +270,8 @@ function love.mousepressed(x, y, button)
             end
             return
         end
+    elseif gameState == "boot" then
+        bootSequence:mousepressed(virtualX, virtualY, button)
     elseif gameState == "login" then
         loginScreen:mousepressed(virtualX, virtualY, button)
     elseif gameState == "game" then
@@ -299,6 +301,8 @@ function love.mousemoved(x, y, dx, dy)
 
     if gameState == "menu" then
         mainMenu:mousemoved(virtualX, virtualY)
+    elseif gameState == "boot" then
+        bootSequence:mousemoved(virtualX, virtualY)
     elseif gameState == "login" then
         loginScreen:mousemoved(virtualX, virtualY)
     elseif gameState == "game" then

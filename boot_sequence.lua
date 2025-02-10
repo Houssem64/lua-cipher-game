@@ -1,5 +1,8 @@
 local BootSequence = {
 	bootSound = nil,
+	skipButtonHovered = false,
+	skipButtonWidth = 80,
+	skipButtonHeight = 30,
 	messages = {
 		"[  OK  ] Reached target Local File Systems",
 		"[  OK  ] Started udev Kernel Device Manager",
@@ -149,9 +152,60 @@ function BootSequence:draw()
 		love.graphics.rectangle('fill', 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 	end
 
+	-- Draw skip button
+	local skipX = love.graphics.getWidth() - self.skipButtonWidth - 20
+	local skipY = 20
+	
+	if self.skipButtonHovered then
+		love.graphics.setColor(0.3, 0.9, 0.3)
+	else
+		love.graphics.setColor(0.2, 0.8, 0.2)
+	end
+	
+	love.graphics.rectangle('fill', skipX, skipY, self.skipButtonWidth, self.skipButtonHeight, 4, 4)
+	love.graphics.setColor(0, 0, 0)
+	local skipText = "Skip"
+	love.graphics.print(skipText, 
+		skipX + self.skipButtonWidth/2 - self.terminal_font:getWidth(skipText)/2,
+		skipY + self.skipButtonHeight/2 - self.terminal_font:getHeight()/2)
+
 	-- Restore graphics state
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.setFont(prevFont)
+end
+
+function BootSequence:mousepressed(x, y, button)
+	if not self.active or button ~= 1 then return end
+	
+	local skipX = love.graphics.getWidth() - self.skipButtonWidth - 20
+	local skipY = 20
+	
+	if x >= skipX and x <= skipX + self.skipButtonWidth and
+	   y >= skipY and y <= skipY + self.skipButtonHeight then
+		-- Stop boot sound
+		if self.bootSound then
+			self.bootSound:stop()
+		end
+		
+		-- Set boot sequence as completed
+		self.completed = true
+		self.active = false
+		
+		-- Call onComplete callback if it exists
+		if self.onComplete then
+			self.onComplete()
+		end
+	end
+end
+
+function BootSequence:mousemoved(x, y)
+	if not self.active then return end
+	
+	local skipX = love.graphics.getWidth() - self.skipButtonWidth - 20
+	local skipY = 20
+	
+	self.skipButtonHovered = x >= skipX and x <= skipX + self.skipButtonWidth and
+							y >= skipY and y <= skipY + self.skipButtonHeight
 end
 
 return BootSequence
