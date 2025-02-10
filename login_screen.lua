@@ -2,14 +2,17 @@ local LoginScreen = {
 	startupSound = nil,
 	username = "",
 	password = "",
-	selectedField = "username", -- "username" or "password"
+	selectedField = "username",
 	errorMessage = "",
 	active = false,
 	font = nil,
 	cursorBlink = 0,
 	showCursor = true,
-	onLoginSuccess = nil, -- Callback for successful login
-	loginButtonHovered = false
+	onLoginSuccess = nil,
+	loginButtonHovered = false,
+	isCreateMode = false,
+	confirmPassword = "",
+	SaveSystem = require("modules/save_system")
 }
 
 function LoginScreen:new(onLoginSuccess)
@@ -20,22 +23,46 @@ function LoginScreen:new(onLoginSuccess)
 	return instance
 end
 
--- Add login validation function
 function LoginScreen:tryLogin()
-	-- Simple validation for demo (you can add more complex validation)
-	if self.username == "" then
-		self.errorMessage = "Username cannot be empty"
-		return
-	end
-	if self.password == "" then
-		self.errorMessage = "Password cannot be empty"
-		return
-	end
-	
-	-- For demo purposes, accept any non-empty username/password
-	self.active = false
-	if self.onLoginSuccess then
-		self.onLoginSuccess(self.username)
+	if self.isCreateMode then
+		if self.username == "" or self.password == "" then
+			self.errorMessage = "Username and password cannot be empty"
+			return
+		end
+		if self.password ~= self.confirmPassword then
+			self.errorMessage = "Passwords do not match"
+			return
+		end
+		
+		-- Save the credentials
+		local credentials = {
+			username = self.username,
+			password = self.password
+		}
+		if self.SaveSystem:save(credentials, "user_credentials") then
+			self.active = false
+			if self.onLoginSuccess then
+				self.onLoginSuccess(self.username)
+			end
+		else
+			self.errorMessage = "Failed to save credentials"
+		end
+	else
+		-- Load saved credentials
+		local savedCreds = self.SaveSystem:load("user_credentials")
+		if not savedCreds then
+			self.errorMessage = "Invalid credentials"
+			return
+		end
+		
+		if self.username == savedCreds.username and self.password == savedCreds.password then
+			self.active = false
+			if self.onLoginSuccess then
+				self.onLoginSuccess(self.username)
+			end
+		else
+			self.errorMessage = "Invalid credentials"
+		end
 	end
 end
 
@@ -43,11 +70,18 @@ function LoginScreen:start()
 	self.active = true
 	self.username = ""
 	self.password = ""
+	self.confirmPassword = ""
 	self.errorMessage = ""
+	
+	-- Check if user exists
+	local savedCreds = self.SaveSystem:load("user_credentials")
+	self.isCreateMode = not savedCreds
+	
 	if self.startupSound then
 		self.startupSound:play()
 	end
 end
+
 
 function LoginScreen:update(dt)
 	if not self.active then return end
@@ -64,18 +98,40 @@ function LoginScreen:keypressed(key)
 	if not self.active then return end
 
 	if key == "tab" then
-		self.selectedField = self.selectedField == "username" and "password" or "username"
-	elseif key == "return" then
-		if self.selectedField == "username" then
-			self.selectedField = "password"
+		if self.isCreateMode then
+			if self.selectedField == "username" then
+				self.selectedField = "password"
+			elseif self.selectedField == "password" then
+				self.selectedField = "confirm"
+			else
+				self.selectedField = "username"
+			end
 		else
-			self:tryLogin()
+			self.selectedField = self.selectedField == "username" and "password" or "username"
+		end
+	elseif key == "return" then
+		if self.isCreateMode then
+			if self.selectedField == "username" then
+				self.selectedField = "password"
+			elseif self.selectedField == "password" then
+				self.selectedField = "confirm"
+			else
+				self:tryLogin()
+			end
+		else
+			if self.selectedField == "username" then
+				self.selectedField = "password"
+			else
+				self:tryLogin()
+			end
 		end
 	elseif key == "backspace" then
 		if self.selectedField == "username" then
 			self.username = self.username:sub(1, -2)
-		else
+		elseif self.selectedField == "password" then
 			self.password = self.password:sub(1, -2)
+		elseif self.selectedField == "confirm" then
+			self.confirmPassword = self.confirmPassword:sub(1, -2)
 		end
 	end
 end
@@ -85,15 +141,16 @@ function LoginScreen:textinput(text)
 	
 	if self.selectedField == "username" then
 		self.username = self.username .. text
-	else
+	elseif self.selectedField == "password" then
 		self.password = self.password .. text
+	elseif self.selectedField == "confirm" then
+		self.confirmPassword = self.confirmPassword .. text
 	end
 end
 
 function LoginScreen:draw()
 	if not self.active then return end
 
-	-- Save current graphics state
 	local prevFont = love.graphics.getFont()
 	love.graphics.setFont(self.font)
 
@@ -101,16 +158,20 @@ function LoginScreen:draw()
 	love.graphics.setColor(0.1, 0.1, 0.1, 1)
 	love.graphics.rectangle('fill', 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
 
-	-- Draw login form
 	local centerX = love.graphics.getWidth() / 2
 	local centerY = love.graphics.getHeight() / 2
 	local boxWidth = 300
-	local boxHeight = 200
+	local boxHeight = self.isCreateMode and 250 or 200
 	local padding = 20
 
 	-- Draw login box background
 	love.graphics.setColor(0.2, 0.2, 0.2, 1)
 	love.graphics.rectangle('fill', centerX - boxWidth/2, centerY - boxHeight/2, boxWidth, boxHeight)
+
+	-- Draw title
+	love.graphics.setColor(0.8, 0.8, 0.8, 1)
+	local title = self.isCreateMode and "Create Account" or "Login"
+	love.graphics.print(title, centerX - self.font:getWidth(title)/2, centerY - boxHeight/2 + padding)
 
 	-- Draw username field
 	love.graphics.setColor(0.8, 0.8, 0.8, 1)
@@ -130,7 +191,18 @@ function LoginScreen:draw()
 	local passwordDisplay = string.rep("*", #self.password) .. (self.selectedField == "password" and self.showCursor and "_" or "")
 	love.graphics.print(passwordDisplay, centerX - boxWidth/2 + padding + 5, centerY + 40)
 
-	-- Draw login button
+	-- Draw confirm password field if in create mode
+	if self.isCreateMode then
+		love.graphics.setColor(0.8, 0.8, 0.8, 1)
+		love.graphics.print("Confirm:", centerX - boxWidth/2 + padding, centerY + 70)
+		love.graphics.setColor(0.15, 0.15, 0.15, 1)
+		love.graphics.rectangle('fill', centerX - boxWidth/2 + padding, centerY + 95, boxWidth - padding*2, 30)
+		love.graphics.setColor(1, 1, 1, 1)
+		local confirmDisplay = string.rep("*", #self.confirmPassword) .. (self.selectedField == "confirm" and self.showCursor and "_" or "")
+		love.graphics.print(confirmDisplay, centerX - boxWidth/2 + padding + 5, centerY + 100)
+	end
+
+	-- Draw button
 	local buttonY = centerY + boxHeight/2 - 35
 	if self.loginButtonHovered then
 		love.graphics.setColor(0.3, 0.6, 0.3, 1)
@@ -139,9 +211,9 @@ function LoginScreen:draw()
 	end
 	love.graphics.rectangle('fill', centerX - 50, buttonY, 100, 30)
 	love.graphics.setColor(1, 1, 1, 1)
-	local loginText = "Login"
-	love.graphics.print(loginText, 
-		centerX - self.font:getWidth(loginText)/2, 
+	local buttonText = self.isCreateMode and "Create" or "Login"
+	love.graphics.print(buttonText, 
+		centerX - self.font:getWidth(buttonText)/2, 
 		buttonY + 15 - self.font:getHeight()/2)
 
 	-- Draw error message if any
@@ -150,7 +222,6 @@ function LoginScreen:draw()
 		love.graphics.print(self.errorMessage, centerX - boxWidth/2 + padding, centerY + boxHeight/2 + 10)
 	end
 
-	-- Restore graphics state
 	love.graphics.setColor(1, 1, 1, 1)
 	love.graphics.setFont(prevFont)
 end
