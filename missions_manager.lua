@@ -124,9 +124,16 @@ function MissionsManager:updateProgress(id, subtaskIndex, complete)
         -- Update progress
         mission.progress = mission.completedSubtasks / #mission.subtasks
         
-        -- Check if all subtasks are completed
-        if mission.completedSubtasks == #mission.subtasks then
+        -- Check if all subtasks are completed and mission wasn't already completed
+        if mission.completedSubtasks == #mission.subtasks and not mission.completed then
             mission.completed = true
+            -- Add ELO reward
+            if mission.reward and mission.reward.elo then
+                self:addELO(mission.reward.elo)
+            else
+                -- Default ELO reward if none specified
+                self:addELO(25)  -- Default ELO gain per mission
+            end
         end
         
         -- Update missions display
