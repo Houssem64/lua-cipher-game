@@ -27,7 +27,7 @@ function Terminal:new()
         state = States.NORMAL,
         passwordAttempts = 0,
         maxPasswordAttempts = 3,
-        sudoPassword = "kali",
+        sudoPassword = "admin",
         scrollPosition = 0,
         maxLines = 20,
         currentCommand = nil,
@@ -57,14 +57,24 @@ function Terminal:getCurrentPrompt()
     elseif self.state == States.FTP_PASSWORD then
         return "Password: "
     elseif self.state == States.PASSWORD then
-        return "[sudo] password for kali: "
+        return "[sudo] password for love: "
     else
-        local dir = FileSystem.current_path:match("[^/]+$") or "~"
         local savedCreds = self.SaveSystem:load("user_credentials")
-        local username = savedCreds and savedCreds.username or "guest"
-        return username .. "@love-Desktop: " .. (dir == username and "~" or dir) .. "$ "
+        local username = savedCreds and savedCreds.username or "love"
+        
+        -- Get the current directory name from the full path
+        local displayPath = FileSystem.current_path
+        if displayPath == "/home/" .. username then
+            displayPath = "~"
+        elseif displayPath:find("^/home/" .. username .. "/") then
+            displayPath = "~" .. displayPath:sub(#("/home/" .. username) + 1)
+        end
+        
+        -- Format with proper spacing and no colon
+        return username .. "@love-Desktop " .. displayPath .. " $ "
     end
 end
+
 function Terminal:showNeofetch()
     local ascii_art = {
         "       _,met$$$$$gg.                    ",
@@ -317,12 +327,35 @@ function Terminal:handleCommand(command)
     elseif parts[1] == "pwd" then
         table.insert(self.history, FileSystem.current_path)
     elseif parts[1] == "ls" then
-        local files = FileSystem:listFiles(FileSystem.current_path)
-        if #files > 0 then
-            table.insert(self.history, table.concat(files, "  "))
+        local target_path = parts[2] and (FileSystem.current_path .. "/" .. parts[2]) or FileSystem.current_path
+        local files = FileSystem:listFiles(target_path)
+        
+        if files then
+            -- Filter out . and .. entries
+            local filtered_files = {}
+            for _, name in ipairs(files) do
+                if name ~= "." and name ~= ".." then
+                    table.insert(filtered_files, name)
+                end
+            end
+            
+            table.sort(filtered_files)
+            -- Format output with proper spacing
+            local output = ""
+            for _, name in ipairs(filtered_files) do
+                output = output .. string.format("%-15s", name)
+            end
+            if output ~= "" then
+                table.insert(self.history, output)
+            else
+                table.insert(self.history, "")  -- Empty directory
+            end
         else
-            table.insert(self.history, "No files found")
+            table.insert(self.history, "")  -- Directory doesn't exist or error
         end
+
+
+
     elseif parts[1] == "cd" then
         if parts[2] then
             local newPath = FileSystem:changePath(parts[2])
@@ -332,7 +365,7 @@ function Terminal:handleCommand(command)
                 table.insert(self.history, "cd: " .. parts[2] .. ": No such file or directory")
             end
         else
-            FileSystem.current_path = "/home/kali"
+            FileSystem.current_path = "/home/love"
         end
     elseif parts[1] == "mkdir" then
         if parts[2] then

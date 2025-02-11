@@ -50,14 +50,9 @@ function love.load()
         loginScreen:start()
         gameState = "login"
     end)
-
-    FileSystem:loadState() 
---[[     effect = moonshine(moonshine.effects.filmgrain)
-    .chain(moonshine.effects.vignette)
-effect.filmgrain.size = 2
- ]]
     
     love.graphics.setDefaultFilter("nearest", "nearest", 1)
+
 
 
 
@@ -222,6 +217,12 @@ function love.keypressed(key)
         chat:keypressed(key)
         musicApp:keypressed(key)
         reelsApp:keypressed(key)
+
+        -- Add F6 key handling to clear filesystem
+        if key == "f6" then
+            FileSystem:clearState()
+            print("Filesystem state cleared")
+        end
 
         if key == "c" then
             -- Get the active mission window from missions manager
