@@ -1,6 +1,38 @@
+local SaveSystem = require("modules/save_system")
+
 local MessagingApp = {}
 MessagingApp.__index = MessagingApp
 
+local AI_RESPONSES = {
+	["hello"] = {"Hi there!", "Hello!", "Hey, how are you?"},
+	["how are you"] = {"I'm doing great, thanks!", "Pretty good, how about you?", "All good here!"},
+	["bye"] = {"Goodbye!", "See you later!", "Take care!"},
+	["thanks"] = {"You're welcome!", "No problem!", "Anytime!"},
+	["help"] = {"What do you need help with?", "I'm here to help!", "How can I assist you?"}
+}
+
+local DEFAULT_RESPONSES = {
+	"That's interesting!", 
+	"Tell me more about that.",
+	"I see what you mean.",
+	"Interesting perspective!",
+	"Thanks for sharing that."
+}
+
+function MessagingApp:getAIResponse(message)
+	-- Convert message to lowercase for matching
+	local lowerMessage = message:lower()
+	
+	-- Check for keyword matches
+	for keyword, responses in pairs(AI_RESPONSES) do
+		if lowerMessage:find(keyword) then
+			return responses[love.math.random(1, #responses)]
+		end
+	end
+	
+	-- Return random default response if no keyword match
+	return DEFAULT_RESPONSES[love.math.random(1, #DEFAULT_RESPONSES)]
+end
 
 
 
@@ -90,9 +122,11 @@ end
 function MessagingApp:new()
 	local obj = {
 		users = {
-			{id = 1, username = "user1", status = "online"},
-			{id = 2, username = "user2", status = "offline"},
-			{id = 3, username = "user3", status = "online"}
+			{id = 1, username = "John Smith", status = "online", picture = "album1.jpg"},
+			{id = 2, username = "Emma Watson", status = "offline", picture = "album2.jpg"},
+			{id = 3, username = "Michael Chen", status = "online", picture = "album3.jpg"},
+			{id = 4, username = "Sarah Johnson", status = "online", picture = "album1.jpg"},
+			{id = 5, username = "David Brown", status = "offline", picture = "album2.jpg"}
 		},
 		friends = {},
 		messages = {},
@@ -102,34 +136,79 @@ function MessagingApp:new()
 		messageInput = "",
 		width = 0,
 		height = 0,
-		-- Add hover and animation states
 		hoveredUser = nil,
 		hoveredButton = nil,
 		messageAnimation = 0,
 		searchBarHovered = false,
 		messageInputActive = false,
 		sendButtonHovered = false,
-		-- Add cursor blink properties
 		cursorBlink = true,
 		blinkTimer = 0,
 		messageInputHovered = false,
-		-- Add font
-		font = love.graphics.newFont("fonts/FiraCode.ttf", 16)
+		font = love.graphics.newFont("fonts/FiraCode.ttf", 16),
+		profileImages = {} -- Will store loaded profile images
 	}
+	
+	-- Load saved data
+	local savedData = SaveSystem:load("messaging_data")
+	if savedData then
+		if savedData.messages then obj.messages = savedData.messages end
+		if savedData.friends then
+			-- Reconstruct friend objects from saved IDs
+			for _, id in ipairs(savedData.friends) do
+				for _, user in ipairs(obj.users) do
+					if user.id == id then
+						table.insert(obj.friends, user)
+						break
+					end
+				end
+			end
+		end
+	end
+	
+	-- Load profile images
+	for _, user in ipairs(obj.users) do
+		local success, image = pcall(love.graphics.newImage, user.picture)
+		if success then
+			obj.profileImages[user.id] = image
+		end
+	end
+	
 	setmetatable(obj, MessagingApp)
 	return obj
 end
 
 
 
+function MessagingApp:saveData()
+	local saveData = {
+		messages = self.messages,
+		friends = {}
+	}
+	
+	-- Save friend IDs
+	for _, friend in ipairs(self.friends) do
+		table.insert(saveData.friends, friend.id)
+	end
+	
+	SaveSystem:save(saveData, "messaging_data")
+end
+
 function MessagingApp:addFriend(userId)
+	local success = false
 	for _, user in ipairs(self.users) do
 		if user.id == userId and not self:isFriend(userId) then
 			table.insert(self.friends, user)
-			return true
+			success = true
+			break
 		end
 	end
-	return false
+	
+	if success then
+		self:saveData()
+	end
+	
+	return success
 end
 
 function MessagingApp:isFriend(userId)
@@ -144,12 +223,28 @@ end
 function MessagingApp:sendMessage(toUserId, content)
 	local message = {
 		id = #self.messages + 1,
-		fromId = 1, -- Current user ID
+		fromId = 1,
 		toId = toUserId,
 		content = content,
 		timestamp = os.time()
 	}
 	table.insert(self.messages, message)
+	
+	-- Save messages
+	self:saveData()
+	
+	-- Generate AI response after a short delay
+	love.timer.sleep(0.5)
+	local response = self:getAIResponse(content)
+	local aiMessage = {
+		id = #self.messages + 1,
+		fromId = toUserId,
+		toId = 1,
+		content = response,
+		timestamp = os.time()
+	}
+	table.insert(self.messages, aiMessage)
+	self:saveData()
 end
 
 function MessagingApp:getMessages(userId)
@@ -249,11 +344,18 @@ function MessagingApp:drawUserItem(user, x, y, width)
 	end
 	self:drawRoundedRect(x + 10, y, width/3 - 20, 60, 8)
 	
-	-- Draw user avatar
-	love.graphics.setColor(0.3, 0.6, 0.9)
-	love.graphics.circle("fill", x + 40, y + 30, 20)
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(user.username:sub(1, 1):upper(), x + 33, y + 20)
+	-- Draw profile picture
+    love.graphics.setColor(1, 1, 1)
+    local profileImage = self.profileImages[user.id]
+    if profileImage then
+        love.graphics.draw(profileImage, x + 20, y + 10, 0, 40/profileImage:getWidth(), 40/profileImage:getHeight())
+    else
+        -- Fallback to colored circle with initials
+        love.graphics.setColor(0.3, 0.6, 0.9)
+        love.graphics.circle("fill", x + 40, y + 30, 20)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(user.username:sub(1, 1):upper(), x + 33, y + 20)
+    end
 	
 	-- Draw username and status
 	love.graphics.setColor(1, 1, 1)
@@ -277,38 +379,49 @@ function MessagingApp:drawUserItem(user, x, y, width)
 end
 
 function MessagingApp:drawChatArea(x, y, width, height)
-	-- Draw chat header with improved styling
+	-- Draw chat header
 	love.graphics.setColor(0.15, 0.18, 0.21)
 	love.graphics.rectangle("fill", x + width/3, y, 2*width/3, 60)
 	
-	-- Draw user avatar in header
-	love.graphics.setColor(0.3, 0.6, 0.9)
-	love.graphics.circle("fill", x + width/3 + 40, y + 30, 20)
+	-- Draw header profile picture
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(self.selectedUser.username:sub(1, 1):upper(), x + width/3 + 33, y + 20)
+	local headerImage = self.profileImages[self.selectedUser.id]
+	if headerImage then
+		love.graphics.draw(headerImage, x + width/3 + 10, y + 10, 0, 40/headerImage:getWidth(), 40/headerImage:getHeight())
+	end
 	
-	-- Draw username and status in header
+	-- Draw username and status
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(self.selectedUser.username, x + width/3 + 70, y + 15)
+	love.graphics.print(self.selectedUser.username, x + width/3 + 60, y + 15)
 	love.graphics.setColor(self.selectedUser.status == "online" and {0.2, 0.8, 0.2} or {0.8, 0.2, 0.2})
-	love.graphics.circle("fill", x + width/3 + 70, y + 45, 4)
+	love.graphics.circle("fill", x + width/3 + 60, y + 45, 4)
 	love.graphics.setColor(0.7, 0.7, 0.7)
-	love.graphics.print(self.selectedUser.status, x + width/3 + 80, y + 35)
+	love.graphics.print(self.selectedUser.status, x + width/3 + 70, y + 35)
 	
 	-- Draw messages area
 	love.graphics.setColor(0.12, 0.15, 0.18)
 	love.graphics.rectangle("fill", x + width/3, y + 60, 2*width/3, height - 120)
 	
-	-- Draw messages with timestamps
+	-- Draw messages
 	local messages = self:getMessages(self.selectedUser.id)
 	local messageY = y + height - 140
 	for i = #messages, 1, -1 do
 		local msg = messages[i]
+		local isCurrentUser = msg.fromId == 1
+		
 		-- Draw message bubble
-		love.graphics.setColor(msg.fromId == 1 and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
+		love.graphics.setColor(isCurrentUser and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
 		local bubbleWidth = math.min(self.font:getWidth(msg.content) + 40, width/2)
-		local bubbleX = msg.fromId == 1 and (x + width - bubbleWidth - 20) or (x + width/3 + 20)
+		local bubbleX = isCurrentUser and (x + width - bubbleWidth - 60) or (x + width/3 + 60)
 		self:drawRoundedRect(bubbleX, messageY, bubbleWidth, 40, 8)
+		
+		-- Draw profile picture
+		love.graphics.setColor(1, 1, 1)
+		local profileImage = isCurrentUser and self.profileImages[1] or self.profileImages[msg.fromId]
+		if profileImage then
+			local imgX = isCurrentUser and (x + width - 50) or (x + width/3 + 10)
+			love.graphics.draw(profileImage, imgX, messageY + 5, 0, 30/profileImage:getWidth(), 30/profileImage:getHeight())
+		end
 		
 		-- Draw message text
 		love.graphics.setColor(1, 1, 1)
@@ -319,20 +432,19 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		local timeStr = os.date("%H:%M", msg.timestamp)
 		local timeWidth = self.font:getWidth(timeStr)
 		love.graphics.print(timeStr, 
-			msg.fromId == 1 and (bubbleX - timeWidth - 10) or (bubbleX + bubbleWidth + 10), 
+			isCurrentUser and (bubbleX - timeWidth - 10) or (bubbleX + bubbleWidth + 10), 
 			messageY + 12)
 		
 		messageY = messageY - 50
 		if messageY < y + 80 then break end
 	end
 	
-	-- Draw message input area with improved styling
+	-- Draw input area
 	love.graphics.setColor(0.15, 0.18, 0.21)
 	love.graphics.rectangle("fill", x + width/3, y + height - 60, 2*width/3, 60)
 	
-	-- Draw input box with focus and hover effects
+	-- Draw input box
 	if self.messageInputActive then
-		-- Draw focus ring
 		love.graphics.setColor(0.2, 0.6, 1, 0.3)
 		self:drawRoundedRect(x + width/3 + 18, y + height - 52, 2*width/3 - 96, 44, 10)
 		love.graphics.setColor(0.25, 0.28, 0.31)
@@ -343,7 +455,7 @@ function MessagingApp:drawChatArea(x, y, width, height)
 	end
 	self:drawRoundedRect(x + width/3 + 20, y + height - 50, 2*width/3 - 100, 40, 8)
 	
-	-- Draw input text with cursor
+	-- Draw input text
 	if self.messageInput == "" then
 		love.graphics.setColor(0.4, 0.4, 0.4)
 		love.graphics.print("Type a message...", x + width/3 + 40, y + height - 35)
@@ -356,10 +468,10 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		end
 	end
 	
-	-- Draw send button with hover effect
+	-- Draw send button
 	if self.messageInput ~= "" then
 		if self.sendButtonHovered then
-			love.graphics.setColor(0.3, 0.7, 1)  -- Brighter blue when hovered
+			love.graphics.setColor(0.3, 0.7, 1)
 		else
 			love.graphics.setColor(0.2, 0.6, 1)
 		end
@@ -368,7 +480,6 @@ function MessagingApp:drawChatArea(x, y, width, height)
 	end
 	self:drawRoundedRect(x + width - 80, y + height - 50, 60, 40, 8)
 	
-	-- Add subtle glow effect when hovered
 	if self.sendButtonHovered and self.messageInput ~= "" then
 		love.graphics.setColor(0.3, 0.7, 1, 0.2)
 		self:drawRoundedRect(x + width - 82, y + height - 52, 64, 44, 10)
