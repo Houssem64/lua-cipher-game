@@ -8,20 +8,23 @@ function MainMenu.new()
     self.isActive = true
     self.startClicked = false
     self.selectedOption = 1
-    self.options = {"Start Game", "Options", "Quit"}
+    self.options = {"INITIATE HACK", "TERMINATE"}
     
+
+
     -- Load video logo
     self.videoLogo = love.graphics.newVideo("logo.ogv")
     self.videoLogo:play()
     
-    -- Sway effect variables
-    self.swayTime = 0
-    self.swayAmplitude = 10  -- How far the text sways side-to-side
-    self.swaySpeed = 2       -- Speed of the sway animation
-    
-    -- Hover effect variables
-    self.hoveredOption = nil -- Track which option is hovered
-    self.hoverColor = {0.1960, 0.80395, 0.1960, 1}  -- Orange color for hovered option
+    -- Cyberpunk menu effects
+    self.hoveredOption = nil
+    self.selectedOption = 1
+    self.hoverColor = {0, 1, 0, 1}  -- Matrix green
+    self.normalColor = {0.2, 0.8, 0.2, 0.7}  -- Dimmed green
+    self.selectedColor = {0, 1, 0.5, 1}  -- Bright cyan
+    self.menuScale = 1.0
+    self.hoverScale = 1.1
+    self.glitchAmount = 0
     
     -- Load click sound
     self.clickSound = love.audio.newSource("menuselect.wav", "static")  -- Replace "click.wav" with your sound file
@@ -37,9 +40,8 @@ end
 function MainMenu:update(dt)
     if not self.isActive then return end
     
-    -- Update sway effect time
-    self.swayTime = self.swayTime + dt * self.swaySpeed
-    
+
+
     -- Update transition
     if self.transitioning then
         self.transitionAlpha = self.transitionAlpha + dt * self.transitionSpeed
@@ -59,12 +61,9 @@ function MainMenu:draw()
     love.graphics.setFont(font)
     if not self.isActive then return end
     
-    -- Draw a semi-transparent background
-    love.graphics.setColor(0, 0, 0, 0.7)
-    love.graphics.rectangle('fill', 0, 0, 1920, 1080)  -- Use virtual game resolution
-    
-    -- Reset color
+    -- Reset color for drawing elements
     love.graphics.setColor(1, 1, 1, 1)
+
     
     -- Draw video logo (centered on 1920x1080 virtual resolution)
     local videoWidth = self.videoLogo:getWidth()
@@ -75,28 +74,46 @@ function MainMenu:draw()
         1080 * 0.1, 
         0, scale, scale)
     
-    -- Draw menu options
+    -- Draw menu options with enhanced visuals
     for i, option in ipairs(self.options) do
-        -- Calculate sway offset
-        local swayOffset = math.sin(self.swayTime + i * 1.5) * self.swayAmplitude
-        
-        -- Check if the option is hovered
         local isHovered = (i == self.hoveredOption)
+        local isSelected = (i == self.selectedOption)
+        local optionWidth = font:getWidth(option)
+        local optionX = (1920 - optionWidth) / 2
+        local optionY = 1080 * 0.5 + (i-1) * 75
         
-        -- Set color based on hover
+        -- Set scale based on hover/selection
+        local scale = self.menuScale
         if isHovered then
-            love.graphics.setColor(self.hoverColor)  -- Use hover color
-        else
-            love.graphics.setColor(1, 1, 1, 1)  -- Default color
+            scale = self.hoverScale
         end
         
-        -- Draw the option text
+        -- Draw hover indicator with glitch effect
+        if isHovered then
+            love.graphics.setColor(self.hoverColor[1], self.hoverColor[2], self.hoverColor[3], 0.3)
+            local glitchOffset = math.random(-2, 2) * self.glitchAmount
+            love.graphics.rectangle('fill', 
+                optionX - 20 + glitchOffset, 
+                optionY, 
+                optionWidth + 40, 
+                font:getHeight())
+        end
+
+        
+        -- Set text color based on state
+        if isHovered then
+            love.graphics.setColor(self.hoverColor)
+        elseif isSelected then
+            love.graphics.setColor(self.selectedColor)
+        else
+            love.graphics.setColor(self.normalColor)
+        end
+        
+        -- Draw the option text with scaling
         love.graphics.push()
-        love.graphics.translate(swayOffset, 0)
-        local optionWidth = font:getWidth(option)
-        love.graphics.print(option, 
-            (1920 - optionWidth) / 2, 
-            1080 * 0.5 + (i-1) * 75)  -- Increased vertical spacing
+        love.graphics.translate(optionX + optionWidth/2, optionY + font:getHeight()/2)
+        love.graphics.scale(scale, scale)
+        love.graphics.print(option, -optionWidth/2, -font:getHeight()/2)
         love.graphics.pop()
     end
     
