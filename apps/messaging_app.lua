@@ -112,7 +112,9 @@ function MessagingApp:new()
 		-- Add cursor blink properties
 		cursorBlink = true,
 		blinkTimer = 0,
-		messageInputHovered = false
+		messageInputHovered = false,
+		-- Add font
+		font = love.graphics.newFont("fonts/FiraCode.ttf", 16)
 	}
 	setmetatable(obj, MessagingApp)
 	return obj
@@ -207,8 +209,8 @@ function MessagingApp:draw(x, y, width, height)
 	
 	-- Draw search text with cursor
 	love.graphics.setColor(0.7, 0.7, 0.7)
-	local font = love.graphics.newFont("fonts/FiraCode.ttf", 16)
-	love.graphics.setFont(font)
+	love.graphics.setFont(self.font)
+
 	if self.searchBarActive and self.cursorBlink then
 		love.graphics.print(self.searchQuery .. "|", x + 50, y + 20)
 	else
@@ -304,7 +306,7 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		local msg = messages[i]
 		-- Draw message bubble
 		love.graphics.setColor(msg.fromId == 1 and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
-		local bubbleWidth = math.min(font:getWidth(msg.content) + 40, width/2)
+		local bubbleWidth = math.min(self.font:getWidth(msg.content) + 40, width/2)
 		local bubbleX = msg.fromId == 1 and (x + width - bubbleWidth - 20) or (x + width/3 + 20)
 		self:drawRoundedRect(bubbleX, messageY, bubbleWidth, 40, 8)
 		
@@ -315,7 +317,7 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		-- Draw timestamp
 		love.graphics.setColor(0.6, 0.6, 0.6)
 		local timeStr = os.date("%H:%M", msg.timestamp)
-		local timeWidth = font:getWidth(timeStr)
+		local timeWidth = self.font:getWidth(timeStr)
 		love.graphics.print(timeStr, 
 			msg.fromId == 1 and (bubbleX - timeWidth - 10) or (bubbleX + bubbleWidth + 10), 
 			messageY + 12)
@@ -390,7 +392,7 @@ end
 
 function MessagingApp:mousepressed(x, y, button)
 	-- Handle search bar click
-	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 40 then
+	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50 then  -- Changed to match search bar height
 		self.searchBarActive = true
 		self.messageInputActive = false  -- Deactivate message input
 		return true
@@ -400,14 +402,14 @@ function MessagingApp:mousepressed(x, y, button)
 	if self.selectedUser then
 		local inputX = self.width/3 + 20
 		local inputY = self.height - 50
-		local inputWidth = 2*self.width/3 - 100
-		if x >= inputX and x <= inputX + inputWidth and
+		if x >= inputX and x <= inputX + (2*self.width/3 - 100) and
 		   y >= inputY and y <= inputY + 40 then
 			self.messageInputActive = true
 			self.searchBarActive = false  -- Deactivate search bar
 			return true
 		end
 	end
+
 	
 	-- Handle send button click
 	if self.selectedUser and self.messageInput ~= "" then
@@ -428,27 +430,27 @@ function MessagingApp:mousepressed(x, y, button)
 	end
 	
 	-- Handle user/friend selection
-	local listY = 50
+	local listY = 60  -- Changed from 50 to 60 to match draw coordinates
 	if self.searchQuery ~= "" then
 		local results = self:searchUsers(self.searchQuery)
 		for _, user in ipairs(results) do
-			if y >= listY and y <= listY + 40 then
-				if x >= self.width/3 - 60 and not self:isFriend(user.id) then
+			if y >= listY and y <= listY + 60 then  -- Changed from 40 to 60
+				if x >= self.width/3 - 80 and x <= self.width/3 - 20 and not self:isFriend(user.id) then
 					self:addFriend(user.id)
 				else
 					self.selectedUser = user
 				end
 				return true
 			end
-			listY = listY + 45
+			listY = listY + 70  -- Changed from 45 to 70 to match drawing spacing
 		end
 	else
 		for _, friend in ipairs(self.friends) do
-			if y >= listY and y <= listY + 40 then
+			if y >= listY and y <= listY + 60 then  -- Changed from 40 to 60
 				self.selectedUser = friend
 				return true
 			end
-			listY = listY + 45
+			listY = listY + 70  -- Changed from 45 to 70
 		end
 	end
 	
