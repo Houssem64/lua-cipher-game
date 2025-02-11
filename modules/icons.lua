@@ -18,6 +18,7 @@ function Icons:load()
         text_editor = self:createTextEditorIcon(),
         music = self:createMusicIcon(),
         browser = self:createBrowserIcon(),
+        messages = self:createMessagesIcon(),
         missions = self:createMissionsIcon()  -- Add missions icon
     }
 end
@@ -148,6 +149,41 @@ function Icons:createMusicIcon()
     love.graphics.setColor(0.7, 0.7, 0.7)
     love.graphics.rectangle("line", 4, 4, 56, 56)
 
+    love.graphics.setCanvas()
+    return canvas
+end
+
+function Icons:createMessagesIcon()
+    local canvas = love.graphics.newCanvas(64, 64)
+    love.graphics.setCanvas(canvas)
+    love.graphics.clear()
+    
+    -- Draw message bubble
+    love.graphics.setColor(0.2, 0.6, 1)  -- Blue color for messages
+    love.graphics.polygon("fill", 
+        10, 10,  -- Top left
+        54, 10,  -- Top right
+        54, 44,  -- Bottom right
+        40, 44,  -- Bottom right corner
+        32, 54,  -- Point
+        24, 44,  -- Bottom left corner
+        10, 44   -- Bottom left
+    )
+    
+    -- Add highlight
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.polygon("fill",
+        10, 10,
+        54, 10,
+        54, 20
+    )
+    
+    -- Add dots for text
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.circle("fill", 22, 27, 3)
+    love.graphics.circle("fill", 32, 27, 3)
+    love.graphics.circle("fill", 42, 27, 3)
+    
     love.graphics.setCanvas()
     return canvas
 end

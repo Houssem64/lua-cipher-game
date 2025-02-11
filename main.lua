@@ -15,7 +15,7 @@ local MissionsManager = require("missions_manager")
 local StoryMissions = require("story_missions")
 local MainMenu = require("main_menu")
 local MusicApp = require("apps.music_app")
-
+local MessagingApp = require("apps.messaging_app")
 local ReelsApp = require("apps.reelsapp")
 local MissionsApp = require("apps.missions_app")
 local LoginScreen = require("login_screen")
@@ -28,6 +28,7 @@ local networkManager
 local mainMenu  -- Add this line to declare mainMenu globally
 local musicApp  -- Add this line to declare musicApp globally
 local webBrowser
+
 local bootSequence
 local gameState = "menu" -- Can be "menu", "boot", or "game"
 
@@ -150,6 +151,7 @@ missionsManager:updateProgress(3, 1, true) -- Complete first subtask
     reelsApp = ReelsApp.new()  -- Create a new instance of ReelsApp
     desktop = Desktop:new()
 
+
     -- Initialize window manager globally
     _G.windowManager = WindowManager:new()
     windowManager = _G.windowManager  -- Keep local reference
@@ -171,6 +173,7 @@ function love.update(dt)
         musicApp:update(dt)
         reelsApp:update(dt)
     end
+
 
 
 
@@ -201,6 +204,7 @@ function love.draw()
         musicApp:draw(0, 0, gameWidth, gameHeight)
         chat:draw()
         _G.missions:draw()
+
     end
 
 
@@ -217,6 +221,7 @@ function love.keypressed(key)
         chat:keypressed(key)
         musicApp:keypressed(key)
         reelsApp:keypressed(key)
+
 
         -- Add F6 key handling to clear filesystem
         if key == "f6" then
@@ -254,9 +259,8 @@ function love.textinput(text)
         windowManager:textinput(text)
         chat:textinput(text)
     end
-
-
 end
+
 
 function love.mousepressed(x, y, button)
     local virtualX = (x - offsetX) / scale
@@ -271,6 +275,7 @@ function love.mousepressed(x, y, button)
             end
             return
         end
+
     elseif gameState == "boot" then
         bootSequence:mousepressed(virtualX, virtualY, button)
     elseif gameState == "login" then
@@ -285,6 +290,7 @@ function love.mousepressed(x, y, button)
         _G.missions:mousepressed(virtualX, virtualY)
         musicApp:mousepressed(virtualX, virtualY, button)
         reelsApp:mousepressed(virtualX, virtualY, button)
+
     end
 end
 

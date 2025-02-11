@@ -144,7 +144,7 @@ function MainMenu:keypressed(key)
             -- Set startClicked flag when Start Game is selected
             self.startClicked = true
             self.transitioning = true
-        elseif self.selectedOption == 3 then
+        elseif self.selectedOption == 2 then
             love.event.quit()
         end
         self.clickSound:play()
@@ -172,7 +172,7 @@ function MainMenu:mousepressed(x, y)
                 -- Set startClicked flag when Start Game is clicked
                 self.startClicked = true
                 self.transitioning = true
-            elseif self.selectedOption == 3 then
+            elseif self.selectedOption == 2 then
                 love.event.quit()
             end
             self.clickSound:play()
