@@ -10,13 +10,52 @@ function MessagingApp:mousereleased(x, y, button)
 end
 
 function MessagingApp:mousemoved(x, y, dx, dy)
-	-- Handle hover effects if needed
+	-- Update hover states
+	self.searchBarHovered = x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50
+	
+	-- Update message input hover state
+	if self.selectedUser then
+		local inputX = self.width/3 + 20
+		local inputY = self.height - 50
+		local inputWidth = 2*self.width/3 - 100
+		self.messageInputHovered = x >= inputX and x <= inputX + inputWidth and
+								 y >= inputY and y <= inputY + 40
+	else
+		self.messageInputHovered = false
+	end
+
+	-- Update send button hover state
+	if self.selectedUser and self.messageInput ~= "" then
+		self.sendButtonHovered = x >= self.width - 80 and x <= self.width - 20 and
+							   y >= self.height - 50 and y <= self.height - 10
+	else
+		self.sendButtonHovered = false
+	end
+	
+	-- Update user hover states
+	self.hoveredUser = nil
+	local listY = 60
+	local users = self.searchQuery ~= "" and self:searchUsers(self.searchQuery) or self.friends
+	for _, user in ipairs(users) do
+		if y >= listY and y <= listY + 60 and x >= 10 and x <= self.width/3 - 10 then
+			self.hoveredUser = user
+			-- Check if hovering over add button
+			if not self:isFriend(user.id) and x >= self.width/3 - 80 and x <= self.width/3 - 20 then
+				self.hoveredButton = user.id
+			else
+				self.hoveredButton = nil
+			end
+			break
+		end
+		listY = listY + 70
+	end
 end
 
 function MessagingApp:textinput(text)
+	-- Only accept input when the respective field is active
 	if self.searchBarActive then
 		self.searchQuery = self.searchQuery .. text
-	elseif self.selectedUser then
+	elseif self.messageInputActive and self.selectedUser then
 		self.messageInput = self.messageInput .. text
 	end
 end
@@ -37,7 +76,15 @@ function MessagingApp:keypressed(key)
 end
 
 function MessagingApp:update(dt)
-	-- Add any animation or state updates here if needed
+	-- Animate new messages
+	self.messageAnimation = (self.messageAnimation + dt * 3) % (math.pi * 2)
+	
+	-- Update cursor blink
+	self.blinkTimer = self.blinkTimer + dt
+	if self.blinkTimer >= 0.5 then
+		self.cursorBlink = not self.cursorBlink
+		self.blinkTimer = 0
+	end
 end
 
 function MessagingApp:new()
@@ -54,7 +101,18 @@ function MessagingApp:new()
 		searchBarActive = false,
 		messageInput = "",
 		width = 0,
-		height = 0
+		height = 0,
+		-- Add hover and animation states
+		hoveredUser = nil,
+		hoveredButton = nil,
+		messageAnimation = 0,
+		searchBarHovered = false,
+		messageInputActive = false,
+		sendButtonHovered = false,
+		-- Add cursor blink properties
+		cursorBlink = true,
+		blinkTimer = 0,
+		messageInputHovered = false
 	}
 	setmetatable(obj, MessagingApp)
 	return obj
@@ -119,28 +177,56 @@ function MessagingApp:draw(x, y, width, height)
 	self.width = width
 	self.height = height
 
-	-- Draw background
-	love.graphics.setColor(0, 0, 0, 0.9)
+	-- Draw background with gradient effect
+	love.graphics.setColor(0.12, 0.15, 0.18, 0.95)
 	love.graphics.rectangle("fill", x, y, width, height)
 	
-	-- Draw search bar
-	love.graphics.setColor(0.2, 0.2, 0.2)
-	love.graphics.rectangle("fill", x + 10, y + 10, width/3 - 20, 30)
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(self.searchQuery == "" and "Search users..." or self.searchQuery, x + 15, y + 15)
+	-- Draw left panel background
+	love.graphics.setColor(0.15, 0.18, 0.21)
+	love.graphics.rectangle("fill", x, y, width/3, height)
+	
+	-- Draw search bar with focus and hover effects
+	if self.searchBarActive then
+		-- Draw focus ring
+		love.graphics.setColor(0.2, 0.6, 1, 0.3)
+		self:drawRoundedRect(x + 8, y + 8, width/3 - 16, 44, 10)
+		love.graphics.setColor(0.25, 0.28, 0.31)
+	elseif self.searchBarHovered then
+		love.graphics.setColor(0.22, 0.25, 0.28)
+	else
+		love.graphics.setColor(0.2, 0.23, 0.26)
+	end
+	self:drawRoundedRect(x + 10, y + 10, width/3 - 20, 40, 8)
+	
+	-- Draw search icon
+	love.graphics.setColor(0.5, 0.5, 0.5)
+	love.graphics.circle("fill", x + 30, y + 30, 8)
+	love.graphics.setColor(0.3, 0.33, 0.36)
+	love.graphics.circle("line", x + 30, y + 30, 8)
+	love.graphics.line(x + 36, y + 36, x + 42, y + 42)
+	
+	-- Draw search text with cursor
+	love.graphics.setColor(0.7, 0.7, 0.7)
+	local font = love.graphics.newFont("fonts/FiraCode.ttf", 16)
+	love.graphics.setFont(font)
+	if self.searchBarActive and self.cursorBlink then
+		love.graphics.print(self.searchQuery .. "|", x + 50, y + 20)
+	else
+		love.graphics.print(self.searchQuery == "" and "Search users..." or self.searchQuery, x + 50, y + 20)
+	end
 	
 	-- Draw users/friends list
-	local listY = y + 50
+	local listY = y + 60
 	if self.searchQuery ~= "" then
 		local results = self:searchUsers(self.searchQuery)
 		for _, user in ipairs(results) do
 			self:drawUserItem(user, x, listY, width)
-			listY = listY + 45
+			listY = listY + 70
 		end
 	else
 		for _, friend in ipairs(self.friends) do
 			self:drawUserItem(friend, x, listY, width)
-			listY = listY + 45
+			listY = listY + 70
 		end
 	end
 	
@@ -148,53 +234,155 @@ function MessagingApp:draw(x, y, width, height)
 	if self.selectedUser then
 		self:drawChatArea(x, y, width, height)
 	end
-
 end
 
 function MessagingApp:drawUserItem(user, x, y, width)
-	love.graphics.setColor(0.2, 0.2, 0.2)
-	love.graphics.rectangle("fill", x + 10, y, width/3 - 20, 40)
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(user.username, x + 15, y + 10)
-	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.print(user.status, x + width/3 - 80, y + 10)
+	-- Draw user item background with hover effect
+	if self.selectedUser == user then
+		love.graphics.setColor(0.2, 0.4, 0.6)
+	elseif self.hoveredUser == user then
+		love.graphics.setColor(0.2, 0.25, 0.3)
+	else
+		love.graphics.setColor(0.18, 0.21, 0.24)
+	end
+	self:drawRoundedRect(x + 10, y, width/3 - 20, 60, 8)
 	
+	-- Draw user avatar
+	love.graphics.setColor(0.3, 0.6, 0.9)
+	love.graphics.circle("fill", x + 40, y + 30, 20)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print(user.username:sub(1, 1):upper(), x + 33, y + 20)
+	
+	-- Draw username and status
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print(user.username, x + 70, y + 15)
+	love.graphics.setColor(user.status == "online" and {0.2, 0.8, 0.2} or {0.8, 0.2, 0.2})
+	love.graphics.circle("fill", x + 70, y + 45, 4)
+	love.graphics.setColor(0.7, 0.7, 0.7)
+	love.graphics.print(user.status, x + 80, y + 35)
+	
+	-- Draw add button if not friend
 	if not self:isFriend(user.id) then
-		love.graphics.setColor(0.2, 0.6, 1)
-		love.graphics.print("+ Add", x + width/3 - 60, y + 10)
+		if self.hoveredButton == user.id then
+			love.graphics.setColor(0.3, 0.7, 1)
+		else
+			love.graphics.setColor(0.2, 0.6, 1)
+		end
+		self:drawRoundedRect(x + width/3 - 80, y + 15, 60, 30, 6)
+		love.graphics.setColor(1, 1, 1)
+		love.graphics.print("+ Add", x + width/3 - 70, y + 22)
 	end
 end
 
 function MessagingApp:drawChatArea(x, y, width, height)
-	love.graphics.setColor(0.15, 0.15, 0.15)
-	love.graphics.rectangle("fill", x + width/3 + 10, y + 10, 2*width/3 - 20, height - 20)
+	-- Draw chat header with improved styling
+	love.graphics.setColor(0.15, 0.18, 0.21)
+	love.graphics.rectangle("fill", x + width/3, y, 2*width/3, 60)
 	
-	-- Draw messages
+	-- Draw user avatar in header
+	love.graphics.setColor(0.3, 0.6, 0.9)
+	love.graphics.circle("fill", x + width/3 + 40, y + 30, 20)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print(self.selectedUser.username:sub(1, 1):upper(), x + width/3 + 33, y + 20)
+	
+	-- Draw username and status in header
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print(self.selectedUser.username, x + width/3 + 70, y + 15)
+	love.graphics.setColor(self.selectedUser.status == "online" and {0.2, 0.8, 0.2} or {0.8, 0.2, 0.2})
+	love.graphics.circle("fill", x + width/3 + 70, y + 45, 4)
+	love.graphics.setColor(0.7, 0.7, 0.7)
+	love.graphics.print(self.selectedUser.status, x + width/3 + 80, y + 35)
+	
+	-- Draw messages area
+	love.graphics.setColor(0.12, 0.15, 0.18)
+	love.graphics.rectangle("fill", x + width/3, y + 60, 2*width/3, height - 120)
+	
+	-- Draw messages with timestamps
 	local messages = self:getMessages(self.selectedUser.id)
-	local messageY = y + height - 70
+	local messageY = y + height - 140
 	for i = #messages, 1, -1 do
 		local msg = messages[i]
-		love.graphics.setColor(msg.fromId == 1 and {0.2, 0.6, 1} or {0.3, 0.3, 0.3})
-		love.graphics.rectangle("fill",
-			msg.fromId == 1 and (x + width - 200) or (x + width/3 + 20),
-			messageY,
-			180,
-			30)
+		-- Draw message bubble
+		love.graphics.setColor(msg.fromId == 1 and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
+		local bubbleWidth = math.min(font:getWidth(msg.content) + 40, width/2)
+		local bubbleX = msg.fromId == 1 and (x + width - bubbleWidth - 20) or (x + width/3 + 20)
+		self:drawRoundedRect(bubbleX, messageY, bubbleWidth, 40, 8)
+		
+		-- Draw message text
 		love.graphics.setColor(1, 1, 1)
-		love.graphics.print(msg.content,
-			msg.fromId == 1 and (x + width - 190) or (x + width/3 + 30),
-			messageY + 5)
-		messageY = messageY - 35
-		if messageY < y + 50 then break end
+		love.graphics.printf(msg.content, bubbleX + 20, messageY + 10, bubbleWidth - 40, "left")
+		
+		-- Draw timestamp
+		love.graphics.setColor(0.6, 0.6, 0.6)
+		local timeStr = os.date("%H:%M", msg.timestamp)
+		local timeWidth = font:getWidth(timeStr)
+		love.graphics.print(timeStr, 
+			msg.fromId == 1 and (bubbleX - timeWidth - 10) or (bubbleX + bubbleWidth + 10), 
+			messageY + 12)
+		
+		messageY = messageY - 50
+		if messageY < y + 80 then break end
 	end
 	
-	-- Draw message input
-	love.graphics.setColor(0.2, 0.2, 0.2)
-	love.graphics.rectangle("fill", x + width/3 + 20, y + height - 40, 2*width/3 - 40, 30)
+	-- Draw message input area with improved styling
+	love.graphics.setColor(0.15, 0.18, 0.21)
+	love.graphics.rectangle("fill", x + width/3, y + height - 60, 2*width/3, 60)
+	
+	-- Draw input box with focus and hover effects
+	if self.messageInputActive then
+		-- Draw focus ring
+		love.graphics.setColor(0.2, 0.6, 1, 0.3)
+		self:drawRoundedRect(x + width/3 + 18, y + height - 52, 2*width/3 - 96, 44, 10)
+		love.graphics.setColor(0.25, 0.28, 0.31)
+	elseif self.messageInputHovered then
+		love.graphics.setColor(0.22, 0.25, 0.28)
+	else
+		love.graphics.setColor(0.2, 0.23, 0.26)
+	end
+	self:drawRoundedRect(x + width/3 + 20, y + height - 50, 2*width/3 - 100, 40, 8)
+	
+	-- Draw input text with cursor
+	if self.messageInput == "" then
+		love.graphics.setColor(0.4, 0.4, 0.4)
+		love.graphics.print("Type a message...", x + width/3 + 40, y + height - 35)
+	else
+		love.graphics.setColor(0.9, 0.9, 0.9)
+		if self.messageInputActive and self.cursorBlink then
+			love.graphics.print(self.messageInput .. "|", x + width/3 + 40, y + height - 35)
+		else
+			love.graphics.print(self.messageInput, x + width/3 + 40, y + height - 35)
+		end
+	end
+	
+	-- Draw send button with hover effect
+	if self.messageInput ~= "" then
+		if self.sendButtonHovered then
+			love.graphics.setColor(0.3, 0.7, 1)  -- Brighter blue when hovered
+		else
+			love.graphics.setColor(0.2, 0.6, 1)
+		end
+	else
+		love.graphics.setColor(0.3, 0.33, 0.36)
+	end
+	self:drawRoundedRect(x + width - 80, y + height - 50, 60, 40, 8)
+	
+	-- Add subtle glow effect when hovered
+	if self.sendButtonHovered and self.messageInput ~= "" then
+		love.graphics.setColor(0.3, 0.7, 1, 0.2)
+		self:drawRoundedRect(x + width - 82, y + height - 52, 64, 44, 10)
+	end
+	
 	love.graphics.setColor(1, 1, 1)
-	love.graphics.print(self.messageInput == "" and "Type a message..." or self.messageInput,
-		x + width/3 + 25, y + height - 35)
+	love.graphics.print("Send", x + width - 65, y + height - 35)
+end
 
+function MessagingApp:drawRoundedRect(x, y, width, height, radius)
+	love.graphics.rectangle("fill", x + radius, y, width - 2*radius, height)
+	love.graphics.rectangle("fill", x, y + radius, width, height - 2*radius)
+	love.graphics.circle("fill", x + radius, y + radius, radius)
+	love.graphics.circle("fill", x + width - radius, y + radius, radius)
+	love.graphics.circle("fill", x + radius, y + height - radius, radius)
+	love.graphics.circle("fill", x + width - radius, y + height - radius, radius)
 end
 
 
@@ -204,7 +392,39 @@ function MessagingApp:mousepressed(x, y, button)
 	-- Handle search bar click
 	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 40 then
 		self.searchBarActive = true
+		self.messageInputActive = false  -- Deactivate message input
 		return true
+	end
+	
+	-- Handle message input click
+	if self.selectedUser then
+		local inputX = self.width/3 + 20
+		local inputY = self.height - 50
+		local inputWidth = 2*self.width/3 - 100
+		if x >= inputX and x <= inputX + inputWidth and
+		   y >= inputY and y <= inputY + 40 then
+			self.messageInputActive = true
+			self.searchBarActive = false  -- Deactivate search bar
+			return true
+		end
+	end
+	
+	-- Handle send button click
+	if self.selectedUser and self.messageInput ~= "" then
+		if x >= self.width - 80 and x <= self.width - 20 and
+		   y >= self.height - 50 and y <= self.height - 10 then
+			self:sendMessage(self.selectedUser.id, self.messageInput)
+			self.messageInput = ""
+			return true
+		end
+	end
+	
+	-- Deactivate both inputs when clicking elsewhere
+	if not (x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 40) and
+	   not (self.selectedUser and x >= self.width/3 + 20 and x <= self.width - 100 and
+			y >= self.height - 50 and y <= self.height - 10) then
+		self.searchBarActive = false
+		self.messageInputActive = false
 	end
 	
 	-- Handle user/friend selection
