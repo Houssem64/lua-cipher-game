@@ -78,7 +78,7 @@ end
 
 function FileManager:new()
     local obj = {
-        currentPath = "/home/kali",
+        currentPath = "/home/love",
         files = {},
         selectedFile = nil,
         clipboard = {
@@ -869,7 +869,14 @@ function FileManager:changeDirectory(dir)
         end
     else
         -- Navigate into the selected directory
-        self.currentPath = self.currentPath .. "/" .. dir
+        -- Remove any trailing slashes from current path and leading/trailing slashes from dir
+        local cleanCurrentPath = self.currentPath:gsub("/*$", "")
+        local cleanDir = dir:gsub("^/*", ""):gsub("/*$", "")
+        
+        -- Only add path if cleanDir is not empty
+        if cleanDir ~= "" then
+            self.currentPath = cleanCurrentPath .. "/" .. cleanDir
+        end
     end
     
     self:refreshFiles()
