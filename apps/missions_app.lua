@@ -113,42 +113,15 @@ function MissionsApp:draw(x, y, width, height)
 	love.graphics.setColor(1, 1, 1)
 	love.graphics.print("Reset All", resetButtonX + 15, resetButtonY + 5)
 
-	-- Draw pagination buttons at the top
+	-- Draw page numbers in boxes at the top
 	local paginationY = y + self.padding + 50
-	local nextButtonX = x + leftPanelWidth - self.padding*4 - 60
-	local prevButtonX = nextButtonX - 70
-
-	-- Previous button
-	if self.scrollPosition > 0 then
-		if self.prevButtonHovered then
-			love.graphics.setColor(0.5, 0.5, 0.6, 0.9)
-		else
-			love.graphics.setColor(0.4, 0.4, 0.5, 0.8)
-		end
-		love.graphics.rectangle("fill", prevButtonX, paginationY, 60, resetButtonHeight, 5)
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("< Prev", prevButtonX + 10, paginationY + 5)
-	end
-
-	-- Next button
-	if self.scrollPosition + self.maxMissionsVisible < #self.missions then
-		if self.nextButtonHovered then
-			love.graphics.setColor(0.5, 0.5, 0.6, 0.9)
-		else
-			love.graphics.setColor(0.4, 0.4, 0.5, 0.8)
-		end
-		love.graphics.rectangle("fill", nextButtonX, paginationY, 60, resetButtonHeight, 5)
-		love.graphics.setColor(1, 1, 1)
-		love.graphics.print("Next >", nextButtonX + 10, paginationY + 5)
-	end
-
-	-- Draw page numbers in boxes
 	local currentPage = math.floor(self.scrollPosition / self.maxMissionsVisible) + 1
 	local totalPages = math.ceil(#self.missions / self.maxMissionsVisible)
 	local boxWidth = 30
 	local boxHeight = 30
 	local boxSpacing = 5
-	local startX = prevButtonX - (totalPages * (boxWidth + boxSpacing))
+	local startX = x + self.padding + 20  -- Start from left side
+
 
 	for i = 1, totalPages do
 		if i == currentPage then
@@ -321,29 +294,28 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 	local inMissionsArea = relativeY >= missionStartY and relativeY <= missionEndY
 	
 	if button == 1 then
-		-- Check pagination buttons
+		-- Check pagination number clicks
 		local resetButtonWidth = 100
 		local resetButtonHeight = 30
 		local leftPanelWidth = love.graphics.getWidth() * 0.4
 		local paginationY = self.padding + 50
-		local nextButtonX = leftPanelWidth - self.padding*4 - 60
-		local prevButtonX = nextButtonX - 70
+		local boxWidth = 30
+		local boxHeight = 30
+		local boxSpacing = 5
+		local startX = baseX + self.padding + 20
+		local totalPages = math.ceil(#self.missions / self.maxMissionsVisible)
 
-		-- Check prev button
-		if relativeX >= prevButtonX and relativeX <= prevButtonX + 60 and
-		   relativeY >= paginationY and relativeY <= paginationY + resetButtonHeight and
-		   self.scrollPosition > 0 then
-			self.scrollPosition = self.scrollPosition - self.maxMissionsVisible
-			return
+		-- Check if clicked on a page number
+		if relativeY >= paginationY and relativeY <= paginationY + boxHeight then
+			for i = 1, totalPages do
+				local boxX = startX + (i-1) * (boxWidth + boxSpacing)
+				if relativeX >= boxX and relativeX <= boxX + boxWidth then
+					self.scrollPosition = (i-1) * self.maxMissionsVisible
+					return
+				end
+			end
 		end
 
-		-- Check next button
-		if relativeX >= nextButtonX and relativeX <= nextButtonX + 60 and
-		   relativeY >= paginationY and relativeY <= paginationY + resetButtonHeight and
-		   self.scrollPosition + self.maxMissionsVisible < #self.missions then
-			self.scrollPosition = self.scrollPosition + self.maxMissionsVisible
-			return
-		end
 
 		-- Check reset button click
 		local resetButtonX = self.padding + 20
@@ -592,18 +564,8 @@ function MissionsApp:mousemoved(x, y, baseX, baseY)
 	self.resetButtonHovered = relativeX >= resetButtonX and relativeX <= resetButtonX + resetButtonWidth and
 							 relativeY >= resetButtonY and relativeY <= resetButtonY + resetButtonHeight
 
-	-- Update pagination button hover states
-	local paginationY = self.padding + 50
-	local nextButtonX = leftPanelWidth - self.padding*4 - 60
-	local prevButtonX = nextButtonX - 70
+	-- No need for pagination button hover states since we removed the buttons
 
-	self.prevButtonHovered = relativeX >= prevButtonX and relativeX <= prevButtonX + 60 and
-							relativeY >= paginationY and relativeY <= paginationY + resetButtonHeight and
-							self.scrollPosition > 0
-
-	self.nextButtonHovered = relativeX >= nextButtonX and relativeX <= nextButtonX + 60 and
-							relativeY >= paginationY and relativeY <= paginationY + resetButtonHeight and
-							self.scrollPosition + self.maxMissionsVisible < #self.missions
 end
 
 function MissionsApp:resetProgress()
