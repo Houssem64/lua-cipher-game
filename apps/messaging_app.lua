@@ -6,64 +6,109 @@ MessagingApp.__index = MessagingApp
 local CONVERSATION_TREE = {
 	initial = {
 		choices = {
-			{text = "Hi, I'm from IT Support", next = "it_intro"},
-			{text = "System Security Check Required", next = "security_check"},
-			{text = "Account Verification Needed", next = "verify"},
-			{text = "Urgent: System Update", next = "update"}
+			{text = "Hi, I'm from IT Support - Urgent System Alert", next = "it_intro"},
+			{text = "Security Breach Detection Alert", next = "security_check"},
+			{text = "Account Access Verification Required", next = "verify"},
+			{text = "Critical System Update Pending", next = "update"}
+		}
+	},
+	security_check = {
+		response = "A security breach? I haven't received any official notification about this. Can you provide more details?",
+		choices = {
+			{text = "Multiple unauthorized access attempts detected", next = "compliance"},
+			{text = "Your system triggered our security alerts", next = "system_flag"},
+			{text = "We need to verify your access logs immediately", next = "server_access"},
+			{text = "I'll double check the alert", next = "bye"}
+		}
+	},
+	compliance = {
+		response = "This sounds serious. What information do you need to verify?",
+		choices = {
+			{text = "Need to verify your database permissions", next = "db_creds"},
+			{text = "Confirm your current network access", next = "network_info"},
+			{text = "Validate your security certificates", next = "cert_info"},
+			{text = "Let me escalate this first", next = "bye"}
+		}
+	},
+	db_creds = {
+		response = "I should probably verify your authorization first... but if this is urgent, I can help. What exactly do you need?",
+		choices = {
+			{text = "Just need your current database login to verify", next = "success"},
+			{text = "We detected unusual database queries", next = "more_access"},
+			{text = "Your backup access may be compromised", next = "backup_creds"},
+			{text = "I'll wait for supervisor approval", next = "end"}
+		}
+	},
+	network_info = {
+		response = "I'm a bit hesitant to share network details... but if this is for security, what specifically do you need?",
+		choices = {
+			{text = "Need to verify your VPN credentials", next = "success"},
+			{text = "Router access has been flagged", next = "router_access"},
+			{text = "Firewall detected suspicious activity", next = "firewall_info"},
+			{text = "I'll send an official request", next = "end"}
+		}
+	},
+	server_access = {
+		response = "Server access? That's highly sensitive... but if there's a security issue, I want to help resolve it.",
+		choices = {
+			{text = "Just need to verify your current login", next = "success"},
+			{text = "Multiple servers may be affected", next = "more_servers"},
+			{text = "Admin panel shows suspicious activity", next = "admin_access"},
+			{text = "I'll check with security team first", next = "end"}
 		}
 	},
 	it_intro = {
-		response = "Oh, IT Support? I wasn't notified about this. What's going on?",
+		response = "IT Support? That's strange, I usually get notified about IT issues through the ticketing system...",
 		choices = {
-			{text = "Routine security audit", next = "audit"},
-			{text = "Your account was flagged", next = "account_issue"},
-			{text = "System upgrade required", next = "upgrade"},
-			{text = "Never mind, wrong person", next = "bye"}
+			{text = "This bypasses normal ticketing for urgency", next = "audit"},
+			{text = "Your account showed suspicious activity", next = "account_issue"},
+			{text = "Critical security patch needed", next = "upgrade"},
+			{text = "I'll submit a regular ticket instead", next = "bye"}
 		}
 	},
 	audit = {
-		response = "A security audit? I should check with my supervisor first...",
+		response = "An urgent audit? This is unusual... shouldn't this go through proper channels?",
 		choices = {
-			{text = "This is time-sensitive", next = "pressure"},
-			{text = "Your account might be compromised", next = "threat"},
-			{text = "You'll lose access if not verified", next = "urgency"},
-			{text = "I understand, I'll wait", next = "bye"}
+			{text = "Security breach requires immediate action", next = "pressure"},
+			{text = "Your credentials may be compromised", next = "threat"},
+			{text = "System access will be revoked if unverified", next = "urgency"},
+			{text = "You're right, I'll use proper channels", next = "bye"}
 		}
 	},
 	account_issue = {
-		response = "What's wrong with my account? I was just using it.",
+		response = "Account issues? But I haven't noticed any problems with my login...",
 		choices = {
-			{text = "Multiple login attempts detected", next = "suspicious"},
-			{text = "Need to verify your credentials", next = "credentials"},
-			{text = "Password policy violation", next = "password"},
-			{text = "Let me check again", next = "bye"}
+			{text = "Our systems detected unauthorized access", next = "suspicious"},
+			{text = "Need to verify identity immediately", next = "credentials"},
+			{text = "Your password has been compromised", next = "password"},
+			{text = "I'll double-check the alerts", next = "bye"}
 		}
 	},
 	suspicious = {
-		response = "That's concerning! What should I do?",
+		response = "Unauthorized access attempts? That's very concerning! What do you need me to do?",
 		choices = {
-			{text = "Verify your current password", next = "get_password"},
-			{text = "Confirm your login details", next = "get_login"},
-			{text = "Reset your credentials", next = "reset"},
-			{text = "Contact your supervisor", next = "fail"}
+			{text = "Quickly verify your current credentials", next = "get_password"},
+			{text = "Need to check your login details", next = "get_login"},
+			{text = "We'll need to reset your access", next = "reset"},
+			{text = "Let me get supervisor approval", next = "fail"}
 		}
 	},
 	get_password = {
-		response = "I should probably submit a ticket through the proper channel...",
+		response = "Hmm... shouldn't this go through the IT helpdesk? Though if it's really urgent...",
 		choices = {
-			{text = "This is an emergency protocol", next = "final_push"},
-			{text = "Your account will be locked", next = "threaten"},
-			{text = "I'm authorized by management", next = "authority"},
-			{text = "You're right, submit a ticket", next = "fail"}
+			{text = "This is emergency security protocol", next = "final_push"},
+			{text = "System will auto-lock in 5 minutes", next = "threaten"},
+			{text = "I have direct authorization from IT head", next = "authority"},
+			{text = "You're right, I'll create a ticket", next = "fail"}
 		}
 	},
 	final_push = {
-		response = "Well... if it's really necessary... should I just tell you my login?",
+		response = "I guess if it's really an emergency... what exactly do you need to verify?",
 		choices = {
-			{text = "Yes, quickly before lockout", next = "success"},
-			{text = "Send it through secure chat", next = "success"},
-			{text = "I'll guide you through verification", next = "success"},
-			{text = "Actually, submit a ticket", next = "fail"}
+			{text = "Just your current login credentials", next = "success"},
+			{text = "Send it through this secure chat", next = "success"},
+			{text = "I'll walk you through verification", next = "success"},
+			{text = "Actually, let's do this properly", next = "fail"}
 		}
 	},
 	success = {
@@ -87,11 +132,23 @@ local CONVERSATION_TREE = {
 }
 
 function MessagingApp:getAIResponse(message, currentState)
-	local state = CONVERSATION_TREE[currentState or "initial"]
-	if state and state.response then
-		return state.response, state.choices
+	-- Only user with ID 3 (Michael Chen) will engage in the social engineering conversation
+	if self.selectedUser and self.selectedUser.id == 3 then
+		local state = CONVERSATION_TREE[currentState or "initial"]
+		if state and state.response then
+			return state.response, state.choices
+		end
 	end
-	return "I'm not sure what to say.", CONVERSATION_TREE.initial.choices
+	
+	-- Default responses for other users
+	local defaultResponses = {
+		"I don't have time for this right now.",
+		"Please contact IT support through official channels.",
+		"I can't help with that, sorry.",
+		"I'm not authorized to share that information.",
+		"You should submit a formal request for that."
+	}
+	return defaultResponses[love.math.random(1, #defaultResponses)], CONVERSATION_TREE.initial.choices
 end
 
 
@@ -105,6 +162,14 @@ end
 function MessagingApp:mousemoved(x, y, dx, dy)
 	-- Update hover states
 	self.searchBarHovered = x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50
+	
+	-- Update reset button hover state
+	if self.selectedUser then
+		self.resetButtonHovered = x >= self.width - 100 and x <= self.width - 20 and
+								y >= 10 and y <= 50
+	else
+		self.resetButtonHovered = false
+	end
 	
 	-- Update choice hover states
 	self.hoveredChoice = nil
@@ -201,6 +266,7 @@ function MessagingApp:new()
 		searchBarHovered = false,
 		messageInputActive = false,
 		sendButtonHovered = false,
+		resetButtonHovered = false,
 		cursorBlink = true,
 		blinkTimer = 0,
 		messageInputHovered = false,
@@ -285,7 +351,12 @@ function MessagingApp:sendMessage(toUserId, content)
 		fromId = 1,
 		toId = toUserId,
 		content = content,
-		timestamp = os.time()
+		timestamp = os.time(),
+		status = "sent",
+		isRead = false,
+		type = "text",
+		edited = false,
+		reactions = {}
 	}
 	table.insert(self.messages, message)
 	
@@ -294,13 +365,18 @@ function MessagingApp:sendMessage(toUserId, content)
 	
 	-- Generate AI response after a short delay
 	love.timer.sleep(0.5)
-	local response = self:getAIResponse(content)
+	local response, _ = self:getAIResponse(content, self.currentConversationState)
 	local aiMessage = {
 		id = #self.messages + 1,
 		fromId = toUserId,
 		toId = 1,
 		content = response,
-		timestamp = os.time()
+		timestamp = os.time(),
+		status = "received",
+		isRead = true,
+		type = "text",
+		edited = false,
+		reactions = {}
 	}
 	table.insert(self.messages, aiMessage)
 	self:saveData()
@@ -457,6 +533,16 @@ function MessagingApp:drawChatArea(x, y, width, height)
 	love.graphics.setColor(0.7, 0.7, 0.7)
 	love.graphics.print(self.selectedUser.status, x + width/3 + 70, y + 35)
 	
+	-- Draw reset button
+	if self.resetButtonHovered then
+		love.graphics.setColor(0.8, 0.2, 0.2)
+	else
+		love.graphics.setColor(0.6, 0.2, 0.2)
+	end
+	self:drawRoundedRect(x + width - 100, y + 10, 80, 40, 8)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print("Reset", x + width - 85, y + 22)
+	
 	-- Draw message choices first
 	love.graphics.setColor(0.15, 0.18, 0.21)
 	love.graphics.rectangle("fill", x + width/3, y + height - 180, 2*width/3, 180)
@@ -486,38 +572,75 @@ function MessagingApp:drawChatArea(x, y, width, height)
 	
 	-- Draw messages
 	local messages = self:getMessages(self.selectedUser.id)
-	local messageY = y + height - 220  -- Start higher above choices
+	local messageY = y + height - 220
 	for i = #messages, 1, -1 do
 		local msg = messages[i]
 		local isCurrentUser = msg.fromId == 1
 		
-		-- Draw message bubble
-		love.graphics.setColor(isCurrentUser and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
-		local bubbleWidth = math.min(self.font:getWidth(msg.content) + 40, width/2)
+		-- Calculate message dimensions
+		local textWidth = self.font:getWidth(msg.content)
+		local bubbleWidth = math.min(textWidth + 40, width/2)
+		local bubbleHeight = 40
 		local bubbleX = isCurrentUser and (x + width - bubbleWidth - 60) or (x + width/3 + 60)
-		self:drawRoundedRect(bubbleX, messageY, bubbleWidth, 40, 8)
 		
-		-- Draw profile picture
+		-- Draw message bubble with enhanced styling
+		love.graphics.setColor(isCurrentUser and {0.2, 0.6, 1} or {0.3, 0.33, 0.36})
+		self:drawRoundedRect(bubbleX, messageY, bubbleWidth, bubbleHeight, 8)
+		
+		-- Draw profile picture with status indicator
 		love.graphics.setColor(1, 1, 1)
 		local profileImage = isCurrentUser and self.profileImages[1] or self.profileImages[msg.fromId]
 		if profileImage then
 			local imgX = isCurrentUser and (x + width - 50) or (x + width/3 + 10)
 			love.graphics.draw(profileImage, imgX, messageY + 5, 0, 30/profileImage:getWidth(), 30/profileImage:getHeight())
+			
+			-- Draw online status indicator
+			if self.selectedUser.status == "online" then
+				love.graphics.setColor(0.2, 0.8, 0.2)
+				love.graphics.circle("fill", imgX + 25, messageY + 30, 4)
+			end
 		end
 		
 		-- Draw message text
 		love.graphics.setColor(1, 1, 1)
 		love.graphics.printf(msg.content, bubbleX + 20, messageY + 10, bubbleWidth - 40, "left")
 		
-		-- Draw timestamp
+		-- Draw detailed timestamp
 		love.graphics.setColor(0.6, 0.6, 0.6)
 		local timeStr = os.date("%H:%M", msg.timestamp)
+		local dateStr = os.date("%d/%m/%y", msg.timestamp)
 		local timeWidth = self.font:getWidth(timeStr)
-		love.graphics.print(timeStr, 
-			isCurrentUser and (bubbleX - timeWidth - 10) or (bubbleX + bubbleWidth + 10), 
-			messageY + 12)
+		local dateWidth = self.font:getWidth(dateStr)
 		
-		messageY = messageY - 50
+		-- Position timestamp and date
+		if isCurrentUser then
+			love.graphics.print(timeStr, bubbleX - timeWidth - 10, messageY + 12)
+			love.graphics.print(dateStr, bubbleX - dateWidth - 10, messageY + 25)
+		else
+			love.graphics.print(timeStr, bubbleX + bubbleWidth + 10, messageY + 12)
+			love.graphics.print(dateStr, bubbleX + bubbleWidth + 10, messageY + 25)
+		end
+		
+		-- Draw message status indicators
+		if isCurrentUser then
+			local statusX = bubbleX - 20
+			local statusY = messageY + bubbleHeight - 10
+			
+			if msg.status == "sent" then
+				love.graphics.setColor(0.6, 0.6, 0.6)
+				love.graphics.circle("fill", statusX, statusY, 3)
+			elseif msg.status == "delivered" then
+				love.graphics.setColor(0.2, 0.6, 1)
+				love.graphics.circle("fill", statusX, statusY, 3)
+				love.graphics.circle("fill", statusX - 8, statusY, 3)
+			elseif msg.isRead then
+				love.graphics.setColor(0.2, 0.8, 0.2)
+				love.graphics.circle("fill", statusX, statusY, 3)
+				love.graphics.circle("fill", statusX - 8, statusY, 3)
+			end
+		end
+		
+		messageY = messageY - 60  -- Increased spacing between messages
 		if messageY < y + 80 then break end
 	end
 	
@@ -542,6 +665,17 @@ function MessagingApp:mousepressed(x, y, button)
 	-- Handle search bar click
 	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50 then
 		self.searchBarActive = true
+		return true
+	end
+	
+	-- Handle reset button click
+	if self.selectedUser and x >= self.width - 100 and x <= self.width - 20 and
+	   y >= 10 and y <= 50 then
+		-- Clear messages for this user
+		self.messages = {}
+		self.currentConversationState = "initial"
+		self.messageChoices = CONVERSATION_TREE.initial.choices
+		self:saveData()
 		return true
 	end
 	
