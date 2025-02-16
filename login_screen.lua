@@ -10,6 +10,7 @@ local LoginScreen = {
 	showCursor = true,
 	onLoginSuccess = nil,
 	loginButtonHovered = false,
+	skipButtonHovered = false,
 	isCreateMode = false,
 	confirmPassword = "",
 	securityQuestion = "",
@@ -333,9 +334,22 @@ function LoginScreen:draw()
 			buttonY + buttonHeight/2 - self.font:getHeight()/2)
 	end
 
+	-- Draw skip button
+	local skipButtonWidth = 80
+	local skipButtonHeight = 30
+	local skipButtonX = love.graphics.getWidth() - skipButtonWidth - 20
+	local skipButtonY = 20
 
+	if self.skipButtonHovered then
+		love.graphics.setColor(0.3, 0.3, 0.35, 1)
+	else
+		love.graphics.setColor(0.2, 0.2, 0.25, 1)
+	end
+	love.graphics.rectangle('fill', skipButtonX, skipButtonY, skipButtonWidth, skipButtonHeight, 4, 4)
 
-
+	love.graphics.setColor(1, 1, 1, 1)
+	love.graphics.print("Skip", skipButtonX + skipButtonWidth/2 - self.font:getWidth("Skip")/2, 
+		skipButtonY + skipButtonHeight/2 - self.font:getHeight()/2)
 
 	-- Draw error message with fade effect
 	if self.errorMessage and self.errorMessage ~= "" then
@@ -402,6 +416,21 @@ function LoginScreen:mousepressed(x, y, button)
 
 
 
+	-- Check skip button click
+	local skipButtonWidth = 80
+	local skipButtonHeight = 30
+	local skipButtonX = love.graphics.getWidth() - skipButtonWidth - 20
+	local skipButtonY = 20
+	
+	if x >= skipButtonX and x <= skipButtonX + skipButtonWidth and
+	   y >= skipButtonY and y <= skipButtonY + skipButtonHeight then
+		self.active = false
+		if self.onLoginSuccess then
+			self.onLoginSuccess("Guest")
+		end
+		return
+	end
+
 	-- Check button click
 	local buttonWidth = 120
 	local buttonHeight = 35
@@ -431,6 +460,15 @@ function LoginScreen:mousemoved(x, y)
 	local buttonHeight = 35
 	local buttonY = centerY + boxHeight/2 - buttonHeight - padding * 1.5 + 25
 
+
+	-- Check if mouse is over skip button
+	local skipButtonWidth = 80
+	local skipButtonHeight = 30
+	local skipButtonX = love.graphics.getWidth() - skipButtonWidth - 20
+	local skipButtonY = 20
+	
+	self.skipButtonHovered = x >= skipButtonX and x <= skipButtonX + skipButtonWidth and
+							y >= skipButtonY and y <= skipButtonY + skipButtonHeight
 
 	-- Check if mouse is over login button
 	self.loginButtonHovered = x >= centerX - buttonWidth/2 and x <= centerX + buttonWidth/2 and
