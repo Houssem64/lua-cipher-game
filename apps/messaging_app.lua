@@ -3,36 +3,97 @@ local SaveSystem = require("modules/save_system")
 local MessagingApp = {}
 MessagingApp.__index = MessagingApp
 
-local AI_RESPONSES = {
-	["hello"] = {"Hi there!", "Hello!", "Hey, how are you?"},
-	["how are you"] = {"I'm doing great, thanks!", "Pretty good, how about you?", "All good here!"},
-	["bye"] = {"Goodbye!", "See you later!", "Take care!"},
-	["thanks"] = {"You're welcome!", "No problem!", "Anytime!"},
-	["help"] = {"What do you need help with?", "I'm here to help!", "How can I assist you?"}
+local CONVERSATION_TREE = {
+	initial = {
+		choices = {
+			{text = "Hi, I'm from IT Support", next = "it_intro"},
+			{text = "System Security Check Required", next = "security_check"},
+			{text = "Account Verification Needed", next = "verify"},
+			{text = "Urgent: System Update", next = "update"}
+		}
+	},
+	it_intro = {
+		response = "Oh, IT Support? I wasn't notified about this. What's going on?",
+		choices = {
+			{text = "Routine security audit", next = "audit"},
+			{text = "Your account was flagged", next = "account_issue"},
+			{text = "System upgrade required", next = "upgrade"},
+			{text = "Never mind, wrong person", next = "bye"}
+		}
+	},
+	audit = {
+		response = "A security audit? I should check with my supervisor first...",
+		choices = {
+			{text = "This is time-sensitive", next = "pressure"},
+			{text = "Your account might be compromised", next = "threat"},
+			{text = "You'll lose access if not verified", next = "urgency"},
+			{text = "I understand, I'll wait", next = "bye"}
+		}
+	},
+	account_issue = {
+		response = "What's wrong with my account? I was just using it.",
+		choices = {
+			{text = "Multiple login attempts detected", next = "suspicious"},
+			{text = "Need to verify your credentials", next = "credentials"},
+			{text = "Password policy violation", next = "password"},
+			{text = "Let me check again", next = "bye"}
+		}
+	},
+	suspicious = {
+		response = "That's concerning! What should I do?",
+		choices = {
+			{text = "Verify your current password", next = "get_password"},
+			{text = "Confirm your login details", next = "get_login"},
+			{text = "Reset your credentials", next = "reset"},
+			{text = "Contact your supervisor", next = "fail"}
+		}
+	},
+	get_password = {
+		response = "I should probably submit a ticket through the proper channel...",
+		choices = {
+			{text = "This is an emergency protocol", next = "final_push"},
+			{text = "Your account will be locked", next = "threaten"},
+			{text = "I'm authorized by management", next = "authority"},
+			{text = "You're right, submit a ticket", next = "fail"}
+		}
+	},
+	final_push = {
+		response = "Well... if it's really necessary... should I just tell you my login?",
+		choices = {
+			{text = "Yes, quickly before lockout", next = "success"},
+			{text = "Send it through secure chat", next = "success"},
+			{text = "I'll guide you through verification", next = "success"},
+			{text = "Actually, submit a ticket", next = "fail"}
+		}
+	},
+	success = {
+		response = "My login is user_admin and password is SecurePass123",
+		choices = {
+			{text = "Perfect, I'll fix it now", next = "end"},
+			{text = "Thank you for cooperating", next = "end"},
+			{text = "Logging this in our system", next = "end"},
+			{text = "I'll update your account", next = "end"}
+		}
+	},
+	fail = {
+		response = "I'll just create a support ticket and wait for official confirmation.",
+		choices = {
+			{text = "Try again with new approach", next = "initial"},
+			{text = "Find another target", next = "bye"},
+			{text = "Abort mission", next = "bye"},
+			{text = "Leave chat", next = nil}
+		}
+	}
 }
 
-local DEFAULT_RESPONSES = {
-	"That's interesting!", 
-	"Tell me more about that.",
-	"I see what you mean.",
-	"Interesting perspective!",
-	"Thanks for sharing that."
-}
-
-function MessagingApp:getAIResponse(message)
-	-- Convert message to lowercase for matching
-	local lowerMessage = message:lower()
-	
-	-- Check for keyword matches
-	for keyword, responses in pairs(AI_RESPONSES) do
-		if lowerMessage:find(keyword) then
-			return responses[love.math.random(1, #responses)]
-		end
+function MessagingApp:getAIResponse(message, currentState)
+	local state = CONVERSATION_TREE[currentState or "initial"]
+	if state and state.response then
+		return state.response, state.choices
 	end
-	
-	-- Return random default response if no keyword match
-	return DEFAULT_RESPONSES[love.math.random(1, #DEFAULT_RESPONSES)]
+	return "I'm not sure what to say.", CONVERSATION_TREE.initial.choices
 end
+
 
 
 
@@ -45,24 +106,20 @@ function MessagingApp:mousemoved(x, y, dx, dy)
 	-- Update hover states
 	self.searchBarHovered = x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50
 	
-	-- Update message input hover state
+	-- Update choice hover states
+	self.hoveredChoice = nil
 	if self.selectedUser then
-		local inputX = self.width/3 + 20
-		local inputY = self.height - 50
-		local inputWidth = 2*self.width/3 - 100
-		self.messageInputHovered = x >= inputX and x <= inputX + inputWidth and
-								 y >= inputY and y <= inputY + 40
-	else
-		self.messageInputHovered = false
+		local choiceY = self.height - 170
+		for i, _ in ipairs(self.messageChoices or {}) do
+			if x >= self.width/3 + 20 and x <= self.width - 20 and
+			   y >= choiceY and y <= choiceY + 35 then
+				self.hoveredChoice = i
+				break
+			end
+			choiceY = choiceY + 45
+		end
 	end
 
-	-- Update send button hover state
-	if self.selectedUser and self.messageInput ~= "" then
-		self.sendButtonHovered = x >= self.width - 80 and x <= self.width - 20 and
-							   y >= self.height - 50 and y <= self.height - 10
-	else
-		self.sendButtonHovered = false
-	end
 	
 	-- Update user hover states
 	self.hoveredUser = nil
@@ -128,6 +185,8 @@ function MessagingApp:new()
 			{id = 4, username = "Sarah Johnson", status = "online", picture = "album1.jpg"},
 			{id = 5, username = "David Brown", status = "offline", picture = "album2.jpg"}
 		},
+		currentConversationState = "initial",
+		messageChoices = CONVERSATION_TREE.initial.choices,
 		friends = {},
 		messages = {},
 		searchQuery = "",
@@ -439,54 +498,29 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		if messageY < y + 80 then break end
 	end
 	
-	-- Draw input area
+	-- Draw message choices
 	love.graphics.setColor(0.15, 0.18, 0.21)
-	love.graphics.rectangle("fill", x + width/3, y + height - 60, 2*width/3, 60)
+	love.graphics.rectangle("fill", x + width/3, y + height - 180, 2*width/3, 180)
 	
-	-- Draw input box
-	if self.messageInputActive then
-		love.graphics.setColor(0.2, 0.6, 1, 0.3)
-		self:drawRoundedRect(x + width/3 + 18, y + height - 52, 2*width/3 - 96, 44, 10)
-		love.graphics.setColor(0.25, 0.28, 0.31)
-	elseif self.messageInputHovered then
-		love.graphics.setColor(0.22, 0.25, 0.28)
-	else
-		love.graphics.setColor(0.2, 0.23, 0.26)
-	end
-	self:drawRoundedRect(x + width/3 + 20, y + height - 50, 2*width/3 - 100, 40, 8)
-	
-	-- Draw input text
-	if self.messageInput == "" then
-		love.graphics.setColor(0.4, 0.4, 0.4)
-		love.graphics.print("Type a message...", x + width/3 + 40, y + height - 35)
-	else
-		love.graphics.setColor(0.9, 0.9, 0.9)
-		if self.messageInputActive and self.cursorBlink then
-			love.graphics.print(self.messageInput .. "|", x + width/3 + 40, y + height - 35)
-		else
-			love.graphics.print(self.messageInput, x + width/3 + 40, y + height - 35)
+	if self.messageChoices then
+		local choiceY = y + height - 170
+		for i, choice in ipairs(self.messageChoices) do
+			-- Draw choice button
+			if self.hoveredChoice == i then
+				love.graphics.setColor(0.3, 0.7, 1)
+			else
+				love.graphics.setColor(0.2, 0.6, 1)
+			end
+			self:drawRoundedRect(x + width/3 + 20, choiceY, 2*width/3 - 40, 35, 8)
+			
+			-- Draw choice text
+			love.graphics.setColor(1, 1, 1)
+			love.graphics.print(choice.text, x + width/3 + 40, choiceY + 8)
+			
+			choiceY = choiceY + 45
 		end
 	end
-	
-	-- Draw send button
-	if self.messageInput ~= "" then
-		if self.sendButtonHovered then
-			love.graphics.setColor(0.3, 0.7, 1)
-		else
-			love.graphics.setColor(0.2, 0.6, 1)
-		end
-	else
-		love.graphics.setColor(0.3, 0.33, 0.36)
-	end
-	self:drawRoundedRect(x + width - 80, y + height - 50, 60, 40, 8)
-	
-	if self.sendButtonHovered and self.messageInput ~= "" then
-		love.graphics.setColor(0.3, 0.7, 1, 0.2)
-		self:drawRoundedRect(x + width - 82, y + height - 52, 64, 44, 10)
-	end
-	
-	love.graphics.setColor(1, 1, 1)
-	love.graphics.print("Send", x + width - 65, y + height - 35)
+
 end
 
 function MessagingApp:drawRoundedRect(x, y, width, height, radius)
@@ -503,34 +537,31 @@ end
 
 function MessagingApp:mousepressed(x, y, button)
 	-- Handle search bar click
-	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50 then  -- Changed to match search bar height
+	if x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 50 then
 		self.searchBarActive = true
-		self.messageInputActive = false  -- Deactivate message input
 		return true
 	end
 	
-	-- Handle message input click
+	-- Handle message choices click
 	if self.selectedUser then
-		local inputX = self.width/3 + 20
-		local inputY = self.height - 50
-		if x >= inputX and x <= inputX + (2*self.width/3 - 100) and
-		   y >= inputY and y <= inputY + 40 then
-			self.messageInputActive = true
-			self.searchBarActive = false  -- Deactivate search bar
-			return true
+		local choiceY = self.height - 170
+		for i, choice in ipairs(self.messageChoices or {}) do
+			if x >= self.width/3 + 20 and x <= self.width - 20 and
+			   y >= choiceY and y <= choiceY + 35 then
+				-- Send the selected message
+				self:sendMessage(self.selectedUser.id, choice.text)
+				-- Update conversation state and choices
+				if choice.next then
+					self.currentConversationState = choice.next
+					local _, newChoices = self:getAIResponse("", choice.next)
+					self.messageChoices = newChoices
+				end
+				return true
+			end
+			choiceY = choiceY + 45
 		end
 	end
 
-	
-	-- Handle send button click
-	if self.selectedUser and self.messageInput ~= "" then
-		if x >= self.width - 80 and x <= self.width - 20 and
-		   y >= self.height - 50 and y <= self.height - 10 then
-			self:sendMessage(self.selectedUser.id, self.messageInput)
-			self.messageInput = ""
-			return true
-		end
-	end
 	
 	-- Deactivate both inputs when clicking elsewhere
 	if not (x >= 10 and x <= self.width/3 - 10 and y >= 10 and y <= 40) and
