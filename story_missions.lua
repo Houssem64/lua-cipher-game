@@ -94,6 +94,82 @@ local StoryMissions = {
 				"Create another file using echo with multiple lines",
 				"Practice file editing with nano's navigation controls"
 			}
+		},
+		{
+			id = 6,
+			text = "Process Management",
+			description = "Learn to manage system processes, monitor resources, and handle running applications effectively.",
+			reward = {
+				badge = "Process Master Badge",
+				elo = 75
+			},
+			rank_required = "Elite Hacker",
+			subtasks = {
+				"Use 'ps' to list running processes",
+				"Try 'top' to monitor system resources",
+				"Kill a process using 'kill' command",
+				"Start a background process with '&'",
+				"Use 'jobs' to view background processes",
+				"Practice process priority with 'nice'",
+				"Monitor system load with 'uptime'"
+			}
+		},
+		{
+			id = 7,
+			text = "Network Security",
+			description = "Master essential network security tools and techniques to understand system vulnerabilities.",
+			reward = {
+				badge = "Security Expert Badge",
+				elo = 85
+			},
+			rank_required = "Master Hacker",
+			subtasks = {
+				"Scan open ports using 'nmap localhost'",
+				"Check network interfaces with 'ifconfig'",
+				"Monitor network traffic using 'tcpdump'",
+				"Test firewall rules with 'iptables -L'",
+				"Analyze network routes with 'traceroute'",
+				"Check listening services with 'netstat'",
+				"Review system logs for security events"
+			}
+		},
+		{
+			id = 8,
+			text = "Shell Scripting",
+			description = "Learn to automate tasks and create powerful shell scripts for system administration.",
+			reward = {
+				badge = "Script Master Badge",
+				elo = 95
+			},
+			rank_required = "Master Hacker",
+			subtasks = {
+				"Create a basic shell script",
+				"Add executable permissions to your script",
+				"Use variables in your script",
+				"Implement conditional statements",
+				"Create a loop in your script",
+				"Add error handling",
+				"Create a script that processes files"
+			}
+		},
+		{
+			id = 9,
+			text = "Advanced System Recovery",
+			description = "Master advanced system recovery techniques and emergency maintenance procedures.",
+			reward = {
+				badge = "Recovery Expert Badge",
+				elo = 105
+			},
+			rank_required = "Guru",
+			subtasks = {
+				"Boot into recovery mode",
+				"Check disk health with 'fsck'",
+				"Repair file system issues",
+				"Recover deleted files",
+				"Fix boot loader problems",
+				"Repair corrupted system files",
+				"Create system backup"
+			}
 		}
 	}
 }
