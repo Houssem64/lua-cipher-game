@@ -457,13 +457,36 @@ function MessagingApp:drawChatArea(x, y, width, height)
 	love.graphics.setColor(0.7, 0.7, 0.7)
 	love.graphics.print(self.selectedUser.status, x + width/3 + 70, y + 35)
 	
-	-- Draw messages area
+	-- Draw message choices first
+	love.graphics.setColor(0.15, 0.18, 0.21)
+	love.graphics.rectangle("fill", x + width/3, y + height - 180, 2*width/3, 180)
+	
+	if self.messageChoices then
+		local choiceY = y + height - 170
+		for i, choice in ipairs(self.messageChoices) do
+			-- Draw choice button
+			if self.hoveredChoice == i then
+				love.graphics.setColor(0.3, 0.7, 1)
+			else
+				love.graphics.setColor(0.2, 0.6, 1)
+			end
+			self:drawRoundedRect(x + width/3 + 20, choiceY, 2*width/3 - 40, 35, 8)
+			
+			-- Draw choice text
+			love.graphics.setColor(1, 1, 1)
+			love.graphics.print(choice.text, x + width/3 + 40, choiceY + 8)
+			
+			choiceY = choiceY + 45
+		end
+	end
+
+	-- Draw messages area above choices
 	love.graphics.setColor(0.12, 0.15, 0.18)
-	love.graphics.rectangle("fill", x + width/3, y + 60, 2*width/3, height - 120)
+	love.graphics.rectangle("fill", x + width/3, y + 60, 2*width/3, height - 240)
 	
 	-- Draw messages
 	local messages = self:getMessages(self.selectedUser.id)
-	local messageY = y + height - 140
+	local messageY = y + height - 220  -- Start higher above choices
 	for i = #messages, 1, -1 do
 		local msg = messages[i]
 		local isCurrentUser = msg.fromId == 1
@@ -498,28 +521,8 @@ function MessagingApp:drawChatArea(x, y, width, height)
 		if messageY < y + 80 then break end
 	end
 	
-	-- Draw message choices
-	love.graphics.setColor(0.15, 0.18, 0.21)
-	love.graphics.rectangle("fill", x + width/3, y + height - 180, 2*width/3, 180)
-	
-	if self.messageChoices then
-		local choiceY = y + height - 170
-		for i, choice in ipairs(self.messageChoices) do
-			-- Draw choice button
-			if self.hoveredChoice == i then
-				love.graphics.setColor(0.3, 0.7, 1)
-			else
-				love.graphics.setColor(0.2, 0.6, 1)
-			end
-			self:drawRoundedRect(x + width/3 + 20, choiceY, 2*width/3 - 40, 35, 8)
-			
-			-- Draw choice text
-			love.graphics.setColor(1, 1, 1)
-			love.graphics.print(choice.text, x + width/3 + 40, choiceY + 8)
-			
-			choiceY = choiceY + 45
-		end
-	end
+
+
 
 end
 
