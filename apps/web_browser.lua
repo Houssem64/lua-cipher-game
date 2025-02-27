@@ -12,8 +12,8 @@ function WebBrowser:new()
 		width = 0,
 		height = 0,
 		activeField = nil,
-		searchBarHeight = 50,
-		toolbarHeight = 70,
+		searchBarHeight = 40,
+		toolbarHeight = 60,
 		history = {},
 		currentHistoryIndex = 0,
 		searchResults = {},
@@ -29,24 +29,33 @@ function WebBrowser:new()
 		loadingDots = "",
 		loadingDotsTimer = 0,
 		currentWebsite = nil,
+		scrollY = 0,
+		maxScrollY = 0,
 		colors = {
-			background = {0.15, 0.15, 0.15},
-			toolbar = {0.2, 0.2, 0.2},
-			input = {0.1, 0.1, 0.1},
-			inputBorder = {0.3, 0.3, 0.3},
-			inputFocus = {0.4, 0.4, 0.4},
-			text = {0.9, 0.9, 0.9},
-			dimText = {0.7, 0.7, 0.7},
-			accent = {0.3, 0.6, 0.9},
-			searchResult = {0.18, 0.18, 0.18},
-			searchResultHover = {0.22, 0.22, 0.22},
-			linkText = {0.4, 0.7, 1.0},
-			linkHover = {0.5, 0.8, 1.0}
+			background = {0.95, 0.95, 0.95},
+			toolbar = {1, 1, 1},
+			input = {1, 1, 1},
+			inputBorder = {0.8, 0.8, 0.8},
+			inputFocus = {0.4, 0.6, 1.0},
+			text = {0.2, 0.2, 0.2},
+			dimText = {0.5, 0.5, 0.5},
+			accent = {0.4, 0.6, 1.0},
+			searchResult = {1, 1, 1},
+			searchResultHover = {0.98, 0.98, 1.0},
+			linkText = {0.1, 0.3, 0.8},
+			linkHover = {0.2, 0.4, 0.9},
+			searchButton = {0.4, 0.6, 1.0},
+			searchButtonHover = {0.5, 0.7, 1.0}
 		},
 		contentArea = {
 			padding = 20,
-			title = "LÖVE Search",
-			message = "Search for LÖVE documentation, tutorials, and system applications"
+			title = "Web Search",
+			message = "Search the web, find information, and discover content"
+		},
+		fonts = {
+			regular = love.graphics.newFont("fonts/FiraCode.ttf", 14),
+			title = love.graphics.newFont("fonts/FiraCode.ttf", 16),
+			heading = love.graphics.newFont("fonts/FiraCode.ttf", 20)
 		}
 	}
 	setmetatable(obj, self)
@@ -57,110 +66,217 @@ end
 function WebBrowser:searchItems(query)
 	self.isLoading = true
 	self.loadingTimer = 0
+	self.scrollY = 0
+	
+	-- Simulate search delay
+	love.timer.sleep(0.5)
+	
+	-- Generate search results based on query
 	self.searchResults = {
 		{
-			title = "John Doe - Software Engineer - LinkedIn",
-			description = "Software Engineer with 5+ years of experience in full-stack development. Currently working at Tech Corp, leading development of web applications and scalable services.",
-			url = "linkedin/profile/johndoe"
+			title = "Latest Technology News - TechNews",
+			description = "Stay updated with the latest technology news, trends, and innovations. Coverage of AI, software development, cybersecurity, and more.",
+			url = "technews.com/latest",
+			favicon = "🌐",
+			type = "article",
+			date = "2 hours ago"
 		},
 		{
-			title = "Software Engineering Jobs in Tech Corp | LinkedIn",
-			description = "1,500+ Software Engineering jobs available. Join our growing team of developers and help build the next generation of technology solutions.",
-			url = "linkedin/jobs/tech-corp"
+			title = "Programming Tutorials - CodeLearn",
+			description = "Learn programming with interactive tutorials. Courses in Python, JavaScript, Lua, and other popular languages. Perfect for beginners and advanced developers.",
+			url = "codelearn.com/tutorials",
+			favicon = "📚",
+			type = "tutorial",
+			date = "1 day ago"
 		},
 		{
-			title = "Tech Corp Company Page | LinkedIn",
-			description = "Tech Corp is a leading software company specializing in innovative solutions. Follow us to stay updated with our latest projects and job opportunities.",
-			url = "linkedin/company/tech-corp"
+			title = "Game Development Resources - GameDev Hub",
+			description = "Resources, tools, and tutorials for game developers. Learn about game engines, asset creation, and game design principles.",
+			url = "gamedevhub.com",
+			favicon = "🎮",
+			type = "resource",
+			date = "3 days ago"
+		},
+		{
+			title = "AI and Machine Learning News",
+			description = "Latest developments in artificial intelligence and machine learning. Research papers, industry applications, and breakthroughs.",
+			url = "aiweekly.com",
+			favicon = "🤖",
+			type = "news",
+			date = "1 week ago"
+		},
+		{
+			title = "Web Development Tools - DevTools",
+			description = "Collection of essential tools and resources for web developers. Frontend frameworks, backend solutions, and development tips.",
+			url = "devtools.io",
+			favicon = "🛠️",
+			type = "tools",
+			date = "2 weeks ago"
 		}
 	}
+	
+	-- Calculate max scroll based on content
+	self.maxScrollY = #self.searchResults * 150 -- Adjust based on result height
+	self.showSearchResults = true
+	self.isLoading = false
 end
-
 
 function WebBrowser:draw(x, y, width, height)
 	self.width = width
 	self.height = height
 
+	-- Draw background
 	love.graphics.setColor(unpack(self.colors.background))
 	love.graphics.rectangle("fill", x, y, width, height)
 	
+	-- Draw toolbar with shadow
 	love.graphics.setColor(unpack(self.colors.toolbar))
 	love.graphics.rectangle("fill", x, y, width, self.toolbarHeight)
+	love.graphics.setColor(0, 0, 0, 0.1)
+	love.graphics.rectangle("fill", x, y + self.toolbarHeight, width, 2)
 	
-	-- Draw back/forward buttons
-	local buttonWidth = 30
-	local buttonHeight = 30
-	local buttonY = y + 20
+	-- Draw navigation buttons with modern style
+	local buttonWidth = 36
+	local buttonHeight = 36
+	local buttonY = y + (self.toolbarHeight - buttonHeight) / 2
 	
 	-- Back button
 	if #self.history > 0 and self.currentHistoryIndex > 1 then
 		love.graphics.setColor(unpack(self.colors.accent))
 	else
-		love.graphics.setColor(0.3, 0.3, 0.3) -- Disabled color
+		love.graphics.setColor(0.8, 0.8, 0.8)
 	end
-	love.graphics.rectangle("fill", x + 20, buttonY, buttonWidth, buttonHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print("←", x + 30, buttonY + 5)
+	love.graphics.circle("fill", x + 30, buttonY + buttonHeight/2, buttonHeight/2 - 2)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.setFont(self.fonts.regular)
+	love.graphics.print("←", x + 24, buttonY + 8)
 	
 	-- Forward button
 	if self.currentHistoryIndex < #self.history then
 		love.graphics.setColor(unpack(self.colors.accent))
 	else
-		love.graphics.setColor(0.3, 0.3, 0.3) -- Disabled color
+		love.graphics.setColor(0.8, 0.8, 0.8)
 	end
-	love.graphics.rectangle("fill", x + 60, buttonY, buttonWidth, buttonHeight)
-	love.graphics.setColor(unpack(self.colors.text))
-	love.graphics.print("→", x + 70, buttonY + 5)
+	love.graphics.circle("fill", x + 75, buttonY + buttonHeight/2, buttonHeight/2 - 2)
+	love.graphics.setColor(1, 1, 1)
+	love.graphics.print("→", x + 69, buttonY + 8)
 	
-	local searchY = y + 10
+	-- Draw search bar with modern style
+	local searchX = x + 120
+	local searchWidth = width - 180
+	local searchY = y + (self.toolbarHeight - self.searchBarHeight) / 2
+	
+	-- Search bar background
 	love.graphics.setColor(unpack(self.colors.input))
-	love.graphics.rectangle("fill", x + 20, searchY, width - 40, self.searchBarHeight)
+	love.graphics.rectangle("fill", searchX, searchY, searchWidth, self.searchBarHeight, 20)
+	
+	-- Search bar border
 	if self.activeField == "search" then
 		love.graphics.setColor(unpack(self.colors.inputFocus))
 	else
 		love.graphics.setColor(unpack(self.colors.inputBorder))
 	end
-	love.graphics.rectangle("line", x + 20, searchY, width - 40, self.searchBarHeight)
+	love.graphics.rectangle("line", searchX, searchY, searchWidth, self.searchBarHeight, 20)
 	
+	-- Search icon
+	love.graphics.setColor(unpack(self.colors.dimText))
+	love.graphics.print("🔍", searchX + 15, searchY + 10)
+	
+	-- Search text
+	love.graphics.setFont(self.fonts.regular)
 	if self.searchText == "" then
 		love.graphics.setColor(unpack(self.colors.dimText))
-		love.graphics.print("Search LÖVE documentation and apps...", x + 115, searchY + 15)
+		love.graphics.print("Search the web...", searchX + 45, searchY + 12)
 	else
 		love.graphics.setColor(unpack(self.colors.text))
 		local beforeCursor = self.searchText:sub(1, self.cursorPos)
 		local afterCursor = self.searchText:sub(self.cursorPos + 1)
-		love.graphics.print(beforeCursor, x + 115, searchY + 15)
+		love.graphics.print(beforeCursor, searchX + 45, searchY + 12)
 		
-		-- Draw blinking cursor
+		-- Draw cursor
 		if self.activeField == "search" and self.cursorVisible then
-			local cursorX = x + 115 + love.graphics.getFont():getWidth(beforeCursor)
-			love.graphics.rectangle("fill", cursorX, searchY + 15, 2, 20)
+			local cursorX = searchX + 45 + love.graphics.getFont():getWidth(beforeCursor)
+			love.graphics.rectangle("fill", cursorX, searchY + 10, 2, 20)
 		end
 		
-		love.graphics.print(afterCursor, x + 115 + love.graphics.getFont():getWidth(beforeCursor), searchY + 15)
+		love.graphics.print(afterCursor, searchX + 45 + love.graphics.getFont():getWidth(beforeCursor), searchY + 12)
 	end
 	
-	-- Draw loading indicator if loading
+	-- Draw loading indicator
 	if self.isLoading then
 		love.graphics.setColor(unpack(self.colors.text))
 		local loadingText = "Searching" .. self.loadingDots
-		local font = love.graphics.getFont()
-		local textWidth = font:getWidth(loadingText)
+		local textWidth = self.fonts.regular:getWidth(loadingText)
 		love.graphics.print(loadingText, x + (width - textWidth)/2, y + self.toolbarHeight + 50)
 		return
 	end
 
-	-- Draw current website if active
+	-- Draw current website or search results
 	if self.currentWebsite then
 		self.currentWebsite:draw(x, y + self.toolbarHeight, width, height - self.toolbarHeight)
-		return
-	end
-
-	if self.showSearchResults and self.searchText ~= "" then
+	elseif self.showSearchResults and self.searchText ~= "" then
 		self:drawSearchResults(x, y + self.toolbarHeight + 10, width)
 	else
 		self:drawWelcomePage(x, y + self.toolbarHeight, width, height - self.toolbarHeight)
 	end
+end
+
+function WebBrowser:drawSearchResults(x, y, width)
+	-- Apply scroll offset
+	y = y - self.scrollY
+	
+	-- Draw search stats
+	love.graphics.setFont(self.fonts.regular)
+	love.graphics.setColor(unpack(self.colors.dimText))
+	love.graphics.print(string.format("About %d results (%.2f seconds)", #self.searchResults, 0.42), x + 20, y)
+	
+	-- Draw results
+	for i, result in ipairs(self.searchResults) do
+		local resultY = y + 50 + (i-1) * 150
+		
+		-- Skip if result is outside visible area
+		if resultY + 150 < y or resultY > y + self.height then
+			goto continue
+		end
+		
+		-- Result background
+		if i == self.hoveredResult then
+			love.graphics.setColor(unpack(self.colors.searchResultHover))
+		else
+			love.graphics.setColor(unpack(self.colors.searchResult))
+		end
+		love.graphics.rectangle("fill", x + 20, resultY, width - 40, 130, 8)
+		
+		-- Favicon and title
+		love.graphics.setFont(self.fonts.title)
+		love.graphics.setColor(unpack(self.colors.linkText))
+		love.graphics.print(result.favicon .. " " .. result.title, x + 40, resultY + 15)
+		
+		-- URL with subtle background
+		love.graphics.setFont(self.fonts.regular)
+		love.graphics.setColor(0.95, 0.95, 0.95)
+		love.graphics.rectangle("fill", x + 40, resultY + 45, width - 80, 20, 4)
+		love.graphics.setColor(0, 0.6, 0, 0.8)
+		love.graphics.print(result.url, x + 45, resultY + 47)
+		
+		-- Type and date
+		love.graphics.setColor(unpack(self.colors.dimText))
+		love.graphics.print(result.type .. " • " .. result.date, x + 40, resultY + 70)
+		
+		-- Description
+		love.graphics.setColor(unpack(self.colors.text))
+		love.graphics.printf(result.description, x + 40, resultY + 90, width - 80)
+		
+		::continue::
+	end
+end
+
+function WebBrowser:wheelmoved(x, y)
+	if self.showSearchResults then
+		self.scrollY = math.max(0, math.min(self.maxScrollY, self.scrollY - y * 30))
+		return true
+	end
+	return false
 end
 
 function WebBrowser:launchSystemApp(app)
@@ -294,41 +410,6 @@ function WebBrowser:mousemoved(x, y)
 	end
 	
 	love.mouse.setCursor(love.mouse.getSystemCursor("arrow"))
-end
-
-
-function WebBrowser:drawSearchResults(x, y, width)
-	-- Draw search stats
-	love.graphics.setColor(0.5, 0.5, 0.5)
-	love.graphics.print("About " .. #self.searchResults .. " results (0.42 seconds)", x + 20, y - 30)
-	
-	for i, result in ipairs(self.searchResults) do
-		-- Draw result background
-		if i == self.hoveredResult then
-			love.graphics.setColor(unpack(self.colors.searchResultHover))
-		else
-			love.graphics.setColor(unpack(self.colors.searchResult))
-		end
-		love.graphics.rectangle("fill", x + 20, y, width - 40, 80)
-		
-		-- Draw title with underline effect on hover
-		love.graphics.setColor(unpack(self.colors.linkText))
-		love.graphics.print(result.title, x + 40, y + 15)
-		if i == self.hoveredResult then
-			local titleWidth = love.graphics.getFont():getWidth(result.title)
-			love.graphics.line(x + 40, y + 35, x + 40 + titleWidth, y + 35)
-		end
-		
-		-- Draw URL in green with favicon
-		love.graphics.setColor(0.2, 0.8, 0.2)
-		love.graphics.print("🔗 " .. result.url, x + 40, y + 40)
-		
-		-- Draw description
-		love.graphics.setColor(unpack(self.colors.dimText))
-		love.graphics.printf(result.description, x + 40, y + 55, width - 80)
-		
-		y = y + 90
-	end
 end
 
 
