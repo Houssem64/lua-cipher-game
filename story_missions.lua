@@ -9,7 +9,6 @@ local StoryMissions = {
 				badge = "Terminal Master Badge",
 				elo = 25
 			},
-			difficulty = 1, -- Easy
 			rank_required = "Script Kiddie",
 			subtasks = {
 				"Use 'pwd' to check your current working directory location",
@@ -31,7 +30,6 @@ local StoryMissions = {
 				badge = "File Operations Expert Badge",
 				elo = 35
 			},
-			difficulty = 2, -- Medium
 			rank_required = "Initiate",
 			subtasks = {
 				"Create a file named 'secret.txt' with some text using 'echo'",
@@ -51,7 +49,6 @@ local StoryMissions = {
 				badge = "Network Explorer Badge",
 				elo = 45
 			},
-			difficulty = 2, -- Medium
 			rank_required = "Apprentice",
 			subtasks = {
 				"Test network connectivity using 'ping localhost'",
@@ -70,7 +67,6 @@ local StoryMissions = {
 				badge = "Admin Rights Badge",
 				elo = 55
 			},
-			difficulty = 3, -- Hard
 			rank_required = "Hacker",
 			subtasks = {
 				"Use 'sudo' to run commands as superuser",
@@ -88,7 +84,6 @@ local StoryMissions = {
 				badge = "Text Editor Expert Badge",
 				elo = 65
 			},
-			difficulty = 3, -- Hard
 			rank_required = "Elite Hacker",
 			subtasks = {
 				"Create a new file named 'notes.txt' using 'echo Hello > notes.txt'",
@@ -108,7 +103,6 @@ local StoryMissions = {
 				badge = "Process Master Badge",
 				elo = 75
 			},
-			difficulty = 4, -- Very Hard
 			rank_required = "Elite Hacker",
 			subtasks = {
 				"Use 'ps' to list running processes",
@@ -128,7 +122,6 @@ local StoryMissions = {
 				badge = "Security Expert Badge",
 				elo = 85
 			},
-			difficulty = 4, -- Advanced
 			rank_required = "Master Hacker",
 			subtasks = {
 				"Scan open ports using 'nmap localhost'",
@@ -148,7 +141,6 @@ local StoryMissions = {
 				badge = "Script Master Badge",
 				elo = 95
 			},
-			difficulty = 5, -- Expert
 			rank_required = "Master Hacker",
 			subtasks = {
 				"Create a basic shell script",
@@ -168,7 +160,6 @@ local StoryMissions = {
 				badge = "Recovery Expert Badge",
 				elo = 105
 			},
-			difficulty = 5, -- Expert
 			rank_required = "Guru",
 			subtasks = {
 				"Boot into recovery mode",

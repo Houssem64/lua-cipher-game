@@ -107,11 +107,11 @@ function Missions.new(x, y, config)
 
     -- Rank display initialization
     self.rankDisplay = {
-        x = 20, -- Position in top left corner
-        y = 80, -- Below status bar
-        width = 220,
-        height = 80,
-        alpha = 0.95
+        x = self.gameWidth - 500,
+        y = self.gameHeight - 500,
+        width = 180,
+        height = 40,
+        alpha = 0.9
     }
     
     return self
@@ -435,24 +435,14 @@ function Missions:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.setFont(default_font)
     
-    -- Draw rank display with enhanced visuals
+    -- Draw rank display
     if _G.missionsManager then
         local rank = _G.missionsManager:getCurrentRank()
         local progress = _G.missionsManager:getRankProgress()
         local elo = _G.missionsManager:getELO()
-        local nextRank = _G.missionsManager:getNextRank()
         
-        -- Background with glow effect
-        love.graphics.setColor(0.3, 0.2, 0.5, self.rankDisplay.alpha * 0.3)
-        love.graphics.rectangle('fill',
-            self.rankDisplay.x - 5,
-            self.rankDisplay.y - 5,
-            self.rankDisplay.width + 10,
-            self.rankDisplay.height + 10,
-            15)
-        
-        -- Main background
-        love.graphics.setColor(0.2, 0.1, 0.3, self.rankDisplay.alpha * 0.8)
+        -- Background
+        love.graphics.setColor(0, 0, 0, self.rankDisplay.alpha * 0.7)
         love.graphics.rectangle('fill',
             self.rankDisplay.x,
             self.rankDisplay.y,
@@ -460,88 +450,47 @@ function Missions:draw()
             self.rankDisplay.height,
             10)
         
-        -- Border with animation
-        local t = love.timer.getTime() * 2
-        local borderAlpha = 0.5 + math.sin(t) * 0.3
-        love.graphics.setColor(0.6, 0.4, 1, self.rankDisplay.alpha * borderAlpha)
-        love.graphics.setLineWidth(2)
+        -- Border
+        love.graphics.setColor(0.6, 0.4, 1, self.rankDisplay.alpha)
         love.graphics.rectangle('line',
             self.rankDisplay.x,
             self.rankDisplay.y,
             self.rankDisplay.width,
             self.rankDisplay.height,
             10)
-        love.graphics.setLineWidth(1)
         
-        -- Rank text with glow
-        love.graphics.setColor(0.8, 0.6, 1, self.rankDisplay.alpha * 0.5)
-        local rankFont = love.graphics.newFont(16)
+        -- Rank text
+        love.graphics.setColor(1, 1, 1, self.rankDisplay.alpha)
+        local rankFont = love.graphics.newFont(14)
         love.graphics.setFont(rankFont)
-        love.graphics.print("Rank: " .. rank.name,
-            self.rankDisplay.x + 12,
-            self.rankDisplay.y + 7)
-        
-        love.graphics.setColor(1, 0.8, 1, self.rankDisplay.alpha)
         love.graphics.print("Rank: " .. rank.name,
             self.rankDisplay.x + 10,
             self.rankDisplay.y + 5)
         
         -- ELO text
-        local eloFont = love.graphics.newFont(14)
+        local eloFont = love.graphics.newFont(12)
         love.graphics.setFont(eloFont)
-        love.graphics.setColor(0.7, 0.7, 0.9, self.rankDisplay.alpha)
         love.graphics.print("ELO: " .. elo,
             self.rankDisplay.x + 10,
-            self.rankDisplay.y + 30)
+            self.rankDisplay.y + 25)
         
-        -- Progress bar background
+--[[         -- Progress bar background
         love.graphics.setColor(0.3, 0.3, 0.3, self.rankDisplay.alpha)
         love.graphics.rectangle('fill',
             self.rankDisplay.x + 10,
-            self.rankDisplay.y + 55,
+            self.rankDisplay.y + 35,
             self.rankDisplay.width - 20,
-            8,
-            4)
+            4,
+            2)
         
-        -- Progress bar fill with gradient effect
-        local progressWidth = (self.rankDisplay.width - 20) * progress
-        local gradient = {
-            {0, 0.4, 0.8, self.rankDisplay.alpha},
-            {0.4, 0.2, 0.8, self.rankDisplay.alpha},
-            {0.6, 0.4, 1.0, self.rankDisplay.alpha}
-        }
-        
-        for i = 1, progressWidth do
-            local ratio = i / progressWidth
-            local r = gradient[1][1] * (1-ratio) + gradient[3][1] * ratio
-            local g = gradient[1][2] * (1-ratio) + gradient[3][2] * ratio
-            local b = gradient[1][3] * (1-ratio) + gradient[3][3] * ratio
-            love.graphics.setColor(r, g, b, self.rankDisplay.alpha)
-            love.graphics.rectangle('fill',
-                self.rankDisplay.x + 10 + i - 1,
-                self.rankDisplay.y + 55,
-                1,
-                8,
-                0)
-        end
-        
-        -- Progress text
-        love.graphics.setColor(1, 1, 1, self.rankDisplay.alpha)
-        local smallFont = love.graphics.newFont(12)
-        love.graphics.setFont(smallFont)
-        if nextRank then
-            love.graphics.printf("Next: " .. nextRank.name,
-                self.rankDisplay.x,
-                self.rankDisplay.y + 65,
-                self.rankDisplay.width,
-                "right")
-        else
-            love.graphics.printf("Max Rank Achieved!",
-                self.rankDisplay.x,
-                self.rankDisplay.y + 65,
-                self.rankDisplay.width,
-                "right")
-        end
+        -- Progress bar fill
+        love.graphics.setColor(0.6, 0.4, 1, self.rankDisplay.alpha)
+        love.graphics.rectangle('fill',
+            self.rankDisplay.x + 10,
+            self.rankDisplay.y + 35,
+            (self.rankDisplay.width - 20) * progress,
+            4,
+            2) ]]
     end
 
     -- Draw notification last to ensure it's on top
