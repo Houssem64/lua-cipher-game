@@ -225,10 +225,6 @@ function MissionsManager:getRankProgress()
     return Ranks:getProgress(self.elo)
 end
 
-function MissionsManager:getNextRank()
-    return Ranks:getNextRank(self.elo)
-end
-
 function MissionsManager:checkRankRequirement(requiredRank)
     -- Ensure we have a valid currentRank
     if not self.currentRank then
