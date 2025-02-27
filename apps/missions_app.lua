@@ -147,12 +147,20 @@ function MissionsApp:draw(x, y, width, height)
 		local mission = self.missions[i]
 		local missionY = currentStartY + (i - 1 - self.scrollPosition) * self.missionHeight
 
+		-- Check if mission is locked due to rank requirement
+		local isLocked = false
+		if mission.rank_required and _G.missionsManager then
+			isLocked = not _G.missionsManager:checkRankRequirement(mission.rank_required)
+		end
+
 		-- Draw mission card with shadow
 		love.graphics.setColor(0, 0, 0, 0.05)
 		love.graphics.rectangle("fill", x + self.padding + 12, missionY + 2, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
-		-- Draw mission background with completion status
-		if self.selectedMission == i then
+		-- Draw mission background with completion status or locked status
+		if isLocked then
+			love.graphics.setColor(0.8, 0.8, 0.8, 0.7) -- Gray out locked missions
+		elseif self.selectedMission == i then
 			love.graphics.setColor(0.95, 0.97, 1)
 		elseif self.viewedMission == i then
 			love.graphics.setColor(0.9, 0.9, 1, 0.9)  -- Light blue tint for viewed
@@ -164,20 +172,47 @@ function MissionsApp:draw(x, y, width, height)
 		love.graphics.rectangle("fill", x + self.padding + 10, missionY, leftPanelWidth - self.padding*4, self.missionHeight - 10, 8)
 
 		-- Draw mission info
-		love.graphics.setColor(0.2, 0.2, 0.2)
+		if isLocked then
+			love.graphics.setColor(0.5, 0.5, 0.5) -- Grayed out text for locked missions
+		else
+			love.graphics.setColor(0.2, 0.2, 0.2)
+		end
 		love.graphics.print(mission.text, x + self.padding + 20, missionY + 15)
+		
+		-- Draw difficulty rating with stars
+		local difficulty = mission.difficulty or 2 -- Default to medium difficulty (2 stars)
 		love.graphics.setColor(0.5, 0.5, 0.5)
-		love.graphics.print("Difficulty: " .. (mission.difficulty or "Normal"), x + self.padding + 20, missionY + 45)
+		love.graphics.print("Difficulty: ", x + self.padding + 20, missionY + 45)
+		
+		-- Draw stars based on difficulty (1-5 scale)
+		for star = 1, 5 do
+			if star <= difficulty then
+				love.graphics.setColor(1, 0.8, 0) -- Gold color for filled stars
+			else
+				love.graphics.setColor(0.7, 0.7, 0.7) -- Gray for empty stars
+			end
+			love.graphics.print("★", x + self.padding + 100 + (star-1)*20, missionY + 45)
+		end
 
 		-- Add rank requirement display
 		if mission.rank_required then
 			-- Check if player meets rank requirement
 			local rankColor = {0.6, 0.4, 1} -- Default purple
-			if _G.missionsManager and not _G.missionsManager:checkRankRequirement(mission.rank_required) then
+			if isLocked then
 				rankColor = {0.8, 0.2, 0.2} -- Red if requirement not met
 			end
 			love.graphics.setColor(unpack(rankColor))
 			love.graphics.print("Required Rank: " .. mission.rank_required, x + self.padding + 20, missionY + 70)
+			
+			-- Draw lock icon for locked missions
+			if isLocked then
+				love.graphics.setColor(0.8, 0.2, 0.2)
+				love.graphics.circle("fill", x + self.padding + leftPanelWidth - self.padding*2, missionY + 25, 15)
+				love.graphics.setColor(1, 1, 1)
+				love.graphics.print("🔒", x + self.padding + leftPanelWidth - self.padding*2 - 8, missionY + 15)
+				love.graphics.setColor(0.8, 0.2, 0.2)
+				love.graphics.print("LOCKED", x + self.padding + leftPanelWidth - self.padding*6, missionY + 15)
+			end
 		end
 
 		-- Also add ELO reward display
@@ -199,8 +234,13 @@ function MissionsApp:draw(x, y, width, height)
 			love.graphics.print("COMPLETED", x + self.padding + leftPanelWidth - self.padding*6, missionY + 15)
 		end
 
-		-- Draw select button with glow effect
-		if self.selectedMission == i then
+		-- Draw select button with glow effect - disable for locked missions
+		if isLocked then
+			love.graphics.setColor(0.5, 0.5, 0.5, 0.5) -- Gray out button for locked missions
+			love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
+			love.graphics.setColor(1, 1, 1, 0.5)
+			love.graphics.print("Locked", x + self.selectButtonX + 20, missionY + self.selectButtonY + 3)
+		elseif self.selectedMission == i then
 			love.graphics.setColor(0.2, 0.8, 0.2) -- Green color for selected
 			love.graphics.rectangle("fill", x + self.selectButtonX, missionY + self.selectButtonY, self.selectButtonWidth, self.selectButtonHeight, 5)
 			love.graphics.setColor(1, 1, 1)
@@ -344,6 +384,15 @@ function MissionsApp:mousepressed(x, y, button, baseX, baseY)
 					if mission.rank_required and _G.missionsManager and 
 					   not _G.missionsManager:checkRankRequirement(mission.rank_required) then
 						-- Don't allow selection if rank requirement not met
+						-- Add a visual or sound feedback to indicate locked mission
+						if self.completion_sound then
+							local sound = self.completion_sound:clone()
+							if sound then
+								sound:setPitch(0.5) -- Lower pitch for error sound
+								sound:setVolume(0.3)
+								sound:play()
+							end
+						end
 						return
 					end
 					

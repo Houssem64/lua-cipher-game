@@ -217,10 +217,18 @@ function love.keypressed(key)
     elseif gameState == "login" then
         loginScreen:keypressed(key)
     elseif gameState == "game" then
+        -- Handle rank animation dismissal
+        if _G.missions and _G.missions.rankAnimation and _G.missions.rankAnimation.active then
+            if _G.missions.rankAnimation:keypressed(key) then
+                return
+            end
+        end
+        
         windowManager:keypressed(key)
         chat:keypressed(key)
         musicApp:keypressed(key)
         reelsApp:keypressed(key)
+
 
 
         -- Add F6 key handling to clear filesystem
