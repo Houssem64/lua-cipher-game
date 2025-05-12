@@ -3,172 +3,325 @@ local StoryMissions = {
 	missions = {
 		{
 			id = 1,
-			text = "Terminal Basics Tutorial",
-			description = "Master the essential terminal commands to become proficient in system navigation and file management. Each task will teach you a fundamental terminal operation.",
+			text = "Terminal Introduction",
+			description = "Learn the very basics of using a terminal interface. This mission introduces you to the fundamental commands every hacker needs to know.",
 			reward = {
-				badge = "Terminal Master Badge",
-				elo = 25
+				badge = "Terminal Novice Badge",
+				elo = 10
 			},
-			rank_required = "Script Kiddie",
+			rank_required = "Newbie",
 			subtasks = {
-				"Use 'pwd' to check your current working directory location",
-				"Try 'neofetch' to view detailed system information and ASCII art",
-				"Use 'whoami' to check your current user",
-				"Create a new directory named 'tutorial' using 'mkdir tutorial'",
-				"Navigate into the directory with 'cd tutorial'",
-				"Create a test file using 'touch test.txt'",
-				"List directory contents with 'ls' to verify your file",
-				"Try 'sudo whoami' to see elevated privileges (password: kali)",
-				"Use 'help' to explore all available commands"
+				"Type 'whoami' to see your current username",
+				"Type 'pwd' to see your current directory location",
+				"Use 'ls' to list files in your current directory",
+				"Try 'clear' to clean up your terminal screen",
+				"Type 'date' to check the current system time",
+				"Run 'help' to see available commands"
 			}
 		},
 		{
 			id = 2,
-			text = "File Detective",
-			description = "Learn advanced file manipulation and search techniques. Master the art of finding and analyzing file contents.",
+			text = "File System Navigation",
+			description = "Master navigating through directories and managing files - essential skills for any cybersecurity professional.",
 			reward = {
-				badge = "File Operations Expert Badge",
-				elo = 35
+				badge = "File Navigator Badge",
+				elo = 15
 			},
-			rank_required = "Initiate",
+			rank_required = "Newbie",
 			subtasks = {
-				"Create a file named 'secret.txt' with some text using 'echo'",
-				"Use 'cat secret.txt' to view the file contents",
-				"Create another file named 'data.txt'",
-				"Use 'grep' to search for text in your files",
-				"Try 'find' to locate files in the current directory",
-				"Change file permissions using 'chmod'",
-				"Practice file manipulation skills"
+				"Create a new directory with 'mkdir practice'",
+				"Navigate into the directory with 'cd practice'",
+				"Create an empty file with 'touch notes.txt'",
+				"Navigate back to parent directory with 'cd ..'",
+				"Use 'ls -la' to view all files with details",
+				"Remove the directory with 'rm -r practice'"
 			}
 		},
 		{
 			id = 3,
-			text = "Network Navigator",
-			description = "Learn essential networking commands and understand basic network operations.",
+			text = "Text Manipulation Basics",
+			description = "Learn to create, view, and manipulate text files - crucial for editing configuration files and examining system logs.",
 			reward = {
-				badge = "Network Explorer Badge",
-				elo = 45
+				badge = "Text Wizard Badge",
+				elo = 20
 			},
-			rank_required = "Apprentice",
+			rank_required = "Script Kiddie",
 			subtasks = {
-				"Test network connectivity using 'ping localhost'",
-				"Connect to an FTP server using 'ftp'",
-				"Download a file using FTP 'get' command",
-				"Upload a file using FTP 'put' command",
-				"List FTP server contents using 'ls'",
-				"Successfully close the FTP connection"
+				"Create a file with content using 'echo \"Hello World\" > hello.txt'",
+				"View the file contents with 'cat hello.txt'",
+				"Append more text with 'echo \"New line\" >> hello.txt'",
+				"View the updated file with 'cat hello.txt'",
+				"Use 'grep \"Hello\" hello.txt' to search for text",
+				"Count words in the file with 'wc -w hello.txt'"
 			}
 		},
 		{
 			id = 4,
-			text = "System Administrator",
-			description = "Master system administration tasks and elevated privileges operations.",
+			text = "Security Analyst Basics",
+			description = "Master essential terminal commands used by security professionals for system reconnaissance and navigation. This is the foundation of all cybersecurity operations.",
 			reward = {
-				badge = "Admin Rights Badge",
-				elo = 55
+				badge = "Security Fundamentals Badge",
+				elo = 25
 			},
-			rank_required = "Hacker",
+			rank_required = "Script Kiddie",
 			subtasks = {
-				"Use 'sudo' to run commands as superuser",
-				"Create a new directory with restricted permissions",
-				"Modify file ownership and permissions",
-				"View system information with 'neofetch'",
-				"Practice secure file operations"
+				"Use 'neofetch' to gather target system information",
+				"Create a secure directory named 'recon' using 'mkdir recon'",
+				"Navigate to the directory with 'cd recon'",
+				"Create a log file using 'touch reconnaissance.log'",
+				"Use 'ls -la' to verify hidden files and permissions",
+				"Try 'sudo whoami' to test for privilege escalation",
+				"Run 'netstat -tuln' to view open network ports"
 			}
 		},
 		{
 			id = 5,
-			text = "Text Editor Master",
-			description = "Learn to create and edit files using various text manipulation commands and the nano editor.",
+			text = "User and Permission Management",
+			description = "Learn to manage file permissions and understand different user privileges in a system - critical for security hardening.",
 			reward = {
-				badge = "Text Editor Expert Badge",
-				elo = 65
+				badge = "Permission Master Badge",
+				elo = 30
 			},
-			rank_required = "Elite Hacker",
+			rank_required = "Initiate",
 			subtasks = {
-				"Create a new file named 'notes.txt' using 'echo Hello > notes.txt'",
-				"View the file contents using 'cat notes.txt'",
-				"Open notes.txt in nano using 'nano notes.txt'",
-				"Add more text and save using Ctrl+O",
-				"Exit nano using Ctrl+X",
-				"Create another file using echo with multiple lines",
-				"Practice file editing with nano's navigation controls"
+				"Create a test file with 'touch secret.txt'",
+				"Change file permissions with 'chmod 600 secret.txt'",
+				"Verify permissions with 'ls -la'",
+				"Try to change ownership with 'chown root secret.txt'",
+				"Use 'sudo' to execute commands with elevated privileges",
+				"Check user privilege information with 'id'"
 			}
 		},
 		{
 			id = 6,
-			text = "Process Management",
-			description = "Learn to manage system processes, monitor resources, and handle running applications effectively.",
+			text = "Basic Data Encoding",
+			description = "Learn how data can be encoded, encrypted, and decoded - fundamental skills for working with secure communications.",
 			reward = {
-				badge = "Process Master Badge",
-				elo = 75
+				badge = "Encoder Badge",
+				elo = 35
 			},
-			rank_required = "Elite Hacker",
+			rank_required = "Initiate",
 			subtasks = {
-				"Use 'ps' to list running processes",
-				"Try 'top' to monitor system resources",
-				"Kill a process using 'kill' command",
-				"Start a background process with '&'",
-				"Use 'jobs' to view background processes",
-				"Practice process priority with 'nice'",
-				"Monitor system load with 'uptime'"
+				"Encode text with 'echo \"Secret message\" | base64'",
+				"Decode base64 with 'echo \"U2VjcmV0IG1lc3NhZ2UK\" | base64 -d'",
+				"Create an MD5 hash with 'echo \"password\" | md5sum'",
+				"Use 'echo \"message\" | base64 > encoded.txt' to save encoded text",
+				"Decode content from a file with 'base64 -d encoded.txt'"
 			}
 		},
 		{
 			id = 7,
-			text = "Network Security",
-			description = "Master essential network security tools and techniques to understand system vulnerabilities.",
+			text = "Basic Forensic Investigation",
+			description = "Learn digital forensics techniques to discover and analyze data. Essential skills for security audits and incident response.",
 			reward = {
-				badge = "Security Expert Badge",
-				elo = 85
+				badge = "Digital Forensics Badge",
+				elo = 40
 			},
-			rank_required = "Master Hacker",
+			rank_required = "Initiate",
 			subtasks = {
-				"Scan open ports using 'nmap localhost'",
-				"Check network interfaces with 'ifconfig'",
-				"Monitor network traffic using 'tcpdump'",
-				"Test firewall rules with 'iptables -L'",
-				"Analyze network routes with 'traceroute'",
-				"Check listening services with 'netstat'",
-				"Review system logs for security events"
+				"Create a file named 'credentials.txt' with sample data using 'echo'",
+				"Examine file contents using 'cat credentials.txt'",
+				"Create a system log file named 'system.log' with sample entries",
+				"Use 'grep \"error\" system.log' to search for specific events",
+				"Use 'find . -name \"*.log\"' to discover log files",
+				"Check file details with 'file credentials.txt'"
 			}
 		},
 		{
 			id = 8,
-			text = "Shell Scripting",
-			description = "Learn to automate tasks and create powerful shell scripts for system administration.",
+			text = "Network Basics",
+			description = "Learn fundamental networking commands to examine connectivity and network configurations.",
 			reward = {
-				badge = "Script Master Badge",
-				elo = 95
+				badge = "Network Novice Badge",
+				elo = 45
 			},
-			rank_required = "Master Hacker",
+			rank_required = "Apprentice",
 			subtasks = {
-				"Create a basic shell script",
-				"Add executable permissions to your script",
-				"Use variables in your script",
-				"Implement conditional statements",
-				"Create a loop in your script",
-				"Add error handling",
-				"Create a script that processes files"
+				"Check your IP address with 'ifconfig' or 'ip addr'",
+				"Test connectivity with 'ping example.com'",
+				"Check network routes with 'route' or 'ip route'",
+				"View active network connections with 'netstat -an'",
+				"Trace network path with 'traceroute example.com'",
+				"Look up domain information with 'nslookup example.com'"
 			}
 		},
 		{
 			id = 9,
-			text = "Advanced System Recovery",
-			description = "Master advanced system recovery techniques and emergency maintenance procedures.",
+			text = "Basic Reconnaissance",
+			description = "Learn to gather information about networks and domains using basic reconnaissance tools.",
 			reward = {
-				badge = "Recovery Expert Badge",
-				elo = 105
+				badge = "Recon Novice Badge",
+				elo = 50
+			},
+			rank_required = "Apprentice",
+			subtasks = {
+				"Use 'whois example.com' to retrieve domain registration information",
+				"Use 'dig example.com' to query DNS information",
+				"Check for open ports with 'nc -zv example.com 80'",
+				"Gather HTTP headers with 'curl -I example.com'",
+				"Create a recon report file with findings"
+			}
+		},
+		{
+			id = 10,
+			text = "System Monitoring",
+			description = "Learn to monitor system resources and processes to identify abnormal activities.",
+			reward = {
+				badge = "System Monitor Badge",
+				elo = 55
+			},
+			rank_required = "Hacker",
+			subtasks = {
+				"View system uptime with 'uptime'",
+				"Monitor processes with 'top'",
+				"List all processes with 'ps aux'",
+				"Check disk usage with 'df -h'",
+				"Monitor system memory with 'free -m'",
+				"Check CPU information with 'lscpu'"
+			}
+		},
+		{
+			id = 11,
+			text = "Advanced File Operations",
+			description = "Master more complex file manipulations and searches needed for thorough system analysis.",
+			reward = {
+				badge = "File Guru Badge",
+				elo = 60
+			},
+			rank_required = "Hacker",
+			subtasks = {
+				"Use 'find / -name \"passwd\" -type f 2>/dev/null' to locate sensitive files",
+				"Search for text in multiple files with 'grep -r \"password\" .'",
+				"Use 'sort' and 'uniq' to analyze log file data",
+				"Compare files with 'diff file1 file2'",
+				"Use 'head' and 'tail' to view portions of large files",
+				"Create archive with 'tar -czvf archive.tar.gz directory/'"
+			}
+		},
+		{
+			id = 12,
+			text = "Network Penetration Basics",
+			description = "Learn essential network penetration testing techniques to identify vulnerabilities in connected systems.",
+			reward = {
+				badge = "Network Security Badge",
+				elo = 65
+			},
+			rank_required = "Elite Hacker",
+			subtasks = {
+				"Perform initial reconnaissance using 'ping targetserver.local'",
+				"Port scan with 'nmap -sS targetserver.local'",
+				"Connect to an open service using 'nc targetserver.local 21'",
+				"Analyze network traffic with 'tcpdump -i eth0'",
+				"Discover hosts on network with 'arp -a'",
+				"Check for exploitable services with 'nmap -sV targetserver.local'"
+			}
+		},
+		{
+			id = 13,
+			text = "Shell Scripting Basics",
+			description = "Learn to automate tasks by creating basic shell scripts - essential for efficient security operations.",
+			reward = {
+				badge = "Script Writer Badge",
+				elo = 70
+			},
+			rank_required = "Elite Hacker",
+			subtasks = {
+				"Create a script file 'scan.sh' with 'touch scan.sh'",
+				"Make the script executable with 'chmod +x scan.sh'",
+				"Edit script with echo commands to output security information",
+				"Add system commands to gather IP and user information",
+				"Run the script with './scan.sh'",
+				"Create a script that takes command line arguments"
+			}
+		},
+		{
+			id = 14,
+			text = "Security Configuration",
+			description = "Learn to create and modify security configuration files to harden systems.",
+			reward = {
+				badge = "Security Hardening Badge",
+				elo = 75
+			},
+			rank_required = "Master Hacker",
+			subtasks = {
+				"Create a firewall configuration file with 'touch firewall.conf'",
+				"Add deny rules to block suspicious IP addresses",
+				"Create a security policy document in a text file",
+				"Set restrictive permissions on configuration files",
+				"Create a backup of critical configuration files",
+				"Implement defense-in-depth in your configurations"
+			}
+		},
+		{
+			id = 15,
+			text = "Advanced Threat Detection",
+			description = "Master process monitoring and threat detection to identify malicious activities in compromised systems.",
+			reward = {
+				badge = "Threat Hunter Badge",
+				elo = 80
+			},
+			rank_required = "Master Hacker",
+			subtasks = {
+				"Use 'ps -aux | grep root' to identify processes running with elevated privileges",
+				"Monitor system resource usage with 'top' to detect resource-intensive processes",
+				"Run 'netstat -antp' to identify suspicious network connections",
+				"Check for unauthorized scheduled tasks with 'crontab -l'",
+				"Examine system logs for unusual login attempts",
+				"Create an incident response plan document"
+			}
+		},
+		{
+			id = 16,
+			text = "Advanced Network Analysis",
+			description = "Execute comprehensive network security assessments using industry-standard tools and methodologies.",
+			reward = {
+				badge = "Network Infiltration Badge",
+				elo = 85
 			},
 			rank_required = "Guru",
 			subtasks = {
-				"Boot into recovery mode",
-				"Check disk health with 'fsck'",
-				"Repair file system issues",
-				"Recover deleted files",
-				"Fix boot loader problems",
-				"Repair corrupted system files",
-				"Create system backup"
+				"Perform comprehensive port scanning with 'nmap -sV -sC targetserver.local'",
+				"Capture network traffic with 'tcpdump -i eth0 -w capture.pcap'",
+				"Analyze captured packets with specialized tools",
+				"Map network infrastructure using 'traceroute' to identify potential entry points",
+				"Enumerate all listening services with 'netstat -tuln'",
+				"Perform password policy analysis through gathering information"
+			}
+		},
+		{
+			id = 17,
+			text = "Security Automation",
+			description = "Master security automation by creating scripts that automate security scans and vulnerability assessments.",
+			reward = {
+				badge = "DevSecOps Master Badge",
+				elo = 90
+			},
+			rank_required = "Guru",
+			subtasks = {
+				"Create an advanced security scanning script",
+				"Implement error handling for edge cases in security tools",
+				"Add conditional logic to detect different types of security breaches",
+				"Create a loop to scan multiple systems or IP ranges",
+				"Develop a script that automatically analyzes security log files",
+				"Create a reporting mechanism for security findings"
+			}
+		},
+		{
+			id = 18,
+			text = "Incident Response Master",
+			description = "Master advanced incident response procedures and digital forensics techniques to investigate system compromises.",
+			reward = {
+				badge = "Forensic Analyst Badge",
+				elo = 100
+			},
+			rank_required = "Guru",
+			subtasks = {
+				"Create a detailed forensic investigation procedure document",
+				"Simulate data recovery from corrupted file systems",
+				"Create forensic timelines of security incidents using log files",
+				"Develop an evidence collection methodology",
+				"Implement a comprehensive disaster recovery plan",
+				"Create a forensic analysis report template"
 			}
 		}
 	}

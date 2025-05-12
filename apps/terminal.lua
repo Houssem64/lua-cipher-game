@@ -451,6 +451,10 @@ function Terminal:handleCommand(command)
         table.insert(self.history, "│  Network:                                                  │")
         table.insert(self.history, "│    ftp       - Connect to FTP server                       │")
         table.insert(self.history, "│    ping      - Test network connectivity                   │")
+        table.insert(self.history, "│    nmap      - Scan a host for open ports                  │")
+        table.insert(self.history, "│    whois     - Lookup domain information                   │")
+        table.insert(self.history, "│    hydra     - Simulate brute-force attack                 │")
+        table.insert(self.history, "│    base64    - Encode/decode text                          │")
         table.insert(self.history, "│  Text Editors:                                             │")
         table.insert(self.history, "│    nano      - Text editor                                 │")
         table.insert(self.history, "│  Terminal Control:                                         │")
@@ -511,6 +515,249 @@ function Terminal:handleCommand(command)
             end
         else
             table.insert(self.history, "Usage: find <pattern>")
+        end
+    elseif parts[1] == "nmap" then
+        -- nmap simulation: nmap <host>
+        if parts[2] then
+            local target = parts[2]
+            local isVerbose = false
+            local serviceVersions = false
+            
+            -- Check for -sV flag (service version detection)
+            for i=3, #parts do
+                if parts[i] == "-sV" then
+                    serviceVersions = true
+                end
+            end
+            
+            table.insert(self.history, "Starting Nmap 7.80 ( https://nmap.org ) at 2025-05-12")
+            table.insert(self.history, "Nmap scan report for " .. target)
+            table.insert(self.history, "Host is up (0.0010s latency).")
+            
+            -- Different outputs based on target
+            if target == "acmecorp.local" then
+                table.insert(self.history, "Not shown: 993 closed ports")
+                table.insert(self.history, "PORT     STATE SERVICE" .. (serviceVersions and "         VERSION" or ""))
+                table.insert(self.history, "22/tcp   open  ssh" .. (serviceVersions and "             OpenSSH 8.4p1" or ""))
+                table.insert(self.history, "80/tcp   open  http" .. (serviceVersions and "            Apache httpd 2.4.46" or ""))
+                table.insert(self.history, "443/tcp  open  https" .. (serviceVersions and "           Apache httpd 2.4.46" or ""))
+                table.insert(self.history, "3306/tcp open  mysql" .. (serviceVersions and "           MySQL 8.0.23" or ""))
+                table.insert(self.history, "8080/tcp open  http-proxy" .. (serviceVersions and "      AcmeCorp Gateway 2.1" or ""))
+                table.insert(self.history, "8443/tcp open  https-alt" .. (serviceVersions and "      AcmeCorp Gateway 2.1" or ""))
+                table.insert(self.history, "9000/tcp open  cslistener" .. (serviceVersions and "      AcmeCorp Internal API" or ""))
+            elseif target == "megabank.local" then
+                table.insert(self.history, "Not shown: 995 closed ports")
+                table.insert(self.history, "PORT     STATE SERVICE" .. (serviceVersions and "         VERSION" or ""))
+                table.insert(self.history, "22/tcp   open  ssh" .. (serviceVersions and "             OpenSSH 7.9p1" or ""))
+                table.insert(self.history, "80/tcp   open  http" .. (serviceVersions and "            Nginx 1.18.0" or ""))
+                table.insert(self.history, "443/tcp  open  https" .. (serviceVersions and "           Nginx 1.18.0" or ""))
+                table.insert(self.history, "8000/tcp open  http-alt" .. (serviceVersions and "       MegaBank Admin Portal 1.5" or ""))
+                table.insert(self.history, "9090/tcp open  zeus-admin" .. (serviceVersions and "     MegaBank Transaction System" or ""))
+            else
+                table.insert(self.history, "Not shown: 997 closed ports")
+                table.insert(self.history, "PORT     STATE SERVICE" .. (serviceVersions and "         VERSION" or ""))
+                table.insert(self.history, "22/tcp   open  ssh" .. (serviceVersions and "             OpenSSH 8.2p1" or ""))
+                table.insert(self.history, "80/tcp   open  http" .. (serviceVersions and "            Apache httpd 2.4.41" or ""))
+                table.insert(self.history, "443/tcp  open  https" .. (serviceVersions and "           Apache httpd 2.4.41" or ""))
+            end
+            
+            table.insert(self.history, "Nmap done: 1 IP address (1 host up) scanned in 0.05 seconds")
+            
+            -- Mission integration
+            if _G.missionsManager then
+                local mission = nil
+                if _G.missions and _G.missions.missions then
+                    for _, m in ipairs(_G.missions.missions) do
+                        if m.selected and not m.completed then
+                            if m.id == 10 then -- Reconnaissance Specialist mission
+                                if target == "acmecorp.local" then
+                                    if serviceVersions then
+                                        self:updateMissionProgress(10, 3) -- subtask 3: run nmap -sV
+                                    else
+                                        self:updateMissionProgress(10, 1) -- subtask 1: run nmap
+                                    end
+                                end
+                            elseif m.id == 7 then -- Network Security mission
+                                self:updateMissionProgress(7, 1) -- subtask 1: run nmap
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+        else
+            table.insert(self.history, "Usage: nmap <host>")
+        end
+    elseif parts[1] == "whois" then
+        -- whois simulation: whois <domain>
+        if parts[2] then
+            local domain = parts[2]
+            
+            -- Different outputs based on domain
+            if domain == "acmecorp.com" then
+                table.insert(self.history, "Domain Name: acmecorp.com")
+                table.insert(self.history, "Registrar: GlobalDomains LLC")
+                table.insert(self.history, "Registrar WHOIS Server: whois.globaldomains.com")
+                table.insert(self.history, "Registrar URL: http://www.globaldomains.com")
+                table.insert(self.history, "Updated Date: 2024-03-15T10:38:52Z")
+                table.insert(self.history, "Creation Date: 1998-05-22T04:00:00Z")
+                table.insert(self.history, "Expiration Date: 2030-05-22T04:00:00Z")
+                table.insert(self.history, "Registrant Organization: Acme Corporation")
+                table.insert(self.history, "Registrant State/Province: California")
+                table.insert(self.history, "Registrant Country: US")
+                table.insert(self.history, "Admin Email: admin@acmecorp.com")
+                table.insert(self.history, "Tech Email: sysadmin@acmecorp.com")
+                table.insert(self.history, "Name Server: ns1.acmecorp.com")
+                table.insert(self.history, "Name Server: ns2.acmecorp.com")
+                table.insert(self.history, "DNSSEC: unsigned")
+            elseif domain == "competitor.com" then
+                table.insert(self.history, "Domain Name: competitor.com")
+                table.insert(self.history, "Registrar: DomainSecure Inc.")
+                table.insert(self.history, "Registrar WHOIS Server: whois.domainsecure.com")
+                table.insert(self.history, "Registrar URL: http://www.domainsecure.com")
+                table.insert(self.history, "Updated Date: 2024-01-08T14:22:01Z")
+                table.insert(self.history, "Creation Date: 2001-11-05T08:15:30Z")
+                table.insert(self.history, "Expiration Date: 2028-11-05T08:15:30Z")
+                table.insert(self.history, "Registrant Organization: Competitor Industries Ltd.")
+                table.insert(self.history, "Registrant State/Province: New York")
+                table.insert(self.history, "Registrant Country: US")
+                table.insert(self.history, "Admin Email: domain-admin@competitor.com")
+                table.insert(self.history, "Tech Email: it-dept@competitor.com")
+                table.insert(self.history, "Name Server: ns1.competitor.com")
+                table.insert(self.history, "Name Server: ns2.competitor.com")
+                table.insert(self.history, "DNSSEC: signedDelegation")
+            else
+                table.insert(self.history, "Domain Name: " .. domain)
+                table.insert(self.history, "Registrar: Example Registrar, Inc.")
+                table.insert(self.history, "Creation Date: 2010-01-01")
+                table.insert(self.history, "Expiration Date: 2030-01-01")
+                table.insert(self.history, "Name Server: ns1.example.com")
+                table.insert(self.history, "Name Server: ns2.example.com")
+            end
+            
+            -- Mission integration
+            if _G.missionsManager then
+                local mission = nil
+                if _G.missions and _G.missions.missions then
+                    for _, m in ipairs(_G.missions.missions) do
+                        if m.selected and not m.completed then
+                            if m.id == 10 then -- Reconnaissance Specialist mission
+                                if domain == "acmecorp.com" then
+                                    self:updateMissionProgress(10, 2) -- subtask 2: whois acmecorp.com
+                                elseif domain == "competitor.com" then
+                                    self:updateMissionProgress(10, 4) -- subtask 4: whois on a different domain
+                                end
+                            end
+                            break
+                        end
+                    end
+                    for _, m in ipairs(_G.missions.missions) do
+                        if m.selected and not m.completed and m.id == 11 then -- Data Obfuscation mission
+                            self:updateMissionProgress(11, 1) -- subtask 1: encode the specific message
+                            break
+                        end
+                    end
+                end
+            end
+            
+        elseif parts[2] == "decode" and parts[3] then
+            local encodedText = table.concat(parts, " ", 3)
+            
+            -- Simplified base64 decoding - just return hardcoded values for mission-critical inputs
+            local result = ""
+            if encodedText == "U2VjdXJlVGVjaCBwYXNzd29yZDogdGhpc2lzYXNlY3JldA==" then
+                result = "SecureTech password: thisisasecret"
+            elseif encodedText == "RW1wbG95ZWUgY3JlZGVudGlhbHMgc3RvcmVkIGluIC9ldGMvc2VjdXJldGVjaC9wYXNzd2QudHh0" then
+                result = "Employee credentials stored in /etc/securetech/passwd.txt"
+            else
+                -- For other inputs, create a simplified representation
+                result = "DECODED: " .. encodedText:sub(1, 10) .. "..."
+            end
+            
+            table.insert(self.history, result)
+            
+            -- Mission integration for decoding specific messages
+            if _G.missionsManager then
+                local mission = nil
+                if _G.missions and _G.missions.missions then
+                    for _, m in ipairs(_G.missions.missions) do
+                        if m.selected and not m.completed and m.id == 11 then -- Data Obfuscation mission
+                            if encodedText == "U2VjdXJlVGVjaCBwYXNzd29yZDogdGhpc2lzYXNlY3JldA==" then
+                                -- Password reveal subtask
+                                self:updateMissionProgress(11, 2) -- subtask 2: decode the password
+                            elseif encodedText == "RW1wbG95ZWUgY3JlZGVudGlhbHMgc3RvcmVkIGluIC9ldGMvc2VjdXJldGVjaC9wYXNzd2QudHh0" then
+                                -- Employee credentials location subtask
+                                self:updateMissionProgress(11, 4) -- subtask 4: decode the location message
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+        else
+            table.insert(self.history, "Usage: base64 <encode|decode> <text>")
+        end
+    elseif parts[1] == "hydra" then
+        -- Simplified hydra simulation: hydra <host> <username> <password>
+        if #parts >= 4 then
+            local host = parts[2]
+            local username = parts[3]
+            local password = parts[4]
+            
+            table.insert(self.history, string.format("Hydra v9.0 (c) 2025 by Example Team"))
+            table.insert(self.history, string.format("[DATA] attacking service http-post-form on host %s", host))
+            table.insert(self.history, string.format("[DATA] using login "%s" with password "%s"", username, password))
+            
+            -- Different responses based on target and credentials
+            local success = false
+            
+            if host == "megabank.local" then
+                if (username == "root" and password == "megabank2023") then
+                    -- Correct credentials for megabank
+                    success = true
+                    table.insert(self.history, string.format("[ATTEMPT] %s:%s - Success!", username, password))
+                    table.insert(self.history, "[INFO] Target http://megabank.local:8000/ login successful")
+                    table.insert(self.history, "[INFO] Admin panel accessed successfully")
+                    table.insert(self.history, "[DATA] Session ID: MB-ADMIN-2025-05-12-001")
+                else
+                    -- Failed attempt for megabank
+                    table.insert(self.history, string.format("[ATTEMPT] %s:%s - Failed", username, password))
+                    table.insert(self.history, "[INFO] Access denied - Invalid credentials")
+                end
+            else
+                -- Generic response for other hosts
+                if math.random() < 0.2 then -- 20% chance of random success for non-specific targets
+                    success = true
+                    table.insert(self.history, string.format("[ATTEMPT] %s:%s - Success!", username, password))
+                else
+                    table.insert(self.history, string.format("[ATTEMPT] %s:%s - Failed", username, password))
+                end
+            end
+            
+            table.insert(self.history, string.format("[STATUS] %d valid password%s found", success and 1 or 0, success and "" or "s"))
+            
+            -- Mission integration
+            if _G.missionsManager then
+                local mission = nil
+                if _G.missions and _G.missions.missions then
+                    for _, m in ipairs(_G.missions.missions) do
+                        if m.selected and not m.completed and m.id == 12 then -- Brute Force Apprentice mission
+                            if host == "megabank.local" then
+                                if username == "admin" and password == "password123" then
+                                    self:updateMissionProgress(12, 1) -- subtask 1: first attempt
+                                elseif username == "administrator" and password == "securepass" then
+                                    self:updateMissionProgress(12, 2) -- subtask 2: second attempt
+                                elseif username == "root" and password == "megabank2023" then
+                                    self:updateMissionProgress(12, 3) -- subtask 3: successful attempt
+                                end
+                            end
+                            break
+                        end
+                    end
+                end
+            end
+        else
+            table.insert(self.history, "Usage: hydra <host> <username> <password>")
         end
     else
         table.insert(self.history, "Command not found: " .. parts[1])
