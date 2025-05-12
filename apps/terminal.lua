@@ -44,7 +44,9 @@ function Terminal:new()
             cursorY = 1,
             cursorX = 1,
             message = ""
-        }
+        },
+        commandHistory = {}, -- Store only user-entered commands
+        commandHistoryIndex = nil -- nil means not browsing
     }
     setmetatable(obj, self)
     self.__index = self
@@ -816,14 +818,43 @@ function Terminal:keypressed(key)
     if self.state == States.NANO then
         self:handleNanoInput(key)
         return
-    elseif key == "return" then
+    elseif self.state == States.NORMAL then
+        if key == "up" then
+            if #self.commandHistory > 0 then
+                if not self.commandHistoryIndex then
+                    self.commandHistoryIndex = #self.commandHistory
+                elseif self.commandHistoryIndex > 1 then
+                    self.commandHistoryIndex = self.commandHistoryIndex - 1
+                end
+                self.currentLine = self.commandHistory[self.commandHistoryIndex] or ""
+            end
+            return
+        elseif key == "down" then
+            if self.commandHistoryIndex then
+                if self.commandHistoryIndex < #self.commandHistory then
+                    self.commandHistoryIndex = self.commandHistoryIndex + 1
+                    self.currentLine = self.commandHistory[self.commandHistoryIndex]
+                else
+                    self.commandHistoryIndex = nil
+                    self.currentLine = ""
+                end
+            end
+            return
+        end
+    end
+
+    if key == "return" then
         if self.state == States.PASSWORD then
             self:handlePassword(self.currentLine)
         elseif self.state == States.FTP_PASSWORD then
             self:handleFTPPassword(self.currentLine)
             self.currentLine = ""
-        else
+        elseif self.state == States.NORMAL then
             table.insert(self.history, self:getCurrentPrompt() .. self.currentLine)
+            if self.currentLine ~= "" then
+                table.insert(self.commandHistory, self.currentLine)
+            end
+            self.commandHistoryIndex = nil
             self:handleCommand(self.currentLine)
             self.currentLine = ""
         end
