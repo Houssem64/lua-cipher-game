@@ -635,28 +635,31 @@ function Terminal:handlePassword(password)
     self.currentLine = ""
 end
 
-local default_font = love.graphics.getFont()
-
 function Terminal:draw(x, y, width, height)
     if self.state == States.NANO then
-        -- Draw nano editor interface
-        love.graphics.setColor(0, 0, 0, 0.9)
+        -- Draw nano editor interface with Kali Linux style
+        love.graphics.setColor(0.07, 0.07, 0.07, 1) -- Dark gray background
         love.graphics.rectangle("fill", x, y, width, height)
-        love.graphics.setColor(0, 1, 0)
         
-        local font = love.graphics.newFont("fonts/FiraCode.ttf", 24)
+        local font = love.graphics.newFont("fonts/FiraCode.ttf", 20)
         love.graphics.setFont(font)
         
-        -- Draw status bar
-        love.graphics.setColor(0, 0.5, 0)
+        -- Draw status bar with Kali Linux blue-gray color
+        love.graphics.setColor(0.15, 0.18, 0.28)
         love.graphics.rectangle("fill", x, y, width, 30)
         love.graphics.setColor(1, 1, 1)
         love.graphics.print("File: " .. self.nanoState.filename .. " " .. self.nanoState.message, x + 10, y + 5)
         
-        -- Draw text content
-        love.graphics.setColor(0, 1, 0)
+        -- Draw command keys footer
+        love.graphics.setColor(0.15, 0.18, 0.28)
+        love.graphics.rectangle("fill", x, y + height - 30, width, 30)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print("^G Get Help  ^O Write Out  ^W Where Is  ^K Cut Text  ^X Exit", x + 10, y + height - 25)
+        
+        -- Draw text content with Kali Linux cyan/white color
+        love.graphics.setColor(0.7, 0.85, 0.9)
         local lineHeight = font:getHeight() * 1.2
-        local visibleLines = math.floor((height - 60) / lineHeight)
+        local visibleLines = math.floor((height - 90) / lineHeight)
         local startLine = math.max(1, self.nanoState.cursorY - math.floor(visibleLines/2))
         
         for i = 1, visibleLines do
@@ -667,60 +670,125 @@ function Terminal:draw(x, y, width, height)
                     -- Draw cursor
                     local cursorX = x + 10 + font:getWidth(self.nanoState.lines[lineNum]:sub(1, self.nanoState.cursorX - 1))
                     if self.cursorBlink then
+                        love.graphics.setColor(0.7, 0.85, 0.9, 0.8)
                         love.graphics.rectangle("fill", cursorX, y + 40 + (i-1) * lineHeight, 2, lineHeight)
                     end
                 end
             end
         end
         
-        love.graphics.setFont(default_font)
+        love.graphics.setFont(love.graphics.getFont())
         return
     end
 
-    -- Draw terminal background
-    love.graphics.setColor(0, 0, 0, 0.9)
-    love.graphics.rectangle("fill", x, y, width, height)
-    
-    -- Draw terminal text
-    love.graphics.setColor(0, 1, 0)  -- Green text
-    local default_font = love.graphics.getFont()
-    
-    -- Use a monospace font that properly supports UTF-8
-    local font = love.graphics.newFont("fonts/FiraCode.ttf", 24)
+
+    -- Terminal background
+    love.graphics.setColor(0.07, 0.07, 0.07, 1)
+    love.graphics.rectangle("fill", x, y , width, height )
+    -- Terminal font
+    local font = love.graphics.newFont("fonts/FiraCode.ttf", 18)
     font:setFilter("nearest", "nearest")
     love.graphics.setFont(font)
-    
     local lineHeight = font:getHeight() * 1.2
     local visibleLines = {}
-    
-    -- Safely process history lines
     for _, line in ipairs(self.history) do
-        -- Ensure the line is a valid string
         if type(line) == "string" then
             table.insert(visibleLines, line)
         end
     end
-    
-    -- Add current prompt and line with proper UTF-8 handling
+    -- Add current prompt and line
     local prompt = self:getCurrentPrompt()
     local currentText = prompt
     if self.state == States.PASSWORD then
         currentText = currentText .. string.rep("*", #self.currentLine)
     else
-        -- Ensure currentLine is a valid string
         currentText = currentText .. (type(self.currentLine) == "string" and self.currentLine or "")
     end
     table.insert(visibleLines, currentText)
-    
-    -- Draw visible lines with scrolling
-    local startLine = math.max(1, #visibleLines - math.floor((height - 20) / lineHeight) + 1)
+    -- Draw lines with Kali Linux color scheme
+    local startLine = math.max(1, #visibleLines - math.floor((height - 50) / lineHeight) + 1)
     for i = startLine, #visibleLines do
-        local lineY = y + ((i - startLine) * lineHeight) + 10
-        -- Safe print with error handling
-        pcall(love.graphics.print, visibleLines[i], x + 10, lineY)
+        local lineY = y + 35 + ((i - startLine) * lineHeight)
+        local line = visibleLines[i]
+        self:drawKaliLine(line, font, x + 10, lineY, i == #visibleLines and self.cursorBlink and self.state ~= States.PASSWORD, prompt, self.currentLine)
     end
-    
-    love.graphics.setFont(default_font)
+    love.graphics.setFont(love.graphics.getFont())
+end
+
+function Terminal:drawKaliLine(line, font, x, y, showCursor, prompt, currentLine)
+    -- Prompt coloring: username@host:path $
+    if line:match("@love%-Desktop") or line:match("@kali") then
+        local userEnd = line:find("@")
+        local pathStart = line:find(" ")
+        local pathEnd = line:find(" %$")
+        if userEnd and pathStart and pathEnd then
+            -- Username in cyan
+            love.graphics.setColor(0.2, 0.8, 1)
+            love.graphics.print(line:sub(1, userEnd-1), x, y)
+            -- @ in white
+            love.graphics.setColor(0.9, 0.9, 0.9)
+            love.graphics.print("@", x + font:getWidth(line:sub(1, userEnd-1)), y)
+            -- Hostname in magenta
+            love.graphics.setColor(0.9, 0.3, 0.6)
+            local hostWidth = font:getWidth(line:sub(1, userEnd))
+            love.graphics.print(line:sub(userEnd+1, pathStart-1), x + hostWidth, y)
+            -- Path in blue
+            love.graphics.setColor(0.1, 0.6, 0.8)
+            local prefixWidth = font:getWidth(line:sub(1, pathStart))
+            love.graphics.print(line:sub(pathStart, pathEnd), x + prefixWidth, y)
+            -- $ and rest in white
+            love.graphics.setColor(0.9, 0.9, 0.9)
+            local promptWidth = font:getWidth(line:sub(1, pathEnd))
+            love.graphics.print(line:sub(pathEnd+1), x + promptWidth, y)
+            -- Cursor
+            if showCursor then
+                local cursorX = x + font:getWidth(line)
+                love.graphics.setColor(0.9, 0.9, 0.9, 0.8)
+                love.graphics.rectangle("fill", cursorX, y, 2, font:getHeight())
+            end
+            return
+        end
+    end
+    -- Password prompts in yellow
+    if line:match("^%[sudo%]") or line:match("^Password:") then
+        love.graphics.setColor(0.9, 0.8, 0.1)
+        love.graphics.print(line, x, y)
+        return
+    end
+    -- FTP prompt in green
+    if line:match("^ftp>") then
+        love.graphics.setColor(0.2, 0.9, 0.4)
+        love.graphics.print(line, x, y)
+        return
+    end
+    -- Error messages in red
+    if line:match("^error") or line:match("not found") or line:match("permission denied") then
+        love.graphics.setColor(0.9, 0.2, 0.2)
+        love.graphics.print(line, x, y)
+        return
+    end
+    -- Command output in cyan/white
+    if self:isCommandOutputLine(line) then
+        love.graphics.setColor(0.8, 0.9, 0.9)
+        love.graphics.print(line, x, y)
+        return
+    end
+    -- Default text (input)
+    love.graphics.setColor(0.9, 0.9, 0.9)
+    love.graphics.print(line, x, y)
+    if showCursor then
+        local cursorX = x + font:getWidth(line)
+        love.graphics.setColor(0.9, 0.9, 0.9, 0.8)
+        love.graphics.rectangle("fill", cursorX, y, 2, font:getHeight())
+    end
+end
+
+function Terminal:isCommandOutputLine(line)
+    return type(line) == "string" and 
+           not line:match("@love%-Desktop") and 
+           not line:match("^ftp>") and
+           not line:match("^Password:") and
+           not line:match("^%[sudo%]")
 end
 
 function Terminal:update(dt)
