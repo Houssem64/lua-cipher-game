@@ -167,31 +167,44 @@ function ReelsApp:loadReel(index)
     end
     
     local reel = self.reels[index]
-    if love.filesystem.getInfo(reel.video) then
-        -- Wrap video loading in pcall for safety
-        local success, video = pcall(function()
-            return love.graphics.newVideo(reel.video, {
-                audio = true,
-                sync = true
-            })
-        end)
-        
-        if success and video then
-            self.currentVideo = video
-            self.videoLoaded = true
-            self.isLoading = false
-            if self.panel.visible then
-                self.currentVideo:play()
-                self.isPlaying = true
-            end
-        else
-            print("Error loading video:", reel.video)
-            self.videoLoaded = false
-            self.isLoading = false
-            self.currentVideo = nil
+    print("Attempting to load video:", reel.video)
+    
+    -- Check if video path is valid
+    if not reel or not reel.video then
+        print("Error: Invalid reel data")
+        self.videoLoaded = false
+        self.isLoading = false
+        self.currentVideo = nil
+        return
+    end
+    
+    -- Safely check if love.filesystem is available
+    if not love.filesystem then
+        print("Error: love.filesystem is not initialized")
+        self.videoLoaded = false
+        self.isLoading = false
+        self.currentVideo = nil
+        return
+    end
+    
+    -- Try to load the video directly without getInfo check
+    local success, video = pcall(function()
+        return love.graphics.newVideo(reel.video, {
+            audio = true,
+            sync = true
+        })
+    end)
+    
+    if success and video then
+        self.currentVideo = video
+        self.videoLoaded = true
+        self.isLoading = false
+        if self.panel.visible then
+            self.currentVideo:play()
+            self.isPlaying = true
         end
     else
-        print("Error: Video file not found -", reel.video)
+        print("Error loading video:", reel.video, success and "unknown error" or video)
         self.videoLoaded = false
         self.isLoading = false
         self.currentVideo = nil

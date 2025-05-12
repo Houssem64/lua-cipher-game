@@ -20,13 +20,14 @@ end
 
 function SaveSystem:load(filename)
     local filePath = filename .. ".sav"
-    if not love.filesystem.getInfo(filePath) then
-        print("No save file found: " .. filePath)
-        return nil
-    end
     
+    -- Try to read the file directly without checking getInfo first
     local success, data = pcall(function()
         local saveData = love.filesystem.read(filePath)
+        if not saveData then
+            print("No save file found: " .. filePath)
+            return nil
+        end
         print("Loading from file: " .. filePath)
         print("Loaded data: " .. saveData)
         return json.decode(saveData)
